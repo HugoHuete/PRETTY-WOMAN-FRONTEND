@@ -1,0 +1,8 @@
+.agents/*
+.codex/*
+output/playwright/
+.playwright-cli/
+.codegraph/
+.impeccable/
+.superpowers/
+*.orig
