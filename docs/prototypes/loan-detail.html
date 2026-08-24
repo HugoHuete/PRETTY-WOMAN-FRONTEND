@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Detalle de préstamo · Pretty Woman</title>
+    <link rel="stylesheet" href="products.css">
+    <link rel="stylesheet" href="finances.css">
+    <link rel="stylesheet" href="sales-redesign.css">
+  </head>
+  <body class="finance-page">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+        <nav>
+          <a href="sales.html"><svg class="nav-icon"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="products.html"><svg class="nav-icon"><use href="prototype-icons.svg#package"></use></svg>Inventario</a>
+          <a href="clients.html"><svg class="nav-icon"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <a href="purchase-orders.html"><svg class="nav-icon"><use href="prototype-icons.svg#truck"></use></svg>Compras</a>
+          <a class="is-current" aria-current="page" href="finances.html"><svg class="nav-icon"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+        </nav>
+        <div class="sidebar-footer"><button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button></div>
+      </aside>
+      <main id="main-content">
+        <header class="topbar"><button class="menu-button" type="button" aria-label="Abrir menú">☰</button><div><p class="crumb">Administración / Finanzas / Préstamos</p><h1>Detalle de préstamo</h1></div><div class="top-actions"><button class="theme-button" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div></header>
+        <section class="workspace" id="loanContent"></section>
+      </main>
+    </div>
+    <dialog class="finance-dialog" id="loanDialog">
+      <header><div><p>Préstamo</p><h2 id="loanDialogTitle">Registrar pago</h2></div><button class="dialog-close" type="button" aria-label="Cerrar">×</button></header>
+      <form class="finance-form" id="loanForm"><label>Monto<input name="amount" type="number" min="0.01" step="0.01" required></label><p class="form-error" id="loanError" hidden></p><div class="dialog-actions"><button class="secondary-action" type="button" data-close-dialog>Cancelar</button><button class="primary-action" type="submit" id="loanSubmit">Guardar</button></div></form>
+    </dialog>
+    <div class="finance-toast" id="financeToast" role="status" hidden></div>
+    <script src="finance-data.js"></script>
+    <script src="loan-detail.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

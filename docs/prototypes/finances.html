@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finanzas · Pretty Woman</title>
+  <link rel="stylesheet" href="products.css">
+  <link rel="stylesheet" href="finances.css">
+  <link rel="stylesheet" href="sales-redesign.css">
+</head>
+<body class="finance-page">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+      <nav><a href="sales.html"><svg class="nav-icon"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a><a href="products.html"><svg class="nav-icon"><use href="prototype-icons.svg#package"></use></svg>Inventario</a><a href="clients.html"><svg class="nav-icon"><use href="prototype-icons.svg#users"></use></svg>Clientes</a><a href="purchase-orders.html"><svg class="nav-icon"><use href="prototype-icons.svg#truck"></use></svg>Compras</a><a class="is-current" aria-current="page" href="finances.html"><svg class="nav-icon"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a></nav>
+      <div class="sidebar-footer"><button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button></div>
+    </aside>
+    <main id="main-content"><header class="topbar"><button class="menu-button" type="button" aria-label="Abrir menú">☰</button><div><p class="crumb">Administración / Finanzas</p><h1>Finanzas</h1></div><div class="top-actions"><button class="theme-button" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div></header>
+      <section class="workspace">
+        <div class="page-intro"><div><h2>Control financiero diario</h2><p>Consulta el saldo general, los movimientos y los compromisos de préstamo. Solo administración puede registrar ajustes manuales.</p></div><a class="primary-action" href="financial-movements.html">Abrir movimientos</a></div>
+        <nav class="finance-local-nav" aria-label="Secciones de finanzas"><a aria-current="page" href="finances.html">Resumen</a><a href="financial-movements.html">Movimientos</a><a href="loans.html">Préstamos</a></nav>
+        <div class="finance-toolbar"><label>Período<select id="periodFilter"><option value="2026-08">Agosto 2026</option><option value="all">Todo el historial</option><option value="2026-07">Julio 2026</option></select></label></div>
+        <section class="finance-overview" aria-label="Resumen financiero"><article class="available-balance"><div><small>Disponible general</small><strong id="totalAvailable">C$0.00</strong><small>Saldo total disponible para la operación de la tienda.</small></div><div class="summary-strip"><div class="summary-stat"><small>Entradas del período</small><strong class="amount-inflow" id="periodInflows">C$0.00</strong></div><div class="summary-stat"><small>Salidas del período</small><strong class="amount-outflow" id="periodOutflows">C$0.00</strong></div></div></article><aside class="loan-alerts"><h3>Atención a préstamos</h3><div id="loanAlerts"></div><a class="finance-link" href="loans.html">Ver todos los préstamos</a></aside></section>
+        <section class="finance-grid"><div class="finance-panel"><div class="finance-panel-heading"><div><h3>Saldo de la tienda</h3><p>Dinero disponible para la operación general.</p></div><a class="finance-link" href="financial-movements.html">Abrir movimientos</a></div><div class="account-list" id="accountList"></div></div><div class="finance-panel"><div class="finance-panel-heading"><div><h3>Actividad reciente</h3><p>Últimos registros del historial.</p></div></div><div class="activity-list" id="activityList"></div></div></section>
+      </section>
+    </main>
+  </div>
+  <script src="finance-data.js"></script><script src="finances.js"></script><script src="prototype-shell.js"></script>
+</body>
+</html>

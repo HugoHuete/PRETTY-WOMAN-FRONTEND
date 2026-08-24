@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Editar campaña</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="purchases-redesign.css" />
+    <link rel="stylesheet" href="discount-campaigns.css" />
+  </head>
+  <body class="purchases-design campaign-form-page" data-campaign-mode="edit">
+    <a class="skip-link" href="#campaignForm">Saltar al formulario</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a class="is-current" href="discount-campaigns.html" aria-current="page" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer"><button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button></div>
+      </aside>
+
+      <main>
+        <header class="topbar campaign-form-topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><a class="campaign-back" href="discount-campaigns.html"><span aria-hidden="true">←</span>Volver a campañas</a><h1>Editar campaña</h1></div>
+          <div class="top-actions"><button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div>
+        </header>
+
+        <form class="workspace campaign-editor" id="campaignForm" novalidate>
+          <div class="campaign-validation-summary" id="campaignValidationSummary" role="alert" tabindex="-1" hidden><strong>Revisa la información marcada</strong><p>No pudimos guardar la campaña todavía.</p><ul id="campaignValidationItems"></ul></div>
+          <div class="campaign-editor-layout">
+            <div class="campaign-editor-main">
+              <section class="campaign-form-section" aria-labelledby="generalTitle"><header><div><span class="campaign-section-icon" aria-hidden="true">1</span><div><h3 id="generalTitle">Información general</h3></div></div></header><div class="campaign-general-fields"><label class="campaign-name-field">Nombre de la campaña<input id="campaignName" name="name" type="text" maxlength="120" autocomplete="off" aria-describedby="campaignNameError" /><span class="field-error" id="campaignNameError"></span></label><label>Fecha inicial<input id="campaignStartDate" name="startDate" type="date" aria-describedby="campaignStartDateError" /><span class="field-error" id="campaignStartDateError"></span></label><label>Fecha final<input id="campaignEndDate" name="endDate" type="date" aria-describedby="campaignEndDateError" /><span class="field-error" id="campaignEndDateError"></span></label></div></section>
+              <section class="campaign-form-section campaign-products-section" aria-labelledby="productsTitle"><header><div><span class="campaign-section-icon" aria-hidden="true">2</span><div><h3 id="productsTitle">Productos y descuentos</h3></div></div><div class="campaign-products-actions product-actions product-primary-actions"><button class="secondary-action collapse-products-action" id="collapseCampaignProducts" type="button"><span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg></span><span>Expandir todos</span></button><button class="secondary-action import-products-action" id="openCampaignCsvImport" type="button"><span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span><span>Importar CSV</span></button><button class="primary-action add-product-action campaign-add-products" id="openProductSelector" type="button"><span aria-hidden="true">+</span> Agregar productos</button></div></header><div class="campaign-products-table" id="campaignProducts" aria-live="polite"></div><p class="field-error campaign-products-error" id="campaignProductsError"></p></section>
+            </div>
+            <aside class="campaign-editor-rail" aria-label="Acciones de campaña">
+              <input id="campaignEnabled" name="enabled" type="checkbox" hidden />
+              <div class="campaign-form-actions"><p class="campaign-actions-label">Acciones</p><button class="primary-action" id="saveCampaign" type="submit">Guardar cambios</button><button class="campaign-disable-action" id="disableCampaign" type="button">Deshabilitar campaña</button><a class="secondary-action" href="discount-campaigns.html">Cancelar</a></div>
+            </aside>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <dialog class="campaign-dialog product-selector-dialog" id="productSelectorDialog" aria-labelledby="productSelectorTitle"><div class="campaign-dialog-header"><div><p>Catálogo</p><h2 id="productSelectorTitle">Agregar productos</h2></div><button class="dialog-close" id="closeProductSelector" type="button" aria-label="Cerrar">×</button></div><div class="campaign-dialog-body"><div class="product-selector-filters"><div class="product-selector-search-field"><label for="productSelectorSearch">Código de producto</label><div class="campaign-dialog-search"><span aria-hidden="true">⌕</span><input id="productSelectorSearch" type="search" placeholder="Ej. VSAT-CRL" aria-label="Código de producto" autocomplete="off" /></div></div><label class="product-selector-category"><span>Categoría</span><select id="productSelectorCategory"><option value="">Todas las categorías</option><option value="Vestidos">Vestidos</option><option value="Blusas">Blusas</option><option value="Pantalones">Pantalones</option><option value="Faldas">Faldas</option></select></label></div><p class="product-selector-count" id="productSelectorCount">0 productos por agregar</p><div class="product-selector-list" id="productSelectorList"></div></div><div class="campaign-dialog-footer"><button class="secondary-action" id="cancelProductSelection" type="button">Cancelar</button><button class="primary-action" id="confirmProductSelection" type="button">Agregar productos</button></div></dialog>
+    <dialog class="campaign-dialog campaign-csv-dialog" id="campaignCsvImportDialog" aria-labelledby="campaignCsvTitle"><div class="campaign-dialog-header"><div><p>Importación masiva</p><h2 id="campaignCsvTitle">Importar campañas desde CSV</h2></div><button class="dialog-close" id="closeCampaignCsvImport" type="button" aria-label="Cerrar">×</button></div><div class="campaign-dialog-body"><section class="campaign-csv-step"><div class="campaign-csv-step-heading"><span>1</span><div><h3>Selecciona el archivo</h3></div></div><input id="campaignCsvFile" type="file" accept=".csv,text/csv" hidden><label class="campaign-csv-dropzone" id="campaignCsvDropzone" for="campaignCsvFile"><span class="campaign-csv-upload-icon" aria-hidden="true">⇧</span><span><strong id="campaignCsvFileLabel">Seleccionar archivo CSV</strong><small id="campaignCsvFileHelp">También puedes arrastrarlo aquí · Máximo 1 MB</small></span><span aria-hidden="true">Seleccionar</span></label><div class="campaign-csv-settings"><fieldset><legend>Delimitador</legend><label><input type="radio" name="campaignCsvDelimiter" value="," checked> Coma</label><label><input type="radio" name="campaignCsvDelimiter" value=";"> Punto y coma</label></fieldset><button class="template-download" id="downloadCampaignCsvTemplate" type="button">Descargar plantilla</button></div></section><section class="campaign-csv-step" aria-live="polite"><div class="campaign-csv-step-heading"><span>2</span><div><h3>Revisa el contenido</h3></div></div><div class="campaign-csv-preview" id="campaignCsvPreview"><strong>Aún no hay un archivo seleccionado</strong><span>Al cargarlo verás el resumen y cualquier fila que necesite corrección.</span></div><div class="campaign-csv-preview-summary" id="campaignCsvPreviewSummary" hidden></div><div class="campaign-csv-errors" id="campaignCsvErrors" hidden><strong>Corrige estas filas para continuar</strong><div><table><thead><tr><th>Fila</th><th>Problema</th></tr></thead><tbody id="campaignCsvErrorRows"></tbody></table></div></div></section><section class="campaign-csv-step"><div class="campaign-csv-step-heading"><span>3</span><div><h3>Elige cómo agregarlo</h3></div></div><fieldset class="campaign-csv-mode-options"><label><input type="radio" name="campaignCsvMode" value="combine" checked><span><strong>Combinar con los productos actuales</strong><small>Conserva lo capturado y agrega destinos nuevos.</small></span></label><label><input type="radio" name="campaignCsvMode" value="replace"><span><strong>Reemplazar productos</strong><small>Quita los destinos actuales y usa solamente el archivo.</small></span></label></fieldset></section></div><div class="campaign-dialog-footer"><button class="secondary-action" id="cancelCampaignCsvImport" type="button">Cancelar</button><button class="primary-action" id="confirmCampaignCsvImport" type="button" disabled>Importar productos</button></div></dialog>
+    <dialog class="campaign-dialog campaign-confirm-dialog" id="disableCampaignDialog" aria-labelledby="disableCampaignTitle"><div class="campaign-dialog-header"><div><p>Acción administrativa</p><h2 id="disableCampaignTitle">Deshabilitar campaña</h2></div><button class="dialog-close" id="closeDisableCampaign" type="button" aria-label="Cerrar">×</button></div><div class="campaign-dialog-body"><div class="campaign-confirm-icon" aria-hidden="true">⊘</div><p id="disableCampaignDescription">El descuento dejará de aplicarse de inmediato. La campaña permanecerá en el historial y podrás habilitarla nuevamente desde este editor.</p></div><div class="campaign-dialog-footer"><button class="secondary-action" id="cancelDisableCampaign" type="button">Conservar habilitada</button><button class="campaign-danger-button" id="confirmDisableCampaign" type="button">Deshabilitar</button></div></dialog>
+    <div class="campaign-toast" id="campaignToast" role="status" aria-live="polite" hidden></div>
+    <script src="discount-campaign-data.js"></script><script src="discount-campaign-form.js"></script><script src="prototype-shell.js"></script>
+  </body>
+</html>

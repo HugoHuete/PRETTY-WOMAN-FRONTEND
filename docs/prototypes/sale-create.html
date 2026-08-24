@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Nueva venta</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="sale-create.css" />
+    <link rel="stylesheet" href="sales-redesign.css" />
+  </head>
+  <body class="sales-design sale-create-page">
+    <a class="skip-link" href="#nuevaVenta">Saltar al formulario de venta</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a class="is-current" href="sales.html" aria-current="page" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+      <button class="nav-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
+
+      <main id="nuevaVenta">
+        <header class="topbar sale-create-topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div class="create-heading"><p class="crumb"><a href="sales.html" aria-label="Regresar al listado de ventas"><span aria-hidden="true">←</span><span class="crumb-label">Regresar a ventas</span></a></p><h1>Nueva venta</h1></div>
+          <div class="top-actions"><button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div>
+        </header>
+
+        <form class="workspace create-workspace" id="saleForm" novalidate>
+          <div class="create-layout">
+            <div class="sale-editor">
+              <section class="sale-basics" aria-labelledby="saleDataTitle">
+                <h2 class="sr-only" id="saleDataTitle">Datos de la venta</h2>
+                <div class="client-field"><label class="label-text" for="clientName">Cliente <span>(opcional)</span></label><div class="client-picker"><input id="clientName" name="client" autocomplete="off" list="clientOptions" placeholder="Buscar por nombre, teléfono o correo" /><button type="button" id="openClientDialog">+ Crear cliente</button></div><datalist id="clientOptions"><option value="Ana Martínez"><option value="María López"><option value="Sofía Gómez"></datalist><small id="selectedClientHelp" hidden></small></div>
+                <fieldset class="operation-type"><legend>Tipo de operación</legend><div><input id="typeSale" name="operationType" type="radio" value="sale" checked /><label for="typeSale">Venta</label><input id="typeReservation" name="operationType" type="radio" value="reservation" /><label for="typeReservation">Reserva</label></div></fieldset>
+                <label>Canal de venta<select id="salesChannel" name="channel" required aria-describedby="channelError"><option value="">Seleccionar canal</option><option value="local" selected>Tienda física</option><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option></select><small class="field-error" id="channelError"></small></label>
+              </section>
+
+              <section class="items-section" aria-labelledby="itemsTitle">
+                <div class="section-heading"><div><h2 id="itemsTitle">Productos de la venta</h2><p id="itemCount">3 prendas agregadas</p></div><button class="primary-action" id="openProductDialog" type="button"><span aria-hidden="true">+</span> Agregar prenda</button></div>
+                <div class="sale-items-table-region" role="region" aria-label="Productos agregados a la venta" tabindex="0">
+                  <table class="sale-items-table">
+                    <caption class="sr-only">Productos agregados a la venta</caption>
+                    <colgroup>
+                      <col class="product-column" />
+                      <col class="color-column" />
+                      <col class="size-column" />
+                      <col class="stock-column" />
+                      <col class="quantity-column" />
+                      <col class="purpose-column" />
+                      <col class="discount-column" />
+                      <col class="total-column" />
+                      <col class="action-column" />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th scope="col">Producto</th>
+                        <th scope="col">Color</th>
+                        <th scope="col">Talla</th>
+                        <th scope="col">Stock</th>
+                        <th scope="col">Cantidad</th>
+                        <th scope="col">Tipo</th>
+                        <th scope="col">Descuento</th>
+                        <th scope="col">Total</th>
+                        <th scope="col"><span class="sr-only">Acción</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="saleItems" aria-live="polite"></tbody>
+                  </table>
+                </div>
+                <div class="items-empty" id="itemsEmpty" hidden><strong>Aún no hay prendas.</strong><p>Agrega al menos una para poder crear la venta.</p><button type="button" id="emptyAddProduct">Agregar primera prenda</button></div>
+                <button class="add-another" id="addAnotherProduct" type="button">+ Agregar otra prenda</button>
+                <p class="form-error" id="itemsError" role="alert"></p>
+              </section>
+
+              <section class="notes-section"><label for="saleNotes">Notas <span>(opcional)</span></label><textarea id="saleNotes" maxlength="300" rows="3" placeholder="Agrega observaciones sobre la venta..."></textarea><span><output id="notesCount">0</output>/300</span></section>
+            </div>
+
+            <div class="sale-checkout-rail">
+              <aside class="sale-summary" aria-labelledby="summaryTitle">
+                <div class="summary-heading"><div><h2 id="summaryTitle">Resumen</h2><p><span id="summaryItemCount">3</span> artículos</p></div><span class="summary-kind" id="summaryKind">Venta</span></div>
+                <dl class="summary-totals"><div><dt>Subtotal</dt><dd id="subtotal">C$ 0.00</dd></div><div><dt>Campañas</dt><dd id="campaignDiscountTotal">− C$ 0.00</dd></div><div><dt>Descuentos manuales</dt><dd id="discountTotal">− C$ 0.00</dd></div><div class="summary-total"><dt>Total</dt><dd id="grandTotal">C$ 0.00</dd></div></dl><p class="selection-total-help" id="selectionTotalHelp" hidden></p>
+                <div class="balance-row"><span>Saldo pendiente</span><strong id="balance">C$ 0.00</strong></div>
+              </aside>
+              <section class="payment-section" aria-labelledby="paymentTitle"><div class="payment-heading"><h2 id="paymentTitle">Pago <span class="payment-optional">(opcional)</span></h2><button type="button" id="togglePayment" aria-expanded="true" aria-controls="paymentFields" aria-label="Ocultar información de pago" title="Ocultar información de pago"><span class="payment-toggle-icon" aria-hidden="true"></span></button></div><div id="paymentFields"><div class="payment-grid"><label>Método<select id="paymentMethod"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="pos-bac">POS BAC</option><option value="pos-banpro">POS BANPRO</option></select></label><label>Moneda recibida<select id="paymentCurrency"><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (USD)</option></select></label><label class="payment-received"><span id="receivedAmountLabel">Monto recibido</span><span class="money-input"><span id="receivedAmountUnit" aria-hidden="true">C$</span><input id="paymentReceived" type="number" min="0" step="0.01" placeholder="0.00" inputmode="decimal" /></span></label><label class="exchange-rate-field" id="exchangeRateField" hidden>Tasa de cambio <span>C$ por $</span><input id="exchangeRate" type="number" min="0.0001" step="0.0001" value="36.6200" inputmode="decimal" /></label></div><dl class="payment-calculation" id="paymentCalculation" hidden><div><dt>Valor recibido</dt><dd id="receivedValueNio">C$ 0.00</dd></div><div><dt>Se aplicará a la venta</dt><dd id="appliedPreview">C$ 0.00</dd></div><div class="payment-change"><dt>Cambio a entregar</dt><dd id="changePreview">C$ 0.00</dd></div></dl><p class="payment-calculation-note" id="paymentCalculationNote" hidden></p><button class="summary-secondary" id="addPayment" type="button"><span aria-hidden="true">+</span> Agregar pago</button><div class="payment-list" id="paymentList"></div><p class="summary-error" id="paymentError" role="alert"></p></div></section>
+              <div class="summary-actions"><button class="create-sale-button" id="createSale" type="submit"><span>Crear venta</span></button></div>
+            </div>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <dialog class="create-dialog client-create-dialog" id="clientCreateDialog" aria-labelledby="clientCreateDialogTitle">
+      <form method="dialog" id="clientCreateForm">
+        <header><div><p>Cliente nuevo</p><h2 id="clientCreateDialogTitle">Crear cliente</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-body client-dialog-fields">
+          <label>Nombre completo<input name="name" autocomplete="name" required placeholder="Ej. Laura Hernández" /></label>
+          <label>Teléfono<input name="phone" type="tel" autocomplete="tel" required placeholder="Ej. 8888 2200" /></label>
+          <label>Usuario de Instagram <span>(opcional)</span><input name="instagram" autocomplete="off" placeholder="Ej. @laurahernandez" /></label>
+          <label>Usuario de Messenger <span>(opcional)</span><input name="messenger" autocomplete="off" placeholder="Ej. laura.hernandez" /></label>
+          <label class="field-wide">Dirección <span>(opcional)</span><textarea name="address" rows="3" autocomplete="street-address" placeholder="Puede agregarse después"></textarea></label>
+          <p class="input-help field-wide">Al guardar, el cliente quedará seleccionado en esta venta.</p>
+          <p class="dialog-error field-wide" id="clientCreateError" role="alert"></p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="save">Crear y seleccionar</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="create-dialog" id="productDialog" aria-labelledby="productDialogTitle">
+      <form method="dialog" id="productForm">
+        <header><div><p>Catálogo disponible</p><h2 id="productDialogTitle">Agregar prenda</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-body"><div class="product-search-field"><label for="productSearch">Buscar por código</label><input id="productSearch" type="search" placeholder="Ej. VW-VD-001" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-controls="productSearchResults" aria-expanded="false" aria-describedby="productError" /><div class="product-search-results" id="productSearchResults" aria-label="Productos encontrados" hidden></div><input name="product" id="productSelect" type="hidden" /></div><div class="variant-grid"><label>Color<select name="color" id="colorSelect" disabled data-viewport-panel></select></label><label>Talla<select name="size" id="sizeSelect" disabled data-searchable data-search-placeholder="Buscar talla…" data-viewport-panel></select></label></div><p class="dialog-error" id="productError" role="alert"></p></div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="add">Agregar a la venta</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="create-dialog discount-dialog" id="discountDialog" aria-labelledby="discountDialogTitle">
+      <form method="dialog" id="discountForm">
+        <header><h2 id="discountDialogTitle">Aplicar descuento</h2><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-body">
+          <fieldset><legend>Forma de cálculo</legend><div class="discount-methods"><label data-tooltip="Calcula un porcentaje sobre el precio regular por unidad. Si hay campaña, la reemplaza."><input type="radio" name="discountType" value="percent" aria-label="Porcentaje. Calcula un porcentaje sobre el precio regular por unidad y reemplaza cualquier campaña." checked /> Porcentaje</label><label data-tooltip="Resta un monto fijo del precio regular de cada unidad. Si hay campaña, la reemplaza."><input type="radio" name="discountType" value="amount" aria-label="Monto. Resta un monto fijo del precio regular por unidad y reemplaza cualquier campaña." /> Monto</label><label data-tooltip="Define directamente el precio final de cada unidad. Si hay campaña, la reemplaza."><input type="radio" name="discountType" value="final" aria-label="Precio final. Define directamente el precio final por unidad y reemplaza cualquier campaña." /> Precio final</label></div></fieldset>
+          <label><span id="discountValueLabel">Porcentaje por unidad</span><span class="discount-value-input"><span id="discountValueUnit" aria-hidden="true">%</span><input id="discountValue" name="discountValue" type="number" min="0" step="0.01" /></span></label>
+          <dl class="discount-price-preview" aria-live="polite">
+            <div><dt id="discountCurrentPriceLabel">Precio actual</dt><dd id="discountCurrentPrice">C$ 0.00</dd></div>
+            <div id="discountCampaignPriceRow" hidden><dt>Con campaña actual</dt><dd id="discountCampaignPrice">C$ 0.00</dd></div>
+            <div class="discount-result"><dt id="discountResultPriceLabel">Con descuento</dt><dd id="discountResultPrice">C$ 0.00</dd></div>
+          </dl>
+          <p class="dialog-error" id="discountError" role="alert"></p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="apply">Aplicar descuento</button></footer>
+      </form>
+    </dialog>
+
+    <div class="create-toast" id="createToast" role="status" aria-live="polite" hidden></div>
+    <script src="sale-create.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

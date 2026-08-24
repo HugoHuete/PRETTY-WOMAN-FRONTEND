@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Campañas</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="purchases-redesign.css" />
+    <link rel="stylesheet" href="discount-campaigns.css" />
+    <link rel="stylesheet" href="table-headings.css" />
+  </head>
+  <body class="purchases-design campaign-list-page">
+    <a class="skip-link" href="#campaignList">Saltar al listado de campañas</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a class="is-current" href="discount-campaigns.html" aria-current="page" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+
+      <main id="campaignsPage">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><p class="crumb">Administración</p><h1>Campañas</h1></div>
+          <div class="top-actions">
+            <a class="primary-action topbar-primary" href="discount-campaign-create.html"><span aria-hidden="true">+</span>Nueva campaña</a>
+            <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <section class="workspace campaign-workspace" aria-label="Listado de campañas">
+          <form class="filters campaign-filters" id="campaignFilters" novalidate>
+            <label class="search-filter campaign-search"><span class="filter-label">Buscar</span><span class="search-control"><span aria-hidden="true">⌕</span><input id="campaignSearch" type="search" placeholder="Campaña o producto" autocomplete="off" /></span></label>
+            <label class="campaign-status-filter">Estado
+              <select id="campaignStatus">
+                <option value="">Todos los estados</option>
+                <option value="scheduled">Programada</option>
+                <option value="active">Activa</option>
+                <option value="finished">Finalizada</option>
+                <option value="disabled">Deshabilitada</option>
+              </select>
+            </label>
+            <button class="clear-button campaign-clear" id="clearCampaignFilters" type="reset" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h11a5 5 0 0 1 0 10H9"></path><path d="m8 3-4 4 4 4"></path></svg><span>Limpiar</span></button>
+          </form>
+
+          <section class="table-region campaign-table-region" id="campaignList" aria-label="Listado de campañas" aria-busy="true" tabindex="-1">
+            <div class="campaign-state campaign-loading" id="campaignLoading" role="status">
+              <span class="sr-only">Cargando campañas</span>
+              <div></div><div></div><div></div><div></div>
+            </div>
+            <div class="campaign-state campaign-error" id="campaignError" hidden>
+              <span class="campaign-state-icon" aria-hidden="true">!</span><strong>No pudimos cargar las campañas</strong><p>Revisa la conexión e inténtalo nuevamente.</p><button class="secondary-action" id="retryCampaigns" type="button">Reintentar</button>
+            </div>
+            <div class="campaign-state campaign-forbidden" id="campaignForbidden" hidden>
+              <span class="campaign-state-icon" aria-hidden="true">×</span><strong>No tienes acceso a Campañas</strong><p>Este módulo está disponible únicamente para administradoras.</p><a class="secondary-action" href="../wireframes/index.html#dashboard">Volver al resumen</a>
+            </div>
+            <table id="campaignTable" hidden>
+              <caption class="sr-only">Campañas de descuento con fecha inicial y fecha final independientes.</caption>
+              <thead><tr><th scope="col">Campaña</th><th scope="col">Fecha inicial</th><th scope="col">Fecha final</th><th scope="col">Productos</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Abrir</span></th></tr></thead>
+              <tbody id="campaignRows"></tbody>
+            </table>
+            <div class="empty-state campaign-empty" id="campaignEmpty" hidden><span aria-hidden="true">◇</span><strong>Aún no hay campañas</strong><p>Crea la primera campaña para aplicar descuentos automáticos.</p><a class="primary-action" href="discount-campaign-create.html">Crear campaña</a></div>
+            <div class="empty-state campaign-empty" id="campaignNoResults" hidden><span aria-hidden="true">⌕</span><strong>No encontramos campañas</strong><p>Prueba con otro nombre, producto o estado.</p><button type="button" id="clearCampaignNoResults">Limpiar filtros</button></div>
+          </section>
+
+          <footer class="pagination campaign-pagination" id="campaignPagination" hidden>
+            <p id="campaignPaginationText">Mostrando campañas</p>
+            <div><button id="previousCampaignPage" type="button" aria-label="Página anterior">‹</button><span id="campaignPageButtons"></span><button id="nextCampaignPage" type="button" aria-label="Página siguiente">›</button></div>
+          </footer>
+        </section>
+      </main>
+    </div>
+
+    <div class="campaign-toast" id="campaignToast" role="status" aria-live="polite" hidden></div>
+    <script src="discount-campaign-data.js"></script>
+    <script src="discount-campaigns.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

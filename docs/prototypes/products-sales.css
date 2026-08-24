@@ -1,0 +1,70 @@
+.price-stack{align-items:center;display:inline-flex;flex-direction:column;gap:2px}.price-regular,.price-offer{font-variant-numeric:tabular-nums;white-space:nowrap}.price-regular.is-discounted{color:var(--muted);font-size:12px;text-decoration:line-through}.price-offer{color:var(--brand-deep);font-weight:850}.table-region th:nth-child(5),.table-region th:nth-child(9),.table-region td:nth-child(5),.table-region td:nth-child(9){text-align:center}@media(max-width:780px){.table-region th:nth-child(6),.table-region td:nth-child(6){display:none}}
+
+/* El catálogo mantiene lectura cómoda sin ocultar columnas operativas. */
+.table-region table { min-width: 1030px; }
+.table-region th { font-size: 12px; padding-block: 13px; }
+.table-region td { font-size: 15px; padding-block: 12px; }
+.table-region .product-cell strong { font-size: 15px; }
+.table-region .product-cell small { font-size: 13px; margin-top: 3px; }
+.table-region .price,
+.table-region .price-offer,
+.table-region .quantity,
+.table-region .available,
+.table-region .reserved,
+.table-region .zero { font-size: 15px; }
+.table-region .price-regular.is-discounted { font-size: 13px; }
+
+/* Productos adopta la misma escala compacta y acción de limpieza de Ventas. */
+.filters .product-search { width: 250px; }
+.filters .product-category-filter { width: 155px; }
+.filters .product-availability-filter { width: 204px; }
+.filters .product-size-filter { width: 125px; }
+.filters .product-supplier-filter { width: 150px; }
+.filters .product-category-filter .pretty-select,
+.filters .product-availability-filter .pretty-select,
+.filters .product-size-filter .pretty-select,
+.filters .product-supplier-filter .pretty-select { min-width: 0; width: 100%; }
+.filters .product-clear-button {
+  align-items: center;
+  align-self: end;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 750;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.filters .product-clear-button svg {
+  fill: none;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 17px;
+}
+.filters .product-clear-button:hover {
+  background: var(--brand-deep);
+  border-color: var(--brand-deep);
+  color: #fff;
+}
+.filters .product-clear-button:active { transform: translateY(1px); }
+
+@media (max-width: 780px) {
+  .filters .product-search { width: 100%; }
+  .filters .product-category-filter,
+  .filters .product-availability-filter,
+  .filters .product-size-filter,
+  .filters .product-supplier-filter { width: 100%; }
+  .filters .product-clear-button { grid-column: 1 / -1; justify-self: start; }
+}
+
+@media (max-width: 460px) {
+  .filters .product-clear-button { grid-column: auto; justify-self: stretch; }
+}

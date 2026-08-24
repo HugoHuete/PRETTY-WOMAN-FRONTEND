@@ -1,0 +1,28 @@
+/* El acceso adopta la misma jerarquía serena de los módulos operativos. */
+.login-shell { padding: 28px 40px 22px; }
+.login-brand img { height: 112px; }
+.login-panel { padding: 22px 0 32px; }
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  max-width: 470px;
+  padding: 34px 36px 30px;
+}
+.login-card header { margin-bottom: 26px; }
+.login-card h2 { font-size: 30px; letter-spacing: -.025em; }
+.login-card header > .login-eyebrow {
+  color: var(--brand-deep);
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 7px;
+}
+.submit-button { min-height: 48px; }
+.access-help { border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); }
+
+@media (max-width: 520px) {
+  .login-shell { padding: 24px 16px 18px; }
+  .login-brand img { height: 78px; }
+  .login-panel { padding-top: 26px; }
+  .login-card { border-radius: 12px; padding: 28px 22px 24px; }
+}

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f8f6f7" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Detalle de orden</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="purchase-orders.css" />
+    <link rel="stylesheet" href="purchases-redesign.css" />
+    <link rel="stylesheet" href="purchase-order-detail.css" />
+  </head>
+  <body class="purchases-design purchase-order-detail-page">
+    <a class="skip-link" href="#orderRecord">Saltar al detalle de la orden</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" width="150" height="100" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a class="is-current" href="purchase-orders.html" aria-current="page" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+      <button class="nav-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
+
+      <main id="orderRecord">
+        <header class="topbar purchase-detail-topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div class="detail-heading">
+            <p class="crumb"><a href="purchase-orders.html" aria-label="Regresar al listado de órdenes de compra"><span aria-hidden="true">←</span><span class="crumb-label">Regresar a compras</span></a></p>
+            <h1 id="orderTitle">Detalle de orden</h1>
+          </div>
+          <div class="top-actions">
+            <a class="secondary-action detail-edit-order" id="editOrder" href="purchase-order-create.html">Editar datos</a>
+            <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <div class="workspace order-record-workspace">
+          <div id="orderNotFound" class="empty-state order-not-found" hidden>
+            <strong>No encontramos esta orden.</strong>
+            <p>Puede que el enlace esté incompleto o que la orden ya no exista.</p>
+            <a class="primary-action" href="purchase-orders.html">Volver a órdenes</a>
+          </div>
+          <div id="orderContent">
+            <div class="order-record-layout">
+              <section class="record-section order-data-section" aria-labelledby="orderDataTitle">
+                <header>
+                  <div><h2 id="orderDataTitle">Datos de la orden</h2></div>
+                  <div class="record-order-status" id="recordStatus"></div>
+                </header>
+                <dl class="order-data-grid">
+                  <div><dt>Proveedor</dt><dd id="recordSupplier"></dd></div>
+                  <div><dt>Fecha de compra</dt><dd id="recordDate"></dd></div>
+                  <div><dt>Moneda de compra</dt><dd id="recordCurrency"></dd></div>
+                  <div id="recordRateField"><dt>Tasa de cambio</dt><dd id="recordRate"></dd></div>
+                </dl>
+              </section>
+
+              <aside class="order-financial-summary" aria-labelledby="financialTitle">
+                <section class="purchase-summary-overview">
+                  <h2 id="financialTitle">Resumen de compra</h2>
+                  <dl class="purchase-counts" aria-label="Contenido de la orden">
+                    <div><dt>Productos</dt><dd id="summaryProducts"></dd></div>
+                    <div><dt>Variantes</dt><dd id="summaryVariants"></dd></div>
+                    <div><dt>Unidades</dt><dd id="summaryUnits"></dd></div>
+                  </dl>
+                  <h3 class="purchase-costs-title">Costos</h3>
+                  <dl class="purchase-costs" aria-label="Costos de la orden">
+                    <div><dt>Costo de mercadería</dt><dd id="merchandiseCost"></dd></div>
+                    <div><dt>Envío a bodega</dt><dd id="shippingCost"></dd></div>
+                    <div class="financial-total"><dt>Costo total</dt><dd id="totalCost"></dd></div>
+                  </dl>
+                </section>
+                <div class="order-next-actions" id="orderNextActions">
+                  <div class="next-decision-heading">
+                    <h3>Siguiente decisión</h3>
+                    <p id="orderActionHelp"></p>
+                  </div>
+                  <a class="primary-action record-receipt-action decision-action" id="receiptAction" href="purchase-order-receipt.html">
+                    <strong id="receiptActionLabel">Registrar recepción</strong>
+                    <small>La mercancía pendiente todavía puede llegar.</small>
+                  </a>
+                  <button class="secondary-action decision-action" id="closeShortagesAction" type="button" hidden>
+                    <strong>Cerrar con faltantes</strong>
+                    <small>Confirma que lo pendiente ya no llegará.</small>
+                  </button>
+                  <button class="primary-action decision-action" id="registerRefundAction" type="button" hidden>
+                    <strong>Registrar reembolso</strong>
+                    <small>Deja constancia de la resolución del proveedor.</small>
+                  </button>
+                  <button class="secondary-action decision-action" id="declineRefundAction" type="button" hidden>
+                    <strong>No habrá reembolso</strong>
+                    <small>Cierra la orden con la pérdida pendiente.</small>
+                  </button>
+                </div>
+              </aside>
+
+              <section class="record-section products-record-section" aria-labelledby="productsTitle">
+                <header>
+                  <div><h2 id="productsTitle">Productos de la orden</h2></div>
+                </header>
+                <div class="order-product-groups" id="orderProductRows"></div>
+              </section>
+
+              <section class="record-section shortages-record-section" id="shortagesSection" aria-labelledby="shortagesTitle" tabindex="-1" hidden>
+                <header>
+                  <div>
+                    <h2 id="shortagesTitle">Faltantes</h2>
+                    <p id="shortagesContext"></p>
+                  </div>
+                  <span class="shortage-resolution" id="shortageResolution"></span>
+                </header>
+                <dl class="shortage-financial-summary" aria-label="Resumen financiero de faltantes">
+                  <div><dt>Pérdida total</dt><dd id="shortageLoss"></dd></div>
+                  <div class="shortage-equation-sign" aria-hidden="true">−</div>
+                  <div><dt>Reembolso del proveedor</dt><dd id="supplierRefundTotal"></dd></div>
+                  <div class="shortage-equation-sign" aria-hidden="true">=</div>
+                  <div class="net-loss-result"><dt>Pérdida neta</dt><dd id="netShortageLoss"></dd></div>
+                </dl>
+                <div class="shortage-history" id="shortageHistory"></div>
+              </section>
+
+              <section class="record-section history-record-section" aria-labelledby="historyTitle">
+                <header>
+                  <div>
+                    <h2 id="historyTitle">Historial de la orden</h2>
+                    <p>Movimientos registrados desde la compra.</p>
+                  </div>
+                </header>
+                <div class="order-history-table" role="region" aria-label="Historial de movimientos de la orden" tabindex="0">
+                  <table>
+                    <thead><tr><th scope="col">Fecha</th><th scope="col">Movimiento</th><th scope="col">Detalle</th><th scope="col">Registrado por</th><th scope="col">Referencia</th></tr></thead>
+                    <tbody id="orderHistoryRows"></tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="record-section tracking-record-section" aria-labelledby="trackingTitle">
+                <header>
+                  <div><h2 id="trackingTitle">Números de seguimiento</h2></div>
+                  <button class="primary-action" id="addTracking" type="button">Agregar</button>
+                </header>
+                <div id="trackingList"></div>
+              </section>
+
+              <section class="record-section comment-record-section" id="commentSection" aria-labelledby="commentTitle">
+                <header><div><h2 id="commentTitle">Comentario interno</h2></div></header>
+                <p id="recordComment"></p>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <dialog class="tracking-dialog" id="trackingDialog" aria-labelledby="trackingDialogTitle">
+      <form method="dialog" id="trackingForm" autocomplete="off">
+        <header><div><p class="order-overline">Paquete</p><h2 id="trackingDialogTitle">Agregar tracking</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="tracking-form-fields">
+          <label>Número de seguimiento<input name="number" autocomplete="off" spellcheck="false" required /></label>
+          <label>Transportadora<select name="carrierId" required><option value="">Seleccionar transportadora</option><option value="1">DHL</option><option value="2">Cargo Express</option></select></label>
+          <label>Fecha de envío<input name="sent" type="date" autocomplete="off" /></label>
+          <label>Fecha de llegada a bodega<input name="arrived" type="date" autocomplete="off" /></label>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="save">Guardar tracking</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="tracking-dialog delete-tracking-dialog" id="deleteTrackingDialog" aria-labelledby="deleteTrackingTitle" aria-describedby="deleteTrackingMessage">
+      <form method="dialog">
+        <header><div><p class="order-overline">Número de seguimiento</p><h2 id="deleteTrackingTitle">Eliminar número</h2></div><button class="dialog-close" type="submit" value="cancel" aria-label="Cerrar">×</button></header>
+        <p class="detail-note" id="deleteTrackingMessage">¿Deseas eliminar este número de seguimiento?</p>
+        <footer><button class="secondary-action" type="submit" value="cancel">Cancelar</button><button class="danger-action" type="submit" value="delete">Eliminar número</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="tracking-dialog shortage-dialog" id="shortageDialog" aria-labelledby="shortageDialogTitle" aria-describedby="shortageDialogIntro shortageDialogWarning">
+      <form method="dialog" id="shortageForm" autocomplete="off">
+        <header>
+          <div>
+            <p class="order-overline">Recepción de la orden</p>
+            <h2 id="shortageDialogTitle" tabindex="-1">Cerrar recepción con faltantes</h2>
+            <p class="shortage-dialog-intro" id="shortageDialogIntro">Confirma las unidades que no llegaron antes de cerrar la recepción.</p>
+          </div>
+          <button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button>
+        </header>
+        <div class="shortage-dialog-body">
+          <dl class="shortage-dialog-summary" aria-label="Impacto del cierre">
+            <div><dt>Unidades faltantes</dt><dd id="shortageDialogUnitCount">0</dd></div>
+            <div><dt>Pérdida estimada</dt><dd id="shortageDialogEstimatedLoss">C$ 0.00</dd></div>
+          </dl>
+          <section class="shortage-review-section" aria-labelledby="shortageReviewTitle">
+            <div class="shortage-review-heading">
+              <h3 id="shortageReviewTitle">Detalle de faltantes</h3>
+              <span id="shortageReviewCount"></span>
+            </div>
+            <div class="shortage-review" id="shortageReview"></div>
+          </section>
+          <div class="shortage-close-date">
+            <label for="shortageClosedAt">Fecha del cierre</label>
+            <input id="shortageClosedAt" name="closedAt" type="date" required aria-describedby="shortageDateHelp shortageDateError" />
+            <small id="shortageDateHelp"></small>
+            <small class="shortage-field-error" id="shortageDateError" role="alert" hidden></small>
+          </div>
+          <div class="shortage-dialog-warning" id="shortageDialogWarning">
+            <svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>
+            <div><strong>Este cierre es definitivo</strong><span>Las unidades pendientes se registrarán como faltantes y ya no podrán recibirse en esta orden.</span></div>
+          </div>
+          <p class="shortage-submit-status" id="shortageSubmitStatus" role="status" aria-live="polite" hidden></p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="danger-action" id="confirmShortagesAction" type="submit" value="close">Cerrar recepción</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="tracking-dialog resolution-dialog refund-dialog" id="refundDialog" aria-labelledby="refundDialogTitle" aria-describedby="refundDialogIntro refundRule">
+      <form method="dialog" id="refundForm" autocomplete="off">
+        <header>
+          <div>
+            <p class="order-overline">Resolución de faltantes</p>
+            <h2 id="refundDialogTitle" tabindex="-1">Registrar reembolso</h2>
+            <p class="resolution-dialog-intro" id="refundDialogIntro">Registra el monto que devolvió el proveedor y revisa cómo quedará la pérdida.</p>
+          </div>
+          <button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button>
+        </header>
+        <div class="resolution-dialog-body">
+          <div class="resolution-rule" id="refundRule">
+            <svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>
+            <div><strong>Solo se puede registrar un reembolso</strong><span>Si el monto es parcial, la diferencia quedará como pérdida definitiva.</span></div>
+          </div>
+          <div class="refund-equation" aria-live="polite" aria-label="Cálculo de la pérdida neta">
+            <span><small>Pérdida registrada</small><strong id="refundableLoss"></strong></span>
+            <b aria-hidden="true">−</b>
+            <span><small>Reembolso</small><strong id="refundPreviewAmount">C$ 0.00</strong></span>
+            <b aria-hidden="true">=</b>
+            <span class="refund-net-result" id="refundNetResult"><small>Pérdida definitiva</small><strong id="refundNetPreview"></strong></span>
+          </div>
+          <fieldset class="refund-form-fields">
+            <legend>Datos del reembolso</legend>
+            <label>Monto recibido<div class="refund-amount-input"><span aria-hidden="true">C$</span><input name="amountNio" type="number" min="0.01" step="0.01" inputmode="decimal" aria-describedby="refundAmountHelp" required /></div><small id="refundAmountHelp">No puede superar la pérdida registrada.</small></label>
+            <label>Fecha del reembolso<input name="refundedAt" type="date" /></label>
+            <div class="partial-refund-confirmation" id="partialRefundConfirmation" hidden>
+              <label><input name="confirmPartial" type="checkbox" /><span><strong>Confirmar reembolso parcial</strong>Entiendo que no podré registrar otro reembolso y la diferencia quedará como pérdida.</span></label>
+            </div>
+            <label><span class="resolution-field-label">Referencia <span>(opcional)</span></span><input name="reference" autocomplete="off" placeholder="Ej. CR-001" /></label>
+            <label><span class="resolution-field-label">Comentario <span>(opcional)</span></span><textarea name="comments" rows="3" placeholder="Ej. Crédito recibido del proveedor."></textarea></label>
+          </fieldset>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="primary-action" id="saveRefundAction" type="submit" value="save">Registrar reembolso</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="tracking-dialog resolution-dialog decline-refund-dialog" id="declineRefundDialog" aria-labelledby="declineRefundTitle" aria-describedby="declineRefundIntro declineRefundWarning">
+      <form method="dialog" id="declineRefundForm" autocomplete="off">
+        <header>
+          <div>
+            <p class="order-overline">Resolución de faltantes</p>
+            <h2 id="declineRefundTitle" tabindex="-1">Cerrar sin reembolso</h2>
+            <p class="resolution-dialog-intro" id="declineRefundIntro">Confirma que la gestión con el proveedor terminó sin recuperar dinero.</p>
+          </div>
+          <button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button>
+        </header>
+        <div class="resolution-dialog-body">
+          <dl class="decline-refund-impact" aria-label="Resultado financiero sin reembolso">
+            <div><dt>Unidades faltantes</dt><dd id="declineRefundUnits">0</dd></div>
+            <div><dt>Reembolso</dt><dd>C$ 0.00</dd></div>
+            <div class="decline-loss-result"><dt>Pérdida definitiva</dt><dd id="declineRefundLoss">C$ 0.00</dd></div>
+          </dl>
+          <div class="resolution-rule is-danger" id="declineRefundWarning">
+            <svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>
+            <div><strong>Esta decisión es definitiva</strong><span>La orden se cerrará y ya no será posible registrar un reembolso del proveedor.</span></div>
+          </div>
+          <fieldset class="decline-refund-fields">
+            <legend>Registro de la decisión</legend>
+            <label><span class="resolution-field-label">Comentario <span>(opcional)</span></span><textarea name="comments" rows="3" placeholder="Ej. El proveedor confirmó que no emitirá crédito."></textarea><small>Quedará visible en el historial de la orden.</small></label>
+          </fieldset>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="danger-action" type="submit" value="decline">Cerrar sin reembolso</button></footer>
+      </form>
+    </dialog>
+
+    <div class="sale-toast" id="orderToast" role="status" aria-live="polite" hidden></div>
+    <script src="purchase-order-data.js"></script>
+    <script src="purchase-order-detail.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

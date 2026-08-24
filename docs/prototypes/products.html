@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Productos</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="products-sales.css" />
+    <link rel="stylesheet" href="purchases-redesign.css" />
+    <link rel="stylesheet" href="products-redesign.css" />
+    <link rel="stylesheet" href="table-headings.css" />
+  </head>
+  <body class="purchases-design products-page">
+    <a class="skip-link" href="#catalogo">Saltar al catálogo</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a class="is-current" href="#catalogo" aria-current="page" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez">
+            <span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span>
+          </button>
+        </div>
+      </aside>
+
+      <main id="catalogo">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><p class="crumb">Inventario</p><h1>Productos</h1></div>
+          <div class="top-actions">
+            <button class="theme-button" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <section class="workspace" aria-label="Catálogo de productos">
+          <form class="filters" id="filters">
+            <label class="search-filter product-search"><span class="filter-label">Buscar</span><span class="search-control"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Nombre, referencia o proveedor" autocomplete="off" /></span></label>
+            <label class="product-category-filter"> Categoría <select id="category" data-searchable data-search-placeholder="Buscar categoría…"><option value="">Todas</option><option value="Vestidos">Vestidos</option><option value="Pantalones">Pantalones</option><option value="Blusas">Blusas</option><option value="Faldas">Faldas</option></select></label>
+            <label class="product-availability-filter"> Estado <select id="availability"><option value="">Todos los estados</option><option value="available">Disponible</option><option value="sold">Vendido</option><option value="inactive">Inactivo</option></select></label>
+            <button class="clear-button product-clear-button" id="clearFilters" type="reset"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h11a5 5 0 0 1 0 10H9"></path><path d="m8 3-4 4 4 4"></path></svg><span>Limpiar filtros</span></button>
+          </form>
+
+          <div class="results-toolbar">
+            <p aria-live="polite"><strong id="resultCount">0 productos</strong><span id="resultContext"> encontrados</span></p>
+            <div class="results-actions">
+              <button class="export-button" id="exportProducts" type="button" title="Descargar los productos filtrados para Excel">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 20h14"></path></svg>
+                <span>Descargar Excel</span>
+              </button>
+              <div class="view-switcher" role="group" aria-label="Vista del catálogo">
+                <button type="button" class="is-active" data-view="table" aria-pressed="true"><span aria-hidden="true">☷</span>Tabla</button>
+                <button type="button" data-view="grid" aria-pressed="false"><span aria-hidden="true">▦</span>Cuadrícula</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-region" id="tableView" tabindex="0" aria-label="Resultados del catálogo en tabla">
+            <table>
+              <caption class="sr-only">Resultados del catálogo agrupados por producto.</caption>
+              <thead><tr><th scope="col">Producto</th><th scope="col">Referencia</th><th scope="col">Variantes</th><th scope="col">Precio</th><th scope="col">Disponible</th><th scope="col">Reservado</th><th scope="col">Estado</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+              <tbody id="productRows"></tbody>
+            </table>
+          </div>
+          <div class="product-grid" id="gridView" aria-label="Resultados visuales del catálogo" hidden></div>
+          <div class="empty-state" id="emptyState" hidden><strong>No hay productos que coincidan.</strong><p>Prueba con otra búsqueda o limpia los filtros.</p><button type="button" id="emptyClear">Limpiar filtros</button></div>
+
+          <footer class="pagination"><p id="paginationText">Mostrando 0 productos</p><div><button type="button" disabled aria-label="Página anterior">‹</button><button class="is-page" type="button" aria-current="page">1</button><button type="button" disabled aria-label="Página siguiente">›</button></div></footer>
+        </section>
+      </main>
+    </div>
+    <dialog class="product-dialog" id="productDialog" aria-labelledby="dialogTitle">
+      <header class="dialog-header">
+        <div><p id="dialogKicker">Producto</p><h2 id="dialogTitle">Movimientos</h2></div>
+        <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div id="dialogContent"></div>
+    </dialog>
+    <script src="products-export.js"></script>
+    <script src="products.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

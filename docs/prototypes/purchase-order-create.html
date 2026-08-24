@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>Pretty Woman - Nueva orden</title>
+  <link rel="stylesheet" href="products.css">
+  <link rel="stylesheet" href="products-refinements.css">
+  <link rel="stylesheet" href="purchase-order-create.css">
+  <link rel="stylesheet" href="purchases-redesign.css">
+</head>
+<body class="purchases-design purchase-create-page">
+  <a class="skip-link" href="#newOrder">Saltar a nueva orden</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+      <nav>
+        <p class="nav-section-title">Operación</p>
+        <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+        <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+        <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+        <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+        <p class="nav-section-title">Inventario</p>
+        <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+        <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+        <a class="is-current" href="purchase-orders.html" aria-current="page" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+        <p class="nav-section-title">Administración</p>
+        <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+        <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+      </nav>
+      <div class="sidebar-footer"><button class="profile" type="button"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span>⌄</span></button></div>
+    </aside>
+    <main id="newOrder">
+      <header class="topbar purchase-create-topbar">
+        <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+        <div class="create-heading"><p class="crumb"><a href="purchase-orders.html" id="orderFormBack" aria-label="Regresar al listado de órdenes de compra"><span aria-hidden="true">←</span><span class="crumb-label">Regresar a compras</span></a></p><h1>Nueva orden de compra</h1></div>
+        <div class="top-actions">
+          <span class="save-state" id="saveState" aria-live="polite">Sin cambios pendientes</span>
+          <button class="theme-button" type="button" aria-pressed="false"><span>◐</span><span class="theme-label">Modo oscuro</span></button>
+        </div>
+      </header>
+      <form class="workspace order-create" id="orderForm" novalidate>
+        <section class="error-summary" id="errorSummary" role="alert" tabindex="-1" aria-labelledby="errorSummaryTitle" hidden>
+          <h2 id="errorSummaryTitle">Revisa los datos de la compra</h2>
+          <p>Hay información pendiente antes de continuar a la revisión final.</p>
+          <ul id="errorSummaryList"></ul>
+        </section>
+        <div class="create-layout">
+          <div class="create-main">
+            <section class="form-section">
+              <header><div><h2>Datos de la orden</h2></div></header>
+              <div class="base-fields">
+                <label>Proveedor<select id="supplier" required data-searchable data-search-placeholder="Buscar proveedor…"><option value="">Selecciona un proveedor</option><option value="SOHO">SOHO</option><option value="Shein">Shein</option><option value="Textiles Managua">Textiles Managua</option><option value="Moda Sur">Moda Sur</option></select></label>
+                <label>Moneda de compra<select id="currency"><option value="USD">USD</option><option value="NIO">C$ — compra local</option></select></label>
+                <label id="exchangeRateField">Tasa de cambio <span class="exchange-rate-input"><span aria-hidden="true">C$</span><input id="exchangeRate" type="number" min="0.01" step="0.01" value="36.62" aria-label="Tasa de cambio, córdobas por dólar"></span></label>
+                <label>Envío proveedor → bodega <span class="money-input"><span id="shippingCurrencySymbol" aria-hidden="true">$</span><input id="shipping" type="number" min="0" step="0.01" value="0.00" aria-label="Costo de envío del proveedor a bodega"></span></label>
+                <label class="full-field comment-field">
+                  <span>Comentario interno <small>(opcional)</small></span>
+                  <textarea id="comment" rows="2" maxlength="280" placeholder="Ej. Compra colección agosto" aria-describedby="commentCount"></textarea>
+                  <small id="commentCount">0 de 280 caracteres</small>
+                </label>
+              </div>
+            </section>
+            <section class="form-section items-section" aria-labelledby="orderProductsTitle">
+              <header>
+                <div><h2 id="orderProductsTitle">Productos de la orden</h2></div>
+                <div class="product-actions product-primary-actions">
+                  <button class="secondary-action collapse-products-action" id="collapseProducts" type="button">
+                    <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 10 4-4 4 4M8 14l4 4 4-4"/></svg></span>
+                    <span data-collapse-label>Contraer todos</span>
+                  </button>
+                  <button class="secondary-action import-products-action" id="openCsvImport" type="button">
+                    <span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>
+                    <span>Importar CSV</span>
+                  </button>
+                  <button class="primary-action add-product-action" id="addProduct" type="button"><span aria-hidden="true">+</span> Agregar productos</button>
+                </div>
+              </header>
+              <div id="productEditors"></div>
+            </section>
+          </div>
+          <aside class="create-summary">
+            <section>
+              <h2>Resumen estimado</h2>
+              <dl>
+                <div><dt>Productos</dt><dd id="summaryProducts">2</dd></div>
+                <div><dt>Variantes</dt><dd id="summaryVariants">3</dd></div>
+                <div><dt>Unidades</dt><dd id="summaryUnits">7</dd></div>
+                <div><dt>Mercadería</dt><dd id="summaryMerchandise">$ 56.90</dd></div>
+                <div><dt>Envío proveedor → bodega</dt><dd id="summaryShipping">$ 15.00</dd></div>
+                <div class="summary-total"><dt>Total compra</dt><dd id="summaryTotal">$ 71.90</dd></div>
+              </dl>
+            </section>
+            <p class="summary-note">Los márgenes son estimados con el costo unitario y la tasa indicada. El envío no se distribuye entre las variantes.</p>
+            <button class="primary-action full-action submit-order" type="submit">Revisar compra</button>
+          </aside>
+        </div>
+        <div class="tablet-submit-bar" aria-label="Resumen y acción de la orden">
+          <div><strong id="tabletSummaryTotal">$ 71.90</strong><span id="tabletSummaryMeta">2 productos · 7 unidades</span></div>
+          <button class="primary-action submit-order" type="submit">Revisar compra</button>
+        </div>
+        <p class="form-feedback" id="formFeedback" role="status" aria-live="assertive"></p>
+      </form>
+    </main>
+  </div>
+  <dialog class="csv-import-dialog" id="csvImportDialog" aria-labelledby="csvImportTitle">
+    <form method="dialog" id="csvImportForm">
+      <header class="csv-dialog-header">
+        <div>
+          <p>Importación masiva</p>
+          <h2 id="csvImportTitle">Importar productos desde CSV</h2>
+        </div>
+        <button class="dialog-close" id="closeCsvImport" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div class="csv-dialog-body">
+        <section class="csv-dialog-step">
+          <div class="csv-step-heading">
+            <span>1</span>
+            <div><h3>Selecciona el archivo</h3><p>Una fila por variante. El código del proveedor agrupa las variantes del mismo producto.</p></div>
+          </div>
+          <input id="csvFile" type="file" accept=".csv,text/csv" hidden>
+          <label class="csv-dropzone" id="csvDropzone" for="csvFile">
+            <span class="csv-upload-icon" aria-hidden="true">⇧</span>
+            <span class="csv-file-copy">
+              <strong id="csvFileLabel">Seleccionar archivo CSV</strong>
+              <small id="csvFileHelp">También puedes arrastrarlo aquí · Máximo 1 MB</small>
+            </span>
+            <span class="csv-file-action" aria-hidden="true">Seleccionar</span>
+          </label>
+          <div class="csv-file-settings">
+            <fieldset class="csv-delimiter-options">
+              <legend>Delimitador del archivo</legend>
+              <div>
+                <label><input type="radio" name="csvDelimiter" value="," checked><span><strong>Coma</strong><code>,</code></span></label>
+                <label><input type="radio" name="csvDelimiter" value=";"><span><strong>Punto y coma</strong><code>;</code></span></label>
+              </div>
+              <p id="csvDelimiterStatus">Lo detectaremos automáticamente al cargar el archivo.</p>
+            </fieldset>
+            <button class="template-download" id="downloadCsvTemplate" type="button">Descargar plantilla con este delimitador</button>
+          </div>
+        </section>
+        <section class="csv-dialog-step csv-preview" id="csvPreview" aria-live="polite">
+          <div class="csv-step-heading">
+            <span>2</span>
+            <div><h3>Revisa el contenido</h3><p>Validaremos productos, variantes y campos obligatorios antes de importar.</p></div>
+          </div>
+          <div class="csv-empty-preview" id="csvEmptyPreview"><strong>Aún no hay un archivo seleccionado</strong><span>Al cargarlo verás aquí el resumen y cualquier fila que necesite corrección.</span></div>
+          <div id="csvPreviewContent" hidden>
+            <div class="csv-preview-summary" id="csvPreviewSummary"></div>
+            <div class="csv-errors" id="csvErrors" hidden>
+              <div><strong id="csvErrorTitle"></strong><span>Corrige el archivo y vuelve a seleccionarlo. No se importó ningún dato.</span></div>
+              <div class="csv-errors-table-wrap">
+                <table>
+                  <thead><tr><th>Fila</th><th>Campo</th><th>Problema</th></tr></thead>
+                  <tbody id="csvErrorRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="csv-dialog-step csv-import-options">
+          <div class="csv-step-heading">
+            <span>3</span>
+            <div><h3>Elige cómo agregarlo</h3><p>La orden no cambiará hasta que confirmes la importación.</p></div>
+          </div>
+          <div class="csv-mode-options">
+            <label><input type="radio" name="csvImportMode" value="combine" checked><span><strong>Combinar con la orden</strong><small>Conserva lo capturado y agrega productos o variantes nuevas.</small></span></label>
+            <label class="is-destructive"><input type="radio" name="csvImportMode" value="replace"><span><strong>Reemplazar productos</strong><small>Quita los productos actuales y usa solamente el archivo.</small></span></label>
+          </div>
+        </section>
+      </div>
+      <footer class="csv-dialog-footer">
+        <button class="secondary-action" id="cancelCsvImport" type="button">Cancelar</button>
+        <button class="primary-action" id="confirmCsvImport" type="button" disabled>Importar productos</button>
+      </footer>
+    </form>
+  </dialog>
+  <dialog class="confirm-purchase-dialog" id="confirmPurchaseDialog" aria-labelledby="confirmPurchaseTitle" aria-describedby="confirmPurchaseDescription">
+    <form method="dialog" id="confirmPurchaseForm">
+      <header>
+        <div><p>Confirmación final</p><h2 id="confirmPurchaseTitle">Revisar y confirmar compra</h2></div>
+        <button class="dialog-close" id="closeConfirmPurchase" type="button" aria-label="Cerrar revisión">×</button>
+      </header>
+      <div class="confirm-purchase-body">
+        <p id="confirmPurchaseDescription">Comprueba los datos principales. Al confirmar se registrará una orden activa y quedará disponible para recepción.</p>
+        <dl class="confirm-purchase-facts">
+          <div><dt>Proveedor</dt><dd id="confirmSupplier"></dd></div>
+          <div><dt>Moneda</dt><dd id="confirmCurrency"></dd></div>
+          <div><dt>Productos</dt><dd id="confirmProducts"></dd></div>
+          <div><dt>Variantes</dt><dd id="confirmVariants"></dd></div>
+          <div><dt>Unidades</dt><dd id="confirmUnits"></dd></div>
+          <div><dt>Mercadería</dt><dd id="confirmMerchandise"></dd></div>
+          <div><dt>Envío a bodega</dt><dd id="confirmShipping"></dd></div>
+          <div class="confirm-total"><dt>Total de compra</dt><dd id="confirmTotal"></dd></div>
+        </dl>
+        <div class="confirm-rate-context" id="confirmRateContext"></div>
+        <div class="confirmation-warning"><strong>Esta acción confirma la compra.</strong><span>Después podrás registrar seguimientos y recepciones desde el detalle de la orden.</span></div>
+      </div>
+      <footer>
+        <button class="secondary-action" id="backToOrder" type="button">Volver a editar</button>
+        <button class="primary-action" id="confirmPurchase" type="submit">Confirmar compra</button>
+      </footer>
+    </form>
+  </dialog>
+  <dialog class="replace-products-dialog" id="replaceProductsDialog" aria-labelledby="replaceProductsTitle" aria-describedby="replaceProductsDescription">
+    <form method="dialog" id="replaceProductsForm">
+      <header><div><p>Importación CSV</p><h2 id="replaceProductsTitle">Reemplazar productos capturados</h2></div><button class="dialog-close" id="closeReplaceProducts" type="button" aria-label="Cerrar confirmación">×</button></header>
+      <div class="replace-products-body">
+        <p id="replaceProductsDescription"></p>
+        <div class="replacement-impact" id="replacementImpact"></div>
+        <p>Podrás deshacer el reemplazo inmediatamente después de importar.</p>
+      </div>
+      <footer><button class="secondary-action" id="cancelReplaceProducts" type="button">Conservar productos</button><button class="danger-action" id="confirmReplaceProducts" type="submit">Reemplazar productos</button></footer>
+    </form>
+  </dialog>
+  <dialog class="batch-add-dialog" id="batchAddDialog" aria-labelledby="batchAddTitle">
+    <form method="dialog" id="batchAddForm">
+      <header>
+        <div>
+          <p id="batchAddContext">Carga rápida</p>
+          <h2 id="batchAddTitle">Agregar productos</h2>
+        </div>
+        <button class="dialog-close" id="closeBatchAdd" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div class="batch-add-body">
+        <p id="batchAddDescription">Crea varios productos vacíos para completarlos en la orden.</p>
+        <label for="batchAddQuantity">¿Cuántos deseas agregar?</label>
+        <div class="quantity-stepper">
+          <button id="decreaseBatchQuantity" type="button" aria-label="Disminuir cantidad">−</button>
+          <input id="batchAddQuantity" type="number" min="1" max="50" value="1" inputmode="numeric">
+          <button id="increaseBatchQuantity" type="button" aria-label="Aumentar cantidad">+</button>
+        </div>
+        <small id="batchAddHelp">Puedes agregar hasta 50 productos a la vez.</small>
+      </div>
+      <footer>
+        <button class="secondary-action" id="cancelBatchAdd" type="button">Cancelar</button>
+        <button class="primary-action" id="confirmBatchAdd" type="submit">Agregar 1 producto</button>
+      </footer>
+    </form>
+  </dialog>
+  <div class="undo-notice" id="undoNotice" role="status" aria-live="polite" hidden>
+    <span id="undoMessage"></span>
+    <button id="undoRemoval" type="button">Deshacer</button>
+    <button id="dismissUndo" type="button" aria-label="Cerrar aviso">×</button>
+  </div>
+  <script src="purchase-order-data.js"></script>
+  <script src="purchase-order-create.js"></script>
+  <script src="prototype-shell.js"></script>
+</body>
+</html>

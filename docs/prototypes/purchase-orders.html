@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>Pretty Woman - Órdenes de compra</title>
+  <link rel="stylesheet" href="products.css">
+  <link rel="stylesheet" href="products-refinements.css">
+  <link rel="stylesheet" href="purchase-orders.css">
+  <link rel="stylesheet" href="purchases-redesign.css">
+  <link rel="stylesheet" href="table-headings.css">
+</head>
+<body class="purchases-design purchase-orders-page">
+  <a class="skip-link" href="#ordersList">Saltar a órdenes</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+      <nav>
+        <p class="nav-section-title">Operación</p>
+        <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+        <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+        <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+        <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+        <p class="nav-section-title">Inventario</p>
+        <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+        <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+        <a class="is-current" href="#orders" aria-current="page" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+        <p class="nav-section-title">Administración</p>
+        <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+        <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="profile" type="button"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span>⌄</span></button>
+      </div>
+    </aside>
+
+    <main id="orders">
+      <header class="topbar">
+        <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+        <div><p class="crumb">Inventario</p><h1>Órdenes de compra</h1></div>
+        <div class="top-actions">
+          <a class="primary-action topbar-primary" href="purchase-order-create.html"><span aria-hidden="true">+</span> Nueva orden</a>
+          <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+        </div>
+      </header>
+
+      <section class="workspace orders-workspace">
+        <form class="filters orders-filters" id="orderFilters" novalidate>
+          <label class="orders-supplier-filter">Proveedor
+            <select id="orderSupplier"><option value="">Todos</option><option>SOHO</option><option>Shein</option><option>Textiles Managua</option><option>Moda Sur</option></select>
+          </label>
+          <label class="orders-status-filter">Estado
+            <select id="orderStatus"><option value="">Todos</option><option value="draft">Borrador</option><option value="transit">En tránsito</option><option value="partial">Recepción parcial</option><option value="pending-refund">Reembolso pendiente</option><option value="received">Recibida</option></select>
+          </label>
+          <label class="orders-date">Fecha inicial<input id="orderDateFrom" type="date" aria-describedby="orderDateError"></label>
+          <label class="orders-date">Fecha final<input id="orderDateTo" type="date" aria-describedby="orderDateError"></label>
+          <label class="orders-sort-filter">Ordenar por
+            <select id="orderSort"><option value="recent">Más recientes</option><option value="oldest">Más antiguas</option><option value="total-desc">Mayor total</option><option value="total-asc">Menor total</option></select>
+          </label>
+          <button class="clear-button orders-clear-button" id="clearOrderFilters" type="reset" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h11a5 5 0 0 1 0 10H9"></path><path d="m8 3-4 4 4 4"></path></svg><span>Limpiar</span></button>
+          <p class="orders-date-error" id="orderDateError" role="alert" hidden>La fecha inicial no puede ser posterior a la fecha final.</p>
+        </form>
+
+        <section class="table-region orders-table-region" id="ordersList" aria-label="Listado de órdenes de compra" aria-busy="true" tabindex="-1">
+          <div class="orders-state orders-loading-state" id="orderLoading" role="status">
+            <span class="sr-only">Cargando órdenes de compra</span>
+            <div class="orders-skeleton-row"></div><div class="orders-skeleton-row"></div><div class="orders-skeleton-row"></div><div class="orders-skeleton-row"></div>
+          </div>
+          <div class="orders-state orders-error-state" id="orderError" hidden>
+            <strong>No pudimos cargar las órdenes</strong>
+            <p>Revisa tu conexión e inténtalo nuevamente.</p>
+            <button class="secondary-action" id="retryOrders" type="button">Reintentar</button>
+          </div>
+          <div class="orders-state orders-permission-state" id="orderForbidden" hidden>
+            <strong>No tienes acceso a compras</strong>
+            <p>Solicita a una administradora que revise los permisos de tu cuenta.</p>
+            <a class="secondary-action" href="../wireframes/index.html#dashboard">Volver al resumen</a>
+          </div>
+          <table id="ordersTable" hidden>
+            <caption class="sr-only">Órdenes de compra. Los totales principales se expresan en córdobas y conservan el valor de origen.</caption>
+            <thead><tr><th>Orden y proveedor</th><th>Fecha</th><th>Monto (C$)</th><th>Costo envío (C$)</th><th>Total (C$)</th><th>Estado</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+            <tbody id="orderRows"></tbody>
+          </table>
+          <div class="empty-state orders-empty-state" id="orderEmpty" hidden>
+            <strong id="orderEmptyTitle">No hay órdenes que coincidan</strong>
+            <p id="orderEmptyDescription">Prueba con otros filtros o restablece los valores.</p>
+            <button id="clearEmptyFilters" type="button">Limpiar filtros</button>
+          </div>
+        </section>
+
+        <footer class="pagination orders-pagination" id="ordersPagination" hidden>
+          <p id="orderPaginationText" aria-live="polite">Mostrando órdenes</p>
+          <div class="orders-page-controls" aria-label="Paginación de órdenes">
+            <button id="previousOrderPage" type="button" aria-label="Página anterior">‹</button>
+            <span class="orders-page-buttons" id="orderPageButtons"></span>
+            <button id="nextOrderPage" type="button" aria-label="Página siguiente">›</button>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </div>
+  <script src="purchase-order-data.js"></script>
+  <script src="purchase-orders.js"></script>
+  <script src="prototype-shell.js"></script>
+</body>
+</html>

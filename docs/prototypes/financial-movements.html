@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movimientos financieros · Pretty Woman</title>
+    <link rel="stylesheet" href="products.css">
+    <link rel="stylesheet" href="finances.css">
+    <link rel="stylesheet" href="sales-redesign.css">
+  </head>
+  <body class="finance-page">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+        <nav>
+          <a href="sales.html"><svg class="nav-icon"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="products.html"><svg class="nav-icon"><use href="prototype-icons.svg#package"></use></svg>Inventario</a>
+          <a href="clients.html"><svg class="nav-icon"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <a href="purchase-orders.html"><svg class="nav-icon"><use href="prototype-icons.svg#truck"></use></svg>Compras</a>
+          <a class="is-current" aria-current="page" href="finances.html"><svg class="nav-icon"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+        </nav>
+        <div class="sidebar-footer"><button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button></div>
+      </aside>
+      <main id="main-content">
+        <header class="topbar"><button class="menu-button" type="button" aria-label="Abrir menú">☰</button><div><p class="crumb">Administración / Finanzas</p><h1>Movimientos financieros</h1></div><div class="top-actions"><button class="theme-button" type="button" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div></header>
+        <section class="workspace">
+          <div class="page-intro"><div><h2>Historial consolidado</h2><p>Consulta toda la actividad financiera en un solo lugar. Ventas y préstamos se registran automáticamente; los gastos, retiros, inversiones e ingresos extraordinarios se agregan aquí.</p></div><button class="primary-action" type="button" id="openMovementDialog">Registrar movimiento</button></div>
+          <nav class="finance-local-nav" aria-label="Secciones de finanzas"><a href="finances.html">Resumen</a><a aria-current="page" href="financial-movements.html">Movimientos</a><a href="loans.html">Préstamos</a></nav>
+          <form class="filters" id="movementFilters">
+            <label>Período<select name="period"><option value="all">Todo el historial</option><option value="2026-08">Agosto 2026</option><option value="2026-07">Julio 2026</option></select></label>
+            <label>Tipo<select name="type"><option value="">Todos los tipos</option><option value="expense">Gasto</option><option value="withdrawal">Retiro</option><option value="investment">Inversión</option><option value="income">Ingreso extraordinario</option></select></label>
+            <label>Origen<select name="origin"><option value="">Todos</option><option value="manual">Manual</option><option value="sale">Venta</option><option value="loan">Préstamo</option></select></label>
+            <label class="search-control"><span aria-hidden="true">⌕</span><input name="search" type="search" placeholder="Buscar concepto o categoría"></label>
+          </form>
+          <div class="ledger-layout is-no-detail" id="ledgerLayout">
+            <div class="table-region"><table class="ledger-table"><caption><span id="movementCount">0 movimientos</span><span>Se muestran todos los orígenes; usa los filtros para acotar la consulta. Haz clic en una fila para ver el detalle.</span></caption><thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>Origen</th><th>Entrada</th><th>Salida</th></tr></thead><tbody id="movementRows"></tbody></table><div class="finance-empty" id="movementEmpty" hidden>No hay movimientos con esos filtros. Ajusta la búsqueda o el período.</div></div>
+            <aside class="ledger-detail" id="movementDetail" hidden></aside>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog class="finance-dialog" id="movementDialog">
+      <header><div><p>Movimiento manual</p><h2>Registrar movimiento</h2></div><button class="dialog-close" type="button" aria-label="Cerrar">×</button></header>
+      <form class="finance-form" id="movementForm"><label>Tipo<select name="type" id="movementType"><option value="expense">Gasto</option><option value="withdrawal">Retiro</option><option value="investment">Inversión</option><option value="income">Ingreso extraordinario</option></select></label><label>Monto<input name="amount" type="number" min="0.01" step="0.01" required></label><label>Concepto<input name="concept" required placeholder="Ej. Compra de bolsas"></label><label id="categoryField">Categoría<input name="category" placeholder="Ej. Empaque"></label><label id="purposeField" hidden>Propósito<input name="purpose" placeholder="Ej. Retiro de socia"></label><p class="form-error" id="movementError" hidden></p><div class="dialog-actions"><button class="secondary-action" type="button" data-close-dialog>Cancelar</button><button class="primary-action" type="submit">Guardar movimiento</button></div></form>
+    </dialog>
+    <div class="finance-toast" id="financeToast" role="status" hidden></div>
+    <script src="finance-data.js"></script>
+    <script src="financial-movements.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pretty Woman — Iniciar sesión</title>
+  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="login-refinements.css">
+</head>
+<body>
+  <main class="login-shell">
+    <a class="login-brand" href="products.html" aria-label="Pretty Woman Boutique">
+      <img src="../../assets/brand/Pink_Logo_v1.png" alt="Pretty Woman Boutique">
+    </a>
+    <section class="login-panel" aria-labelledby="login-title">
+      <div class="login-card">
+        <header>
+          <p class="login-eyebrow">Acceso al equipo</p>
+          <h2 id="login-title">Inicia sesión</h2>
+          <p>Ingresa con tu correo y contraseña.</p>
+        </header>
+        <form id="loginForm" novalidate>
+          <label for="email">Correo electrónico</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="nombre@prettywoman.com" required>
+          <p class="field-error" id="emailError" hidden></p>
+          <div class="password-label"><label for="password">Contraseña</label><a href="#recover" id="recoverLink">¿Olvidaste tu contraseña?</a></div>
+          <div class="password-control"><input id="password" name="password" type="password" autocomplete="current-password" required><button id="passwordToggle" type="button" aria-label="Mostrar contraseña" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12s-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"></path><circle cx="12" cy="12" r="2.7"></circle></svg></button></div>
+          <p class="field-error" id="passwordError" hidden></p>
+          <label class="remember"><input type="checkbox" name="remember"><span>Recordarme en este equipo</span></label>
+          <button class="submit-button" type="submit">Ingresar</button>
+          <p class="form-feedback" id="loginFeedback" role="status" aria-live="polite"></p>
+        </form>
+        <aside class="access-help" id="recover"><strong>¿Necesitas acceso?</strong><span>Comunícate con la administradora de la boutique para crear o recuperar tu cuenta.</span></aside>
+      </div>
+    </section>
+    <footer>Pretty Woman Boutique · Acceso para el equipo</footer>
+  </main>
+  <script src="login.js"></script>
+</body>
+</html>

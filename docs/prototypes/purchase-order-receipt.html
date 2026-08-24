@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>Pretty Woman - Registrar recepción</title>
+  <link rel="stylesheet" href="products.css">
+  <link rel="stylesheet" href="products-refinements.css">
+  <link rel="stylesheet" href="purchases-redesign.css">
+  <link rel="stylesheet" href="purchase-order-receipt.css">
+  <link rel="stylesheet" href="purchase-order-receipt-products.css">
+</head>
+<body class="purchases-design purchase-receipt-page">
+  <a class="skip-link" href="#receipt">Saltar a recepción</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique"></div>
+      <nav>
+        <p class="nav-section-title">Operación</p>
+        <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+        <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+        <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+        <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+        <p class="nav-section-title">Inventario</p>
+        <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+        <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+        <a class="is-current" href="purchase-orders.html" aria-current="page" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+        <p class="nav-section-title">Administración</p>
+        <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+        <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+      </nav>
+      <div class="sidebar-footer"><button class="profile" type="button"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span>⌄</span></button></div>
+    </aside>
+    <main id="receipt">
+      <header class="topbar purchase-receipt-topbar">
+        <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+        <div class="receipt-title-group">
+          <p class="crumb"><a href="purchase-order-detail.html?id=OC-0048" id="receiptBackLink"><span aria-hidden="true">←</span> Regresar a orden #OC-0048</a></p>
+          <h1>Registrar recepción</h1>
+        </div>
+        <div class="top-actions"><button class="theme-button" type="button" aria-pressed="false"><span>◐</span><span class="theme-label">Modo oscuro</span></button></div>
+      </header>
+      <form class="workspace receipt-workspace" id="receiptForm">
+        <div class="receipt-layout">
+          <div class="receipt-main">
+            <section class="receipt-section receipt-shipping-section">
+              <header class="receipt-section-heading"><h2>Datos de la recepción</h2></header>
+              <div class="receipt-date"><label>Fecha de recepción<input name="receivedAt" type="date" value="2026-07-15" required></label></div>
+              <div class="package-list" id="packageList">
+                <div class="package-row"><label class="package-select"><input class="package-check" type="checkbox" checked><strong>SOHO-782190</strong></label><span class="package-fields"><label><span>Peso <small>(lb)</small></span><input class="package-weight" inputmode="decimal" value="8.5"></label><label><span>Envío <small>(USD)</small></span><span class="currency-input"><span aria-hidden="true">$</span><input class="package-shipping" inputmode="decimal" value="24.00" aria-label="Envío en USD"></span></label></span></div>
+                <div class="package-row"><label class="package-select"><input class="package-check" type="checkbox"><strong>SOHO-782191</strong></label><span class="package-fields"><label><span>Peso <small>(lb)</small></span><input class="package-weight" inputmode="decimal" disabled></label><label><span>Envío <small>(USD)</small></span><span class="currency-input"><span aria-hidden="true">$</span><input class="package-shipping" inputmode="decimal" disabled aria-label="Envío en USD"></span></label></span></div>
+              </div>
+              <label class="direct-shipping" id="directShipping" hidden>Envío bodega → Nicaragua (USD)<input id="directShippingCost" inputmode="decimal" value="18.00"><small>Esta orden no tiene tracking; el costo se registra directamente en la recepción.</small></label>
+            </section>
+            <section class="receipt-section receipt-products-section">
+              <header class="receipt-section-heading products-heading"><h2>Prendas recibidas</h2><button class="primary-action compact-action" id="fillPendingAction" type="button">Recibir todo</button></header>
+              <p class="receipt-products-help"><strong>Factor de envío:</strong> se usa para distribuir el costo del flete entre las variantes.</p>
+              <div id="receiptProducts"></div>
+            </section>
+            <section class="receipt-section receipt-comment"><label><span class="receipt-field-label">Comentario de recepción <small>(opcional)</small></span><textarea name="comments" rows="3" placeholder="Ej. El segundo paquete continúa en tránsito"></textarea></label></section>
+          </div>
+          <aside class="receipt-summary" aria-labelledby="receiptSummaryTitle">
+            <section>
+              <h2 id="receiptSummaryTitle">Resumen de recepción</h2>
+              <dl class="receipt-summary-counts">
+                <div id="packageCountRow"><dt>Paquetes</dt><dd id="packageCount">1 de 2</dd></div>
+                <div><dt>Unidades</dt><dd id="unitCount">7</dd></div>
+                <div><dt>Sobrantes</dt><dd id="surplusCount">0</dd></div>
+              </dl>
+            </section>
+            <div class="confirmation-note"><strong>Al confirmar</strong><span id="confirmationText">7 unidades quedarán disponibles para venta. La orden pasará a recepción parcial.</span></div>
+            <p class="receipt-feedback" id="receiptFeedback" role="status" aria-live="polite"></p>
+            <button class="primary-action receipt-confirm" type="submit">Confirmar recepción</button>
+          </aside>
+        </div>
+      </form>
+    </main>
+  </div>
+  <script src="purchase-order-data.js"></script>
+  <script src="purchase-order-receipt.js"></script>
+  <script src="prototype-shell.js"></script>
+</body>
+</html>

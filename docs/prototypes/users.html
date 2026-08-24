@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Usuarios</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="users.css" />
+    <link rel="stylesheet" href="navigation-redesign.css" />
+    <link rel="stylesheet" href="table-headings.css" />
+  </head>
+  <body class="users-page">
+    <a class="skip-link" href="#usersPage">Saltar a usuarios</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+          <a class="is-current" href="#usersPage" aria-current="page" title="Usuarios" data-label="Usuarios"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Usuarios</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+
+      <main id="usersPage">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><p class="crumb">Administración</p><h1>Usuarios</h1></div>
+          <div class="top-actions">
+            <button class="primary-action topbar-primary" id="createUser" type="button"><span aria-hidden="true">+</span> Nuevo usuario</button>
+            <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <section class="workspace users-workspace" aria-label="Gestión de usuarios">
+          <form class="filters user-filters" id="userFilters">
+            <label class="user-search"><span>Buscar usuario</span><span class="search-control"><span aria-hidden="true">⌕</span><input id="userSearch" type="search" placeholder="Nombre o correo" autocomplete="off" /></span></label>
+            <label>Rol<select id="userRole"><option value="">Todos los roles</option><option value="admin">Administradora</option><option value="seller">Vendedora</option></select></label>
+            <label>Estado<select id="userStatus"><option value="">Todos los estados</option><option value="active">Activo</option><option value="disabled">Deshabilitado</option></select></label>
+            <button class="clear-button" id="clearUserFilters" type="reset" hidden>Limpiar filtros</button>
+          </form>
+
+          <section class="users-list" id="usersList" aria-label="Listado de usuarios">
+            <div class="table-region users-table-region" id="usersTableRegion">
+              <table>
+                <caption class="sr-only">Usuarios con rol, estado y acciones.</caption>
+                <thead><tr><th scope="col">Usuario</th><th scope="col">Correo</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+                <tbody id="userRows"></tbody>
+              </table>
+            </div>
+            <div class="user-empty-state" id="userEmptyState" hidden><span aria-hidden="true">◎</span><strong id="userEmptyTitle">No hay usuarios registrados</strong><p id="userEmptyText">Crea el primer usuario para darle acceso al sistema.</p><button class="primary-action" id="userEmptyAction" type="button">Nuevo usuario</button></div>
+          </section>
+
+          <footer class="pagination users-pagination" id="usersPagination"><p id="userPaginationText">Mostrando 0 usuarios</p><div><button id="previousUserPage" type="button" aria-label="Página anterior">‹</button><span class="user-page-number" id="userPageNumber">1</span><button id="nextUserPage" type="button" aria-label="Página siguiente">›</button></div></footer>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="user-dialog" id="userDialog" aria-labelledby="userDialogTitle" aria-describedby="userFormMessage">
+      <form id="userForm" novalidate>
+        <header class="user-dialog-header"><div><p id="userDialogKicker">Equipo</p><h2 id="userDialogTitle">Nuevo usuario</h2></div><button class="dialog-close" type="button" data-close-user aria-label="Cerrar">×</button></header>
+        <div class="user-dialog-body">
+          <div class="user-form-grid">
+            <label class="user-field-wide">Nombre completo<input name="name" required maxlength="120" autocomplete="name" /><span class="user-field-error" data-error-for="name"></span></label>
+            <label class="user-field-wide">Correo electrónico<input name="email" type="email" required maxlength="160" autocomplete="email" placeholder="nombre@prettywoman.com" /><span class="user-field-error" data-error-for="email"></span></label>
+            <label>Rol<select name="role" required><option value="seller">Vendedora</option><option value="admin">Administradora</option></select><span class="user-field-error" data-error-for="role"></span></label>
+            <label>Contraseña temporal<input name="password" type="password" minlength="8" autocomplete="new-password" /><small id="userPasswordHint">Mínimo 8 caracteres.</small><span class="user-field-error" data-error-for="password"></span></label>
+          </div>
+          <p class="user-form-message" id="userFormMessage" role="alert"></p>
+        </div>
+        <footer class="user-dialog-footer"><button class="secondary-action" type="button" data-close-user>Cancelar</button><button class="primary-action" type="submit" id="saveUser">Guardar usuario</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="user-status-dialog" id="userStatusDialog" aria-labelledby="userStatusTitle" aria-describedby="userStatusSummary">
+      <form id="userStatusForm">
+        <header class="user-dialog-header"><div><p>Acción administrativa</p><h2 id="userStatusTitle">Deshabilitar usuario</h2></div><button class="dialog-close" type="button" data-close-user-status aria-label="Cerrar">×</button></header>
+        <div class="user-dialog-body"><p class="user-status-summary" id="userStatusSummary"></p></div>
+        <footer class="user-dialog-footer"><button class="secondary-action" type="button" data-close-user-status>Volver</button><button class="danger-action" type="submit" id="confirmUserStatus">Deshabilitar usuario</button></footer>
+      </form>
+    </dialog>
+
+    <div class="user-toast" id="userToast" role="status" aria-live="polite" hidden></div>
+    <script src="users.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

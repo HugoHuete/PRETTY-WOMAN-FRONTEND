@@ -1,0 +1,31 @@
+/* Shared table heading treatment: the same quiet pink band and type scale
+   keeps operational lists recognizable across modules. */
+.sales-index-page .sales-table-region > table > thead > tr > th,
+.clients-page .clients-list > table > thead > tr > th,
+.products-page .table-region > table > thead > tr > th,
+.purchase-orders-page .orders-table-region > table > thead > tr > th,
+.campaign-list-page .campaign-table-region > table > thead > tr > th,
+.shipments-page .shipments-table-region > table > thead > tr > th,
+.incidents-page .incident-table-region > table > thead > tr > th {
+  background: var(--brand-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line));
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: .045em;
+  padding-bottom: 14px;
+  padding-top: 14px;
+  text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .sales-index-page .sales-table-region > table > thead > tr > th,
+:root[data-theme="dark"] .clients-page .clients-list > table > thead > tr > th,
+:root[data-theme="dark"] .products-page .table-region > table > thead > tr > th,
+:root[data-theme="dark"] .purchase-orders-page .orders-table-region > table > thead > tr > th,
+:root[data-theme="dark"] .campaign-list-page .campaign-table-region > table > thead > tr > th,
+:root[data-theme="dark"] .shipments-page .shipments-table-region > table > thead > tr > th,
+:root[data-theme="dark"] .incidents-page .incident-table-region > table > thead > tr > th {
+  background: var(--brand-soft);
+  color: var(--ink);
+}

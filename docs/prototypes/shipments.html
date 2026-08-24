@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Envíos</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="shipments.css" />
+    <link rel="stylesheet" href="navigation-redesign.css" />
+    <link rel="stylesheet" href="table-headings.css" />
+  </head>
+  <body class="shipments-page">
+    <!--
+      THESIS: Una cola de entregas que convierte cada envío en una siguiente acción clara.
+      OWN-WORLD: Banda rosada de estados, tabla operativa compacta y detalle persistente sin tarjetas decorativas.
+      STORY: La usuaria encuentra el envío, confirma dónde está y actualiza su siguiente estado.
+      FIRST VIEWPORT: Título y acción para volver a ventas arriba; estados, filtros, tabla y detalle entran en la primera lectura.
+      FORM: Tabla + expediente lateral, modo Operate, semilla fija para el prototipo.
+    -->
+    <a class="skip-link" href="#shipmentsPage">Saltar a envíos</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a href="sales.html" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a class="is-current" href="#shipmentsPage" aria-current="page" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+          <a href="users.html" title="Usuarios" data-label="Usuarios"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Usuarios</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+
+      <main id="shipmentsPage">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><p class="crumb">Operación</p><h1>Envíos</h1></div>
+          <div class="top-actions">
+            <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <section class="workspace shipments-workspace" aria-label="Gestión de envíos">
+          <section class="shipment-status-rail" aria-label="Resumen de envíos">
+            <div><span>Por preparar</span><strong id="shipmentPendingCount">0</strong><small>requieren asignación</small></div>
+            <div><span>Listas para despacho</span><strong id="shipmentReadyCount">0</strong><small>esperando salida</small></div>
+            <div><span>En tránsito</span><strong id="shipmentSentCount">0</strong><small>en camino</small></div>
+            <div><span>Entregadas</span><strong id="shipmentDeliveredCount">0</strong><small>completadas</small></div>
+          </section>
+
+          <form class="filters shipment-filters" id="shipmentFilters">
+            <label class="shipment-search"><span>Buscar envío</span><span class="search-control"><span aria-hidden="true">⌕</span><input id="shipmentSearch" type="search" placeholder="Código, venta o clienta" autocomplete="off" /></span></label>
+            <label>Agencia<select id="shipmentAgency"><option value="">Todas las agencias</option><option value="MANDA">MANDA</option><option value="Cargo Express">Cargo Express</option><option value="Entrega local">Entrega local</option></select></label>
+            <label>Estado<select id="shipmentStatus"><option value="">Todos los estados</option><option value="pending">Por preparar</option><option value="ready">Lista para despacho</option><option value="sent">En tránsito</option><option value="delivered">Entregada</option><option value="failed">Entrega fallida</option><option value="cancelled">Cancelada</option></select></label>
+            <button class="clear-button" id="clearShipmentFilters" type="reset" hidden>Limpiar filtros</button>
+          </form>
+
+          <div class="shipments-layout">
+            <section class="shipments-list" aria-label="Listado de envíos">
+              <div class="results-toolbar"><p><strong id="shipmentResultCount">0 envíos</strong> encontrados</p><p class="results-hint">Selecciona una fila para ver el detalle</p></div>
+              <div class="table-region shipments-table-region" id="shipmentTableRegion" tabindex="0">
+                <table>
+                  <caption class="sr-only">Envíos de ventas</caption>
+                  <thead><tr><th scope="col">Envío</th><th scope="col">Venta y clienta</th><th scope="col">Destino</th><th scope="col">Agencia</th><th scope="col">Monto</th><th scope="col">Estado</th></tr></thead>
+                  <tbody id="shipmentRows"></tbody>
+                </table>
+              </div>
+              <div class="empty-state" id="shipmentEmptyState" hidden><strong>No hay envíos que coincidan.</strong><p>Prueba con otro código, agencia o estado.</p><button type="button" id="emptyShipmentClear">Limpiar filtros</button></div>
+              <footer class="pagination shipments-pagination"><p id="shipmentPaginationText">Mostrando 0 envíos</p><div><button id="previousShipmentPage" type="button" aria-label="Página anterior">‹</button><button class="is-page" id="shipmentPageNumber" type="button" aria-current="page">1</button><button id="nextShipmentPage" type="button" aria-label="Página siguiente">›</button></div></footer>
+            </section>
+
+            <aside class="shipment-detail" id="shipmentDetail" aria-live="polite" aria-label="Detalle del envío"></aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="shipment-toast" id="shipmentToast" role="status" aria-live="polite" hidden></div>
+
+    <dialog class="shipment-edit-dialog" id="shipmentEditDialog" aria-labelledby="shipmentEditTitle">
+      <form id="shipmentEditForm" novalidate>
+        <header class="shipment-edit-header">
+          <div><p>Gestión de envío</p><h2 id="shipmentEditTitle">Editar envío</h2></div>
+          <button class="dialog-close" type="button" data-close-shipment-edit aria-label="Cerrar">×</button>
+        </header>
+        <div class="shipment-edit-fields">
+          <label>Código del envío<input name="code" required maxlength="40" autocomplete="off" /></label>
+          <label>Cliente<input name="client" required maxlength="120" autocomplete="name" /></label>
+          <label>Agencia<select name="agency" required><option value="MANDA">MANDA</option><option value="Cargo Express">Cargo Express</option><option value="Entrega local">Entrega local</option></select></label>
+          <label>Municipio<select name="municipality" required><option value="Managua">Managua</option><option value="Ciudad Sandino">Ciudad Sandino</option><option value="Masaya">Masaya</option><option value="Granada">Granada</option><option value="León">León</option></select></label>
+          <label>Costo de envío<span class="shipment-currency-input"><span aria-hidden="true">C$</span><input name="amount" type="number" min="0" step="0.01" required inputmode="decimal" /></span></label>
+          <label class="shipment-edit-wide">Dirección<input name="address" required maxlength="220" autocomplete="street-address" /></label>
+          <p class="shipment-form-error shipment-edit-wide" id="shipmentEditError" role="alert" hidden></p>
+        </div>
+        <footer class="shipment-edit-footer"><button class="secondary-action" type="button" data-close-shipment-edit>Cancelar</button><button class="primary-action" type="submit">Guardar cambios</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="shipment-action-dialog" id="shipmentActionDialog" aria-labelledby="shipmentActionTitle" aria-describedby="shipmentActionSummary">
+      <form id="shipmentActionForm" novalidate>
+        <header class="shipment-edit-header">
+          <div><p>Actualización de envío</p><h2 id="shipmentActionTitle">Confirmar acción</h2></div>
+          <button class="dialog-close" type="button" data-close-shipment-action aria-label="Cerrar">×</button>
+        </header>
+        <div class="shipment-action-body">
+          <p id="shipmentActionSummary"></p>
+        </div>
+        <footer class="shipment-edit-footer shipment-action-footer"><button class="secondary-action" type="button" data-close-shipment-action>Volver</button><button class="danger-action" type="submit" id="shipmentActionConfirm">Confirmar</button></footer>
+      </form>
+    </dialog>
+    <script src="shipments.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

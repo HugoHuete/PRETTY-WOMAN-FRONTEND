@@ -1,0 +1,174 @@
+/* Mantiene Envíos y Usuarios alineados con el sidebar operativo del resto del panel. */
+.shipments-page,
+.users-page {
+  --nav-surface: #fff;
+  --nav-ink: #211b1e;
+  --nav-muted: #62585e;
+  --nav-line: #ddd6da;
+  --nav-surface-raised: #f0edef;
+  --nav-brand: #ad3f5d;
+  --nav-brand-deep: #91324d;
+  --nav-brand-soft: #f9e9ee;
+}
+
+:root[data-theme="dark"] .shipments-page,
+:root[data-theme="dark"] .users-page {
+  --nav-surface: #211a1f;
+  --nav-ink: #fff9fb;
+  --nav-muted: #e5dce0;
+  --nav-line: #493f44;
+  --nav-surface-raised: #2b2528;
+  --nav-brand: #dc718d;
+  --nav-brand-deep: #f08aa4;
+  --nav-brand-soft: #3b252d;
+}
+
+.shipments-page .sidebar,
+.users-page .sidebar {
+  background: var(--nav-surface);
+  border-right: 1px solid var(--nav-line);
+  color: var(--nav-ink);
+  font-family: Aptos, "Segoe UI", system-ui, sans-serif;
+  line-height: 1.45;
+  padding: 0;
+}
+
+.shipments-page .brand,
+.users-page .brand {
+  align-items: center;
+  border-bottom: 1px solid var(--nav-line);
+  display: flex;
+  height: 108px;
+  justify-content: center;
+  min-height: 108px;
+  overflow: hidden;
+  padding: 14px 20px;
+}
+
+.shipments-page .brand img,
+.users-page .brand img {
+  filter: brightness(0) saturate(100%) invert(20%) sepia(9%) saturate(1687%) hue-rotate(274deg) brightness(91%) contrast(88%);
+  height: 96px;
+  max-width: none;
+  object-fit: contain;
+  width: 210px;
+}
+
+:root[data-theme="dark"] .shipments-page .brand img,
+:root[data-theme="dark"] .users-page .brand img { filter: brightness(0) invert(1); }
+
+.shipments-page .sidebar nav,
+.users-page .sidebar nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  overflow-y: auto;
+  padding: 18px 12px;
+}
+
+.shipments-page .sidebar .nav-section-title,
+.users-page .sidebar .nav-section-title {
+  color: var(--nav-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .07em;
+  margin: 15px 10px 5px;
+}
+
+.shipments-page .sidebar .nav-section-title:first-child,
+.users-page .sidebar .nav-section-title:first-child { margin-top: 0; }
+
+.shipments-page .sidebar a,
+.shipments-page .text-button,
+.shipments-page .profile,
+.users-page .sidebar a,
+.users-page .text-button,
+.users-page .profile {
+  border-radius: 8px;
+  color: var(--nav-muted);
+  font-size: 15px;
+  font-weight: 620;
+  gap: 12px;
+  min-height: 44px;
+  padding: 9px 12px;
+}
+
+.shipments-page .sidebar a:hover,
+.shipments-page .sidebar a:focus-visible,
+.shipments-page .text-button:hover,
+.shipments-page .profile:hover,
+.users-page .sidebar a:hover,
+.users-page .sidebar a:focus-visible,
+.users-page .text-button:hover,
+.users-page .profile:hover {
+  background: var(--nav-surface-raised);
+  color: var(--nav-ink);
+}
+
+.shipments-page .sidebar a.is-current,
+.users-page .sidebar a.is-current {
+  background: var(--nav-brand-soft);
+  color: var(--nav-brand-deep);
+  font-weight: 760;
+}
+
+.shipments-page .sidebar-footer,
+.users-page .sidebar-footer {
+  border-top: 1px solid var(--nav-line);
+  gap: 4px;
+  margin: auto 12px 0;
+  padding: 10px 0 12px;
+}
+
+.shipments-page .profile small,
+.users-page .profile small { color: var(--nav-muted); }
+.shipments-page .avatar,
+.users-page .avatar { background: #f6b5c5; color: #351f2b; }
+
+@media (max-width: 1120px) {
+  .shipments-page .app-shell,
+  .users-page .app-shell { grid-template-columns: 76px minmax(0, 1fr); }
+
+  .shipments-page .sidebar,
+  .users-page .sidebar { padding: 0 10px; }
+
+  .shipments-page .brand,
+  .users-page .brand { height: 82px; min-height: 82px; padding: 12px 0; }
+  .shipments-page .brand img,
+  .users-page .brand img { height: 58px; width: 72px; }
+  .shipments-page .sidebar nav,
+  .users-page .sidebar nav { padding-inline: 0; }
+  .shipments-page .sidebar .nav-section-title,
+  .users-page .sidebar .nav-section-title { display: none; }
+  .shipments-page .sidebar a,
+  .shipments-page .text-button,
+  .shipments-page .profile,
+  .users-page .sidebar a,
+  .users-page .text-button,
+  .users-page .profile { font-size: 0; justify-content: center; padding: 9px; }
+  .shipments-page .profile > span:not(.avatar),
+  .users-page .profile > span:not(.avatar) { display: none; }
+}
+
+@media (max-width: 780px) {
+  .shipments-page .app-shell,
+  .users-page .app-shell { display: block; }
+  .shipments-page .sidebar,
+  .users-page .sidebar { display: none; }
+  .shipments-page .sidebar.is-open,
+  .users-page .sidebar.is-open {
+    display: flex;
+    inset: 0 auto 0 0;
+    position: fixed;
+    width: 236px;
+    z-index: 5;
+  }
+  .shipments-page .sidebar.is-open .nav-section-title,
+  .users-page .sidebar.is-open .nav-section-title { display: block; }
+  .shipments-page .sidebar.is-open a,
+  .users-page .sidebar.is-open a { font-size: 15px; justify-content: flex-start; padding: 9px 12px; }
+  .shipments-page .sidebar.is-open .profile > span:not(.avatar),
+  .users-page .sidebar.is-open .profile > span:not(.avatar) { display: block; }
+}

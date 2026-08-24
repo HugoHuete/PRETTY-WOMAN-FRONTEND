@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Detalle de venta</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="sales.css" />
+    <link rel="stylesheet" href="sale-detail.css" />
+    <link rel="stylesheet" href="sales-redesign.css" />
+  </head>
+  <body class="sales-design sale-detail-page">
+    <a class="skip-link" href="#saleRecord">Saltar al detalle</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a class="is-current" href="sales.html" aria-current="page" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez"><span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span></button>
+        </div>
+      </aside>
+      <button class="nav-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
+
+      <main id="saleRecord">
+        <header class="topbar record-topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div class="record-heading"><p class="crumb"><a href="sales.html" aria-label="Regresar al listado de ventas"><span aria-hidden="true">←</span><span class="crumb-label">Regresar a ventas</span></a></p><h1 id="recordTitle">Venta</h1></div>
+          <div class="top-actions"><button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button></div>
+        </header>
+        <div class="workspace sale-record-workspace" id="saleRecordContent"></div>
+      </main>
+    </div>
+    <dialog class="sale-dialog" id="paymentDialog" aria-labelledby="paymentDialogTitle">
+      <form method="dialog" id="paymentForm">
+        <header><div><p>Pago de venta</p><h2 id="paymentDialogTitle">Registrar pago</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <div id="paymentHelp" class="payment-balance-help"></div>
+          <label>Método de pago<select name="method" id="existingPaymentMethod" required><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option></select></label>
+          <label class="existing-terminal" id="existingTerminalField" hidden>Terminal<select name="paymentTerminalId" id="existingPaymentTerminal"><option value="">Seleccionar terminal</option><option value="bac">BAC</option><option value="banpro">BANPRO</option></select></label>
+          <label>Moneda recibida<select name="currency" id="existingPaymentCurrency"><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (USD)</option></select></label>
+          <label class="existing-payment-amount"><span class="field-label"><span id="existingReceivedLabel">Monto recibido</span><span id="existingReceivedUnit">C$</span></span><input name="received" id="existingPaymentReceived" type="number" min="0" step="0.01" required inputmode="decimal" placeholder="0.00" /></label>
+          <label class="field-wide existing-exchange-rate" id="existingExchangeRateField" hidden>Tasa de cambio <span>C$ por $</span><input name="exchangeRate" id="existingExchangeRate" type="number" min="0.0001" step="0.0001" value="36.6200" inputmode="decimal" /></label>
+          <dl class="existing-payment-calculation" id="existingPaymentCalculation" hidden><div><dt>Valor recibido</dt><dd id="existingReceivedValueNio">C$ 0.00</dd></div><div><dt>A productos</dt><dd id="existingProductAppliedPreview">C$ 0.00</dd></div><div><dt>Al envío</dt><dd id="existingShippingAppliedPreview">C$ 0.00</dd></div><div class="payment-applied"><dt>Total aplicado</dt><dd id="existingAppliedPreview">C$ 0.00</dd></div><div class="payment-change"><dt>Cambio a entregar</dt><dd id="existingChangePreview">C$ 0.00</dd></div></dl>
+          <p class="dialog-error field-wide" id="existingPaymentError" role="alert"></p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="save">Registrar pago</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="sale-dialog" id="deliveryDialog" aria-labelledby="deliveryDialogTitle">
+      <form method="dialog" id="deliveryForm">
+        <header><div><p>Entrega de venta</p><h2 id="deliveryDialogTitle">Crear entrega</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <label>Agencia<select name="deliveryAgencyId" required data-searchable data-search-placeholder="Buscar agencia…"><option value="">Seleccionar agencia</option><option value="1">MANDA</option><option value="2">Cargo Express</option><option value="3">Entrega local</option></select></label>
+          <label>Municipio<select name="municipalityId" required data-searchable data-search-placeholder="Buscar municipio…"><option value="">Seleccionar municipio</option><option value="1">Managua</option><option value="2">Ciudad Sandino</option><option value="3">Masaya</option><option value="4">Granada</option><option value="5">León</option></select></label>
+          <label>Código del envío<input name="code" required maxlength="40" placeholder="Ej. DEL-0128" autocomplete="off" /></label>
+          <label>Monto de envío<div class="currency-input"><span aria-hidden="true">C$</span><input name="shippingChargedToClient" type="number" min="0" step="0.01" value="0.00" required inputmode="decimal" aria-label="Monto de envío en córdobas" /></div></label>
+          <label class="field-wide">Teléfono del cliente<input name="contactPhone" autocomplete="tel" readonly /></label>
+          <label class="field-wide"><span class="field-label">Dirección de entrega <small>(opcional)</small></span><textarea name="deliveryAddress" rows="3" aria-describedby="deliveryAddressHelp"></textarea></label>
+          <p class="field-help" id="deliveryAddressHelp">Si la dejas vacía, se usará la dirección registrada en el cliente.</p>
+          <label class="field-wide"><span class="field-label">Comentario <small>(opcional)</small></span><textarea name="comments" rows="3" maxlength="500" placeholder="Ej. llamar antes de llegar"></textarea></label>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="primary-action" type="submit" value="save">Crear entrega</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="sale-dialog delivery-edit-dialog" id="deliveryEditDialog" aria-labelledby="deliveryEditTitle">
+      <form method="dialog" id="deliveryEditForm">
+        <header><div><p>Entrega pendiente</p><h2 id="deliveryEditTitle">Editar entrega</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <label>Agencia<select name="deliveryAgencyId" required><option value="1">MANDA</option><option value="2">Cargo Express</option><option value="3">Entrega local</option></select></label>
+          <label>Municipio<select name="municipalityId" required><option value="1">Managua</option><option value="2">Ciudad Sandino</option><option value="3">Masaya</option><option value="4">Tipitapa</option></select></label>
+          <label>Código del envío<input name="code" required maxlength="40" autocomplete="off" /></label>
+          <label>Monto de envío<div class="currency-input"><span aria-hidden="true">C$</span><input name="shippingChargedToClient" type="number" min="0" step="0.01" required inputmode="decimal" /></div></label>
+          <label class="field-wide"><span class="field-label">Dirección de entrega <small>(opcional)</small></span><textarea name="deliveryAddress" rows="3"></textarea></label>
+          <p class="field-help">Si queda vacía, se usará la dirección registrada en el cliente.</p>
+          <label class="field-wide"><span class="field-label">Comentario <small>(opcional)</small></span><textarea name="comments" rows="2"></textarea></label>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="primary-action" type="submit" value="save">Guardar cambios</button></footer>
+      </form>
+    </dialog>
+    <dialog class="sale-dialog delivery-action-dialog" id="deliveryActionDialog" aria-labelledby="deliveryActionTitle">
+      <form method="dialog" id="deliveryActionForm">
+        <header><div><p>Acción administrativa</p><h2 id="deliveryActionTitle">Confirmar acción</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-action-copy"><span class="dialog-action-icon" aria-hidden="true">!</span><div><strong id="deliveryActionSummary"></strong><p id="deliveryActionHelp"></p></div></div>
+        <label class="action-comment" id="deliveryActionCommentField">Motivo o comentario <span>(opcional)</span><textarea name="comment" rows="3"></textarea></label>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Volver</button><button class="primary-action" id="deliveryActionConfirm" type="submit" value="confirm">Confirmar</button></footer>
+      </form>
+    </dialog>
+    <dialog class="sale-dialog admin-payment-dialog" id="adminPaymentDialog" aria-labelledby="adminPaymentTitle">
+      <form method="dialog" id="adminPaymentForm">
+        <header><div><p>Corrección administrativa</p><h2 id="adminPaymentTitle">Actualizar pago</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <label class="field-wide">Movimiento<select name="movementId" required></select></label>
+          <div class="admin-payment-method-grid field-wide">
+            <label>Método de pago<select name="method" id="adminPaymentMethod" required><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option></select></label>
+            <label id="adminPaymentTerminalField" hidden>Terminal<select name="terminal" id="adminPaymentTerminal"><option value="">Seleccionar terminal</option><option value="bac">BAC</option><option value="banpro">BANPRO</option></select></label>
+          </div>
+          <label class="field-wide">Moneda recibida<select name="currency" id="adminPaymentCurrency" required><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (USD)</option></select></label>
+          <label class="field-wide"><span class="field-label"><span>Monto recibido</span><span id="adminPaymentAmountUnit">C$</span></span><div class="currency-input"><span id="adminPaymentAmountPrefix">C$</span><input name="amount" id="adminPaymentAmount" type="number" min="0.01" step="0.01" required inputmode="decimal" /></div></label>
+        </div>
+        <p class="admin-form-error" id="adminPaymentError" role="alert"></p>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Volver</button><button class="primary-action" type="submit" value="save">Guardar corrección</button></footer>
+      </form>
+    </dialog>
+    <dialog class="sale-dialog admin-refund-dialog" id="adminRefundDialog" aria-labelledby="adminRefundTitle">
+      <form method="dialog" id="adminRefundForm">
+        <header><div><p>Salida de dinero</p><h2 id="adminRefundTitle">Reembolsar pago</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="refund-available"><span>Disponible para reembolsar</span><strong id="refundAvailable">C$ 0.00</strong></div>
+        <div class="dialog-fields"><label class="field-wide">Monto<div class="currency-input"><span>C$</span><input name="amount" type="number" min="0.01" step="0.01" required inputmode="decimal" /></div></label></div>
+        <p class="admin-form-error" id="adminRefundError" role="alert"></p>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Volver</button><button class="primary-action danger-confirm" type="submit" value="refund">Confirmar reembolso</button></footer>
+      </form>
+    </dialog>
+    <dialog class="sale-dialog admin-cancel-dialog" id="adminCancelDialog" aria-labelledby="adminCancelTitle">
+      <form method="dialog" id="adminCancelForm">
+        <header><div><p>Acción irreversible</p><h2 id="adminCancelTitle">Cancelar venta</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-action-copy"><span class="dialog-action-icon" aria-hidden="true">!</span><div><strong>La venta dejará de estar activa.</strong><p>Las prendas regresarán a disponibilidad. Los movimientos y el motivo permanecerán en el expediente.</p></div></div>
+        <label class="action-comment">Motivo de cancelación<textarea name="reason" rows="3" required placeholder="Este dato será visible en el historial"></textarea></label>
+        <footer><button class="secondary-action" type="submit" value="back" formnovalidate>Conservar venta</button><button class="primary-action danger-confirm" type="submit" value="confirm">Cancelar definitivamente</button></footer>
+      </form>
+    </dialog>
+    <dialog class="sale-dialog client-dialog" id="clientDialog" aria-labelledby="clientDialogTitle">
+      <form method="dialog" id="clientDialogForm">
+        <header><div><p>Cliente de la venta</p><h2 id="clientDialogTitle">Cambiar cliente</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="client-dialog-body">
+          <label class="client-search-field" for="clientSearch">Buscar cliente<input id="clientSearch" name="clientSearch" type="search" placeholder="Nombre, teléfono, Instagram o Messenger" autocomplete="off" /></label>
+          <div class="client-search-results" id="clientSearchResults" role="listbox" aria-label="Clientes encontrados"></div>
+          <p class="client-search-empty" id="clientSearchEmpty" hidden>No encontramos clientes con esos datos.</p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" id="clientSaveButton" type="submit" value="save" disabled>Guardar cliente</button></footer>
+      </form>
+    </dialog>
+    <div class="sale-toast" id="recordToast" role="status" aria-live="polite" hidden></div>
+    <script src="sale-detail.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>

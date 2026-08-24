@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Pretty Woman - Ventas</title>
+    <link rel="stylesheet" href="products.css" />
+    <link rel="stylesheet" href="products-refinements.css" />
+    <link rel="stylesheet" href="sales.css" />
+    <link rel="stylesheet" href="sales-redesign.css" />
+    <link rel="stylesheet" href="table-headings.css" />
+  </head>
+  <body class="sales-design sales-index-page">
+    <a class="skip-link" href="#ventas">Saltar a ventas</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <div class="brand"><img src="../../assets/brand/White_Logo_v1.png" alt="Pretty Woman Boutique" /></div>
+        <nav>
+          <p class="nav-section-title">Operación</p>
+          <a href="../wireframes/index.html#dashboard" title="Resumen" data-label="Resumen"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#home"></use></svg>Resumen</a>
+          <a class="is-current" href="#ventas" aria-current="page" title="Ventas" data-label="Ventas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#receipt"></use></svg>Ventas</a>
+          <a href="shipments.html" title="Envíos" data-label="Envíos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#truck"></use></svg>Envíos</a>
+          <a href="clients.html" title="Clientes" data-label="Clientes"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#users"></use></svg>Clientes</a>
+          <p class="nav-section-title">Inventario</p>
+          <a href="products.html" title="Productos" data-label="Productos"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#package"></use></svg>Productos</a>
+          <a href="incidents.html" title="Incidencias" data-label="Incidencias"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#alert"></use></svg>Incidencias</a>
+          <a href="purchase-orders.html" title="Compras" data-label="Compras"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#clipboard"></use></svg>Compras</a>
+          <p class="nav-section-title">Administración</p>
+          <a href="finances.html" title="Finanzas" data-label="Finanzas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#wallet"></use></svg>Finanzas</a>
+          <a href="discount-campaigns.html" title="Campañas" data-label="Campañas"><svg class="nav-icon" aria-hidden="true"><use href="prototype-icons.svg#campaign"></use></svg>Campañas</a>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="profile" type="button" aria-label="Abrir perfil de María Pérez">
+            <span class="avatar">MP</span><span><strong>María Pérez</strong><small>Administradora</small></span><span aria-hidden="true">⌄</span>
+          </button>
+        </div>
+      </aside>
+      <button class="nav-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
+
+      <main id="ventas">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-label="Abrir menú">☰</button>
+          <div><p class="crumb">Operación</p><h1>Ventas</h1></div>
+          <div class="top-actions">
+            <a class="primary-action topbar-primary" href="sale-create.html">+ Nueva venta</a>
+            <button class="theme-button" type="button" aria-pressed="false" aria-label="Activar modo oscuro"><span aria-hidden="true">◐</span><span class="theme-label">Modo oscuro</span></button>
+          </div>
+        </header>
+
+        <section class="workspace sales-workspace" aria-label="Listado y detalle de ventas">
+          <section class="shift-summary" aria-label="Resumen del turno">
+            <div class="shift-summary-main"><span>Turno actual</span><strong>Domingo, 27 de julio · María</strong></div>
+            <div><span>Ventas registradas</span><strong>12 · C$ 28,640</strong></div>
+            <div><span>Por cobrar</span><strong>4 · C$ 6,180</strong></div>
+            <div><span>Por entregar</span><strong>5 pedidos</strong></div>
+          </section>
+
+          <div class="sales-layout">
+          <form class="filters sales-filters" id="salesFilters">
+            <label class="search-filter sales-search"><span class="filter-label">Buscar</span><span class="search-control"><svg class="sales-search-icon" aria-hidden="true"><use href="prototype-icons.svg#search"></use></svg><input id="saleSearch" type="search" placeholder="Venta, cliente o teléfono" autocomplete="off" /></span></label>
+            <label class="sales-date">Fecha inicial<input id="saleDateFrom" type="date" /></label>
+            <label class="sales-date">Fecha final<input id="saleDateTo" type="date" /></label>
+            <label class="sales-channel-filter">Canal<select id="saleChannel"><option value="">Todos</option><option value="Tienda física">Tienda física</option><option value="WhatsApp">WhatsApp</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option></select></label>
+            <span class="sales-filter-break" aria-hidden="true"></span>
+            <label class="sales-operation-filter">Estado operativo<select id="operationalStatus"><option value="">Todos</option><option value="pending">Pendiente</option><option value="reserved">Reservada</option><option value="ready">Lista</option><option value="sent">Enviada</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option></select></label>
+            <label class="sales-payment-filter">Pago<select id="paymentStatus"><option value="">Todos</option><option value="paid">Pagada</option><option value="partial">Pago parcial</option><option value="cancelled">Cancelada</option></select></label>
+            <label class="sales-delivery-filter">Entrega<select id="deliveryStatus"><option value="">Todos</option><option value="not-applicable">No aplica (local)</option><option value="none">Sin crear</option><option value="ready">Pendiente</option><option value="sent">Despachada</option><option value="delivered-selection">Entregada · selección pendiente</option><option value="completed">Entregada</option><option value="failed">Entrega fallida</option><option value="cancelled">Cancelada</option></select></label>
+            <button class="clear-button sales-clear-button" id="clearSalesFilters" type="reset"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h11a5 5 0 0 1 0 10H9"></path><path d="m8 3-4 4 4 4"></path></svg><span>Limpiar filtros</span></button>
+          </form>
+
+            <section class="sales-list" aria-label="Lista de ventas">
+              <p class="sr-only" id="resultCount" aria-live="polite">0 ventas</p>
+              <div class="sales-loading" id="salesLoading" aria-live="polite">
+                <span class="sr-only">Cargando ventas</span><div></div><div></div><div></div><div></div>
+              </div>
+              <div class="load-error" id="salesError" hidden>
+                <strong>No pudimos cargar las ventas.</strong><p>Revisa tu conexión e inténtalo de nuevo.</p><button type="button" id="retrySales">Intentar de nuevo</button>
+              </div>
+              <div class="table-region sales-table-region" id="salesTableRegion" tabindex="0" aria-label="Resultados de ventas" hidden>
+                <table>
+                  <caption class="sr-only">Ventas y reservas registradas</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Venta</th>
+                      <th scope="col">Cliente</th>
+                      <th scope="col">Fecha</th>
+                      <th scope="col">Canal</th>
+                      <th scope="col">Estado</th>
+                      <th scope="col">Pago</th>
+                      <th scope="col">Entrega</th>
+                      <th scope="col">Total</th>
+                      <th scope="col"><span class="sr-only">Acción</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="salesRows"></tbody>
+                </table>
+                <div class="empty-state" id="salesEmpty" hidden><strong>No hay ventas que coincidan.</strong><p>Prueba con otros filtros o limpia la búsqueda.</p><button type="button" id="emptySalesClear">Limpiar filtros</button></div>
+              </div>
+              <footer class="pagination"><p id="paginationText">Mostrando 0 ventas</p><div id="paginationControls" aria-label="Paginación de ventas"><button id="previousSalesPage" type="button" disabled aria-label="Página anterior">‹</button><span id="salesPageButtons"></span><button id="nextSalesPage" type="button" disabled aria-label="Página siguiente">›</button></div></footer>
+            </section>
+
+            <aside class="sale-detail" id="saleDetail" aria-live="polite" aria-label="Detalle de la venta"></aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="sale-dialog" id="paymentDialog" aria-labelledby="paymentDialogTitle">
+      <form method="dialog" id="paymentForm">
+        <header><div><p>Pago de venta</p><h2 id="paymentDialogTitle">Registrar pago</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <div id="paymentHelp" class="payment-balance-help"></div>
+          <label>Aplicar el pago a<select name="allocation" id="existingPaymentAllocation" required><option value="automatic">Automáticamente</option><option value="products">Productos</option><option value="shipping">Envío</option></select></label>
+          <label>Método de pago<select name="method" id="existingPaymentMethod" required><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option></select></label>
+          <label class="field-wide existing-terminal" id="existingTerminalField" hidden>Terminal<select name="paymentTerminalId" id="existingPaymentTerminal"><option value="">Seleccionar terminal</option><option value="bac">BAC</option><option value="banpro">BANPRO</option></select></label>
+          <label>Moneda recibida<select name="currency" id="existingPaymentCurrency" aria-describedby="existingCurrencyHelp"><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (USD)</option></select></label>
+          <label class="field-wide"><span id="existingReceivedLabel">Monto recibido</span> <span id="existingReceivedUnit">C$</span><input name="received" id="existingPaymentReceived" type="number" min="0" step="0.01" required inputmode="decimal" placeholder="0.00" /></label>
+          <label class="field-wide existing-exchange-rate" id="existingExchangeRateField" hidden>Tasa de cambio <span>C$ por $</span><input name="exchangeRate" id="existingExchangeRate" type="number" min="0.0001" step="0.0001" value="36.6200" inputmode="decimal" /></label>
+          <p id="existingCurrencyHelp" class="field-help">Efectivo y transferencia admiten córdobas o dólares. POS procesa únicamente córdobas.</p>
+          <dl class="existing-payment-calculation" id="existingPaymentCalculation" hidden><div><dt>Valor recibido</dt><dd id="existingReceivedValueNio">C$ 0.00</dd></div><div><dt>A productos</dt><dd id="existingProductAppliedPreview">C$ 0.00</dd></div><div><dt>Al envío</dt><dd id="existingShippingAppliedPreview">C$ 0.00</dd></div><div class="payment-applied"><dt>Total aplicado</dt><dd id="existingAppliedPreview">C$ 0.00</dd></div><div class="payment-change"><dt>Cambio a entregar</dt><dd id="existingChangePreview">C$ 0.00</dd></div></dl>
+          <p class="field-help existing-calculation-note" id="existingCalculationNote" hidden></p>
+          <p class="dialog-error field-wide" id="existingPaymentError" role="alert"></p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="save">Registrar pago</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="sale-dialog" id="deliveryDialog" aria-labelledby="deliveryDialogTitle">
+      <form method="dialog" id="deliveryForm">
+        <header><div><p>Entrega de venta</p><h2 id="deliveryDialogTitle">Crear entrega</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <label>Agencia<select name="deliveryAgencyId" required data-searchable data-search-placeholder="Buscar agencia…"><option value="">Seleccionar agencia</option><option value="1">MANDA</option><option value="2">Cargo Express</option><option value="3">Entrega local</option></select></label>
+          <label>Municipio<select name="municipalityId" required data-searchable data-search-placeholder="Buscar municipio…"><option value="">Seleccionar municipio</option><option value="1">Managua</option><option value="2">Ciudad Sandino</option><option value="3">Masaya</option><option value="4">Granada</option><option value="5">León</option></select></label>
+          <label>Código del envío<input name="code" required maxlength="40" placeholder="Ej. DEL-0128" autocomplete="off" /></label>
+          <label>Monto de envío<div class="currency-input"><span aria-hidden="true">C$</span><input name="shippingChargedToClient" type="number" min="0" step="0.01" value="0.00" required inputmode="decimal" aria-label="Monto de envío en córdobas" /></div></label>
+          <label class="field-wide">Teléfono del cliente<input name="contactPhone" autocomplete="tel" readonly /></label>
+          <label class="field-wide">Dirección de entrega <span>(opcional)</span><textarea name="deliveryAddress" rows="3" aria-describedby="deliveryAddressHelp"></textarea></label>
+          <p class="field-help" id="deliveryAddressHelp">Si la dejas vacía, se usará la dirección registrada en el cliente.</p>
+          <label class="field-wide">Comentario <span>(opcional)</span><textarea name="comments" rows="3" maxlength="500" placeholder="Ej. llamar antes de llegar"></textarea></label>
+          <label class="agency-collection-field field-wide"><input name="agencyCollects" type="checkbox" /><span><strong>La agencia cobrará el saldo al entregar</strong><small>El detalle mostrará el monto exacto pendiente que debe cobrar.</small></span></label>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Seguir revisando</button><button class="primary-action" type="submit" value="save">Crear entrega</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="sale-dialog" id="saleEditDialog" aria-labelledby="saleEditDialogTitle">
+      <form method="dialog" id="saleEditForm">
+        <header><div><p>Información de la venta</p><h2 id="saleEditDialogTitle">Editar información</h2></div><button class="dialog-close" type="submit" value="cancel" formnovalidate aria-label="Cerrar">×</button></header>
+        <div class="dialog-fields">
+          <label class="field-wide">Cliente <span>(opcional)</span><select name="client" id="saleClientSelect" data-searchable data-search-placeholder="Buscar por nombre o teléfono…"><option value="">Sin cliente</option><option value="Ana Martínez" data-phone="+505 8888 2200">Ana Martínez · 8888 2200</option><option value="María López" data-phone="+505 8756 4321">María López · 8756 4321</option><option value="Sofía Gómez" data-phone="+505 8547 1122">Sofía Gómez · 8547 1122</option></select></label>
+          <label class="field-wide">Canal de venta<select name="channel" id="saleChannelEdit" required><option value="Tienda física">Tienda física</option><option value="WhatsApp">WhatsApp</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option></select></label>
+          <label class="field-wide">Comentarios <span>(opcional)</span><textarea name="comments" rows="4" maxlength="500" placeholder="Agrega contexto útil sobre la venta"></textarea></label>
+          <p class="field-help" id="saleEditHelp">Puedes asociar o cambiar el cliente en cualquier momento. Se necesita un cliente para crear una entrega.</p>
+        </div>
+        <footer><button class="secondary-action" type="submit" value="cancel" formnovalidate>Cancelar</button><button class="primary-action" type="submit" value="save">Guardar cambios</button></footer>
+      </form>
+    </dialog>
+
+    <div class="sale-toast" id="saleToast" role="status" aria-live="polite" hidden></div>
+    <script src="sales.js"></script>
+    <script src="prototype-shell.js"></script>
+  </body>
+</html>
