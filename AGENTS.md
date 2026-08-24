@@ -31,6 +31,12 @@ Use two-space indentation in readable HTML, CSS, and JavaScript. Name files and 
 
 No automated test framework or coverage threshold is configured. Manually exercise each changed prototype at desktop and tablet widths. Verify primary flows, validation, dialogs, empty/error states, keyboard navigation, and browser-console output. Confirm links, images, and sibling CSS/JS files load through the local server. Document tested pages and scenarios in the pull request.
 
+## Git Commit Policy
+
+- Keep related implementation changes uncommitted while the work is still evolving, even when it spans several requests or refinement passes.
+- Do not create commits automatically. Create a commit only when the user explicitly asks for one.
+- When requested, make one focused commit that groups the completed, related work. Create multiple commits only when the user explicitly asks to split independently deployable changes.
+
 ## Commit & Pull Request Guidelines
 
 The repository currently has no commits, so no historical convention exists. Use short, imperative, scoped messages such as `Add purchase receipt validation` or `Refine tablet sales layout`. Keep commits focused. Pull requests should explain the user-facing change, list tested routes and viewport sizes, link the relevant issue or product requirement, and include before/after screenshots for visual changes. Call out any intentional divergence from `PRODUCT.md` or `docs/product/admin-screen-map.md`.
