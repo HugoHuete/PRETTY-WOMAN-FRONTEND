@@ -1,17 +1,23 @@
-:root {
-  color: #2b1d24;
-  background: #fff9fa;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+@import "tailwindcss";
+
+@theme {
+  --color-pw-canvas: #fafafa;
+  --color-pw-ink: #1c191b;
+  --color-pw-muted: #68616a;
+  --color-pw-line: #e7e5e4;
+  --color-pw-brand: #e97894;
+  --color-pw-brand-deep: #c95773;
+  --color-pw-brand-soft: #fff3f6;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  min-width: 320px;
-  min-height: 100vh;
-  margin: 0;
+@layer base {
+  body {
+    min-width: 320px;
+    margin: 0;
+    color: var(--color-pw-ink);
+    background: var(--color-pw-canvas);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
 }

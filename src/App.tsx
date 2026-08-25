@@ -1,5 +1,7 @@
+import { LoginPage } from './features/auth/login-page';
+
 function App() {
-  return <main aria-label="Aplicación Pretty Woman" />;
+  return <LoginPage />;
 }
 
 export default App;
