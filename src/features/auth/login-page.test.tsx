@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from './login-page';
+import { AuthProvider, useAuth } from './auth-provider';
 
 const apiUrl = 'https://pretty-woman-backend-production.up.railway.app';
 const session = {
@@ -24,13 +25,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function renderLogin() {
+  return render(
+    <AuthProvider autoInitialize={false}>
+      <LoginPage />
+    </AuthProvider>,
+  );
+}
+
 describe('LoginPage', () => {
+  function AuthStateProbe() {
+    const { status } = useAuth();
+    return <span>{status}</span>;
+  }
+
+  it('no intenta restaurar la sesión si falta la URL de la API', () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByText('anonymous')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it('explica los campos obligatorios sin enviar una solicitud vacía', async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<LoginPage />);
+    renderLogin();
     await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(screen.getByText('Ingresa tu usuario.')).toBeInTheDocument();
@@ -40,7 +68,7 @@ describe('LoginPage', () => {
 
   it('permite mostrar y ocultar la contraseña', async () => {
     const user = userEvent.setup();
-    render(<LoginPage />);
+    renderLogin();
     const password = screen.getByLabelText('Contraseña');
     const toggle = screen.getByRole('button', { name: 'Mostrar contraseña' });
 
@@ -65,7 +93,7 @@ describe('LoginPage', () => {
     window.localStorage.clear();
     window.sessionStorage.clear();
 
-    render(<LoginPage />);
+    renderLogin();
     await user.type(screen.getByLabelText('Usuario'), 'maria.vendedora');
     await user.type(screen.getByLabelText('Contraseña'), 'contraseña');
     await user.click(screen.getByRole('button', { name: 'Ingresar' }));
@@ -97,7 +125,7 @@ describe('LoginPage', () => {
     );
     const user = userEvent.setup();
 
-    render(<LoginPage />);
+    renderLogin();
     await user.type(screen.getByLabelText('Usuario'), 'maria.vendedora');
     await user.type(screen.getByLabelText('Contraseña'), 'incorrecta');
     await user.click(screen.getByRole('button', { name: 'Ingresar' }));

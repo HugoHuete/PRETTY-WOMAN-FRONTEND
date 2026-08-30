@@ -1,43 +1,15 @@
 import { useState } from "react";
 import brandLogo from "../../../assets/brand/Pink_Logo_v1.png";
+import { AuthApiError } from "./auth-session";
+import { useAuth } from "./auth-provider";
 
 type FieldErrors = { username?: string; password?: string };
-
-type AuthSession = {
-  accessToken: string;
-  expiresAtUtc: string;
-  csrfToken: string | null;
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    name: string;
-    lastname: string;
-    enabled: boolean;
-    roles: string[];
-  };
-};
-
-type ProblemDetails = { title?: string; detail?: string };
-
-async function errorMessage(response: Response) {
-  try {
-    const details = (await response.json()) as ProblemDetails;
-    return (
-      details.detail ??
-      details.title ??
-      "No se pudo iniciar sesión. Intenta nuevamente."
-    );
-  } catch {
-    return "No se pudo iniciar sesión. Intenta nuevamente.";
-  }
-}
 
 const inputClasses =
   "min-h-12 w-full rounded-lg border border-pw-line bg-white px-3 text-pw-ink outline-none transition focus:border-pw-brand-deep focus:ring-3 focus:ring-pw-brand-soft aria-invalid:border-red-700 disabled:cursor-wait";
 
 export function LoginPage() {
-  const [, setSession] = useState<AuthSession | null>(null);
+  const { signIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,22 +41,14 @@ export function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username: trimmedUsername, password }),
-      });
-
-      if (!response.ok) {
-        setFeedback(await errorMessage(response));
-        return;
-      }
-
-      setSession((await response.json()) as AuthSession);
+      await signIn(trimmedUsername, password);
       setFeedback("Acceso correcto. Estamos preparando tu espacio de trabajo.");
-    } catch {
-      setFeedback("No se pudo conectar con el servidor. Intenta nuevamente.");
+    } catch (error) {
+      setFeedback(
+        error instanceof AuthApiError
+          ? error.detail
+          : "No se pudo conectar con el servidor. Intenta nuevamente.",
+      );
     } finally {
       setIsSubmitting(false);
     }
