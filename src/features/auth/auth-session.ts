@@ -77,15 +77,22 @@ function defaultChannelFactory(name: string): Channel | null {
 }
 
 /**
- * Usa el bloqueo global del navegador para que dos pestañas no roten el mismo
- * refreshToken al mismo tiempo.
+ * En navegadores compatibles usa Web Locks para que dos pestañas no roten el
+ * mismo refreshToken a la vez. En navegadores antiguos no existe un mutex
+ * fiable entre pestañas: se permite el refresh normal y el backend responde
+ * de forma idempotente a un duplicado inmediato de la misma rotación.
  */
 function defaultLockRequest<T>(name: string, callback: () => Promise<T>) {
   const lockManager = (globalThis.navigator as Navigator & {
     locks?: { request<T>(name: string, callback: () => Promise<T>): Promise<T> };
   }).locks;
 
-  return lockManager ? lockManager.request(name, callback) : callback();
+  if (lockManager) return lockManager.request(name, callback);
+
+  // No se guardan tokens ni datos de sesión en localStorage para simular un
+  // bloqueo. Ese mecanismo sería más complejo y no aporta valor al soporte
+  // residual de navegadores sin Web Locks.
+  return callback();
 }
 
 function createId() {

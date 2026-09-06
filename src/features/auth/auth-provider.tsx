@@ -38,8 +38,8 @@ export function AuthProvider({
   const manager = useMemo(
     () =>
       /**
-       * Cada pestaña tiene su propio accessToken, pero el manager coordina
-       * los refresh mediante BroadcastChannel y navigator.locks.
+       * Cada pestaña tiene su propio accessToken. En navegadores modernos,
+       * el manager coordina los refresh con BroadcastChannel y Web Locks.
        */
       new AuthSessionManager({
         apiBaseUrl,
