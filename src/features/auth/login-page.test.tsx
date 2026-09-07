@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from './login-page';
 import { AuthProvider, useAuth } from './auth-provider';
@@ -27,10 +28,17 @@ afterEach(() => {
 
 function renderLogin() {
   return render(
-    <AuthProvider autoInitialize={false}>
-      <LoginPage />
-    </AuthProvider>,
+    <MemoryRouter initialEntries={['/login']}>
+      <AuthProvider autoInitialize={false}>
+        <LoginPage />
+      </AuthProvider>
+    </MemoryRouter>,
   );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}</output>;
 }
 
 describe('LoginPage', () => {
@@ -141,5 +149,36 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(await screen.findByText('Usuario o contraseña incorrectos.')).toBeInTheDocument();
+  });
+
+  it('lleva al inicio después de iniciar sesión correctamente', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', apiUrl);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(session), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthProvider autoInitialize={false}>
+          <LoginPage />
+          <LocationProbe />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText('Usuario'), 'maria.vendedora');
+    await user.type(screen.getByLabelText('Contraseña'), 'contraseña');
+    await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    });
   });
 });

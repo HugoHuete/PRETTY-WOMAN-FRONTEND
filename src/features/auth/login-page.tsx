@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthApiError } from "./auth-session";
 import { useAuth } from "./auth-provider";
 
@@ -11,6 +12,7 @@ const inputClasses =
 
 export function LoginPage() {
   const { signIn } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +45,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       await signIn(trimmedUsername, password);
+      navigate('/', { replace: true });
       setFeedback("Acceso correcto. Estamos preparando tu espacio de trabajo.");
     } catch (error) {
       setFeedback(
