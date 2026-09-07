@@ -173,7 +173,8 @@ export class AuthSessionManager {
 
   constructor(options: AuthSessionManagerOptions) {
     this.apiBaseUrl = options.apiBaseUrl.replace(/\/$/, '');
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn =
+      options.fetchFn ?? ((input, init) => globalThis.fetch(input, init));
     this.channelFactory = options.channelFactory ?? defaultChannelFactory;
     this.channel = this.channelFactory(channelName);
     this.lockRequest = options.lockRequest ?? defaultLockRequest;

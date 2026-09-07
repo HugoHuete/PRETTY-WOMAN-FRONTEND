@@ -52,9 +52,28 @@ const session: AuthSession = {
 afterEach(() => {
   FakeChannel.reset();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('AuthSessionManager', () => {
+  it('invoca el fetch nativo con el contexto global', async () => {
+    const nativeFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(
+        new Response(JSON.stringify(session), { status: 200 }),
+      );
+    });
+    vi.stubGlobal('fetch', nativeFetch);
+    const manager = new AuthSessionManager({
+      apiBaseUrl: 'https://api.example.com',
+      channelFactory: () => null,
+    });
+
+    await expect(manager.signIn('maria.vendedora', 'contraseña')).resolves.toEqual(session);
+
+    manager.dispose();
+  });
+
   it('invalida un refresh en curso cuando otra pestaña publica una sesión nueva', async () => {
     let loginCalls = 0;
     let refreshCalls = 0;
