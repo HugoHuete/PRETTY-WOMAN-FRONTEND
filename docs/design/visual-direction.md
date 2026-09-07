@@ -6,9 +6,9 @@ Diseñar una aplicación administrativa minimalista, clara y rápida para uso di
 
 ## Referencia de marca
 
-- Logos: `assets/brand/Pink_Logo_v1.png` y `assets/brand/White_Logo_v1.png`.
+- Logos canónicos: `https://media.prettywomanboutiquenic.com/branding/pink_logo.png` y `https://media.prettywomanboutiquenic.com/branding/white_logo.png`. Los archivos locales en `assets/brand/` se conservan como referencia de diseño.
 - Rasgos: tipografía manuscrita rosa coral, contraste negro/blanco y subtítulo clásico.
-- Uso: colocar el logo completo en login y en el encabezado de la barra lateral. Usar la versión blanca sobre fondos oscuros (sidebar y panel de login); reservar la rosa para fondos claros o piezas de marca. En áreas densas, priorizar una marca compacta o el nombre en texto para preservar la legibilidad.
+- Uso: colocar el logo completo en login y en el encabezado de la barra lateral. En el modo claro, la barra lateral usa superficie blanca y el logo se presenta con contraste oscuro; en el modo oscuro se conserva la versión blanca. La versión blanca también se usa en el panel de login. En áreas densas, priorizar una marca compacta para preservar la legibilidad.
 
 ## Principios
 
@@ -41,7 +41,7 @@ Usar fondo blanco, texto oscuro y rosa coral para el contraste principal. No usa
 
 ### Modo oscuro
 
-El modo oscuro debe ser una alternativa del mismo sistema, no una inversión automática de colores. Se activará desde el menú de perfil y respetará la preferencia del sistema como valor inicial.
+El modo oscuro debe ser una alternativa del mismo sistema, no una inversión automática de colores. Se activará desde el control de tema de la topbar y respetará la preferencia guardada como valor inicial.
 
 | Token | Valor oscuro | Uso |
 |---|---|---|
@@ -56,7 +56,7 @@ El modo oscuro debe ser una alternativa del mismo sistema, no una inversión aut
 - El logo blanco se conserva sin alteración sobre una superficie oscura limpia.
 - Las tablas usan filas oscuras con separación sutil; evitar grandes fondos negros puros.
 - Los estados semánticos mantienen texto, icono y etiqueta explícita para conservar accesibilidad en ambos temas.
-- La preferencia elegida por la persona usuaria debe persistir entre sesiones.
+- La preferencia elegida por la persona usuaria debe persistir entre sesiones y se cambia desde la acción de tema de la topbar.
 
 ## Tipografía
 
@@ -66,13 +66,17 @@ El modo oscuro debe ser una alternativa del mismo sistema, no una inversión aut
 
 ## Layout responsive
 
-| Zona | Escritorio (≥ 1024 px) | Tablet (768–1023 px) |
-|---|---|---|
-| Navegación | Sidebar fija de 248 px, con logo y grupos por módulo | Sidebar plegable desde botón de menú; panel superpuesto al contenido |
-| Topbar | Encabezado con ruta, usuario y acciones contextuales | Encabezado compacto con menú, título y perfil |
-| Contenido | Máximo útil de 1440 px; padding de 32 px | Padding de 20–24 px; tarjetas y paneles se apilan |
-| Tablas | Todas las columnas relevantes y acciones al final | Columnas esenciales; detalle y acciones secundarias en menú o panel |
-| Formularios | Dos columnas cuando hay espacio | Una columna; campos y botones de al menos 44 px de alto |
+El shell reutilizable conserva la gramática visual de los prototipos y cambia de modo en dos cortes claros:
+
+| Zona | Escritorio (≥ 1121 px) | Tablet (781–1120 px) | Móvil (≤ 780 px) |
+|---|---|---|---|
+| Navegación | Sidebar fija de 236 px, logo contrastado, grupos por módulo y perfil al pie | Rail fijo de 76 px con iconos; las etiquetas y títulos se ocultan sin perder `title`/nombre accesible | Sidebar fuera del flujo; se abre como panel superpuesto desde el botón de menú |
+| Topbar | Transparente, mínimo 96 px, breadcrumb, título y acciones a la derecha | Mantiene la jerarquía del escritorio con menos controles visibles | Mínimo 92 px, menú junto al título y acciones compactas |
+| Contenido | Máximo útil de 1600 px; padding de 32 px | Padding de 24–32 px; tarjetas y paneles se apilan cuando lo necesitan | Padding de 20/16 px; controles y acciones ocupan el ancho disponible |
+| Tablas | Todas las columnas relevantes y acciones al final | Columnas esenciales; detalle y acciones secundarias en menú o panel | Scroll horizontal explícito o vista de detalle; nunca se comprime texto crítico |
+| Formularios | Dos columnas cuando hay espacio | Una o dos columnas según el ancho útil | Una columna; campos y botones de al menos 44 px de alto |
+
+El shell se implementa una sola vez en `src/shared/layout/app-shell.tsx`; las páginas aportan únicamente su contenido mediante rutas anidadas. Los enlaces se filtran por rol, los iconos mantienen el mismo lenguaje visual de `prototype-icons.svg` y el menú móvil conserva foco y cierre con Escape.
 
 ## Componentes base
 
