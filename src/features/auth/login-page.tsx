@@ -69,7 +69,7 @@ export function LoginPage() {
       </a>
 
       <section
-        className="flex justify-center py-6 sm:py-8"
+        className="flex items-start justify-center py-6 sm:py-8"
         aria-labelledby="login-title"
       >
         <div className="w-full max-w-117.5 rounded-xl border border-pw-line bg-white px-5 py-7 sm:px-9 sm:py-8">

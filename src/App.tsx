@@ -1,12 +1,7 @@
 import { LoginPage } from './features/auth/login-page';
-import { AuthProvider } from './features/auth/auth-provider';
 
 function App() {
-  return (
-    <AuthProvider>
-      <LoginPage />
-    </AuthProvider>
-  );
+  return <LoginPage />;
 }
 
 export default App;
