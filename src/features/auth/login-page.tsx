@@ -1,9 +1,10 @@
 import { useState } from "react";
-import brandLogo from "../../../assets/brand/Pink_Logo_v1.png";
 import { AuthApiError } from "./auth-session";
 import { useAuth } from "./auth-provider";
 
 type FieldErrors = { username?: string; password?: string };
+
+const brandLogoUrl = "https://media.prettywomanboutiquenic.com/branding/pink_logo.png";
 
 const inputClasses =
   "min-h-12 w-full rounded-lg border border-pw-line bg-white px-3 text-pw-ink outline-none transition focus:border-pw-brand-deep focus:ring-3 focus:ring-pw-brand-soft aria-invalid:border-red-700 disabled:cursor-wait";
@@ -63,7 +64,7 @@ export function LoginPage() {
       >
         <img
           className="h-20 w-auto max-w-55 object-contain sm:h-28 sm:max-w-62.5"
-          src={brandLogo}
+          src={brandLogoUrl}
           alt="Pretty Woman Boutique"
         />
       </a>

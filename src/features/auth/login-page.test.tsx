@@ -53,6 +53,16 @@ describe('LoginPage', () => {
     expect(screen.getByText('anonymous')).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('muestra el logo desde el servicio de branding', () => {
+    renderLogin();
+
+    expect(screen.getByRole('img', { name: 'Pretty Woman Boutique' })).toHaveAttribute(
+      'src',
+      'https://media.prettywomanboutiquenic.com/branding/pink_logo.png',
+    );
+  });
+
   it('explica los campos obligatorios sin enviar una solicitud vacía', async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn();
