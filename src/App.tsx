@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { useAuth } from './features/auth/auth-provider';
 import { LoginPage } from './features/auth/login-page';
 import { DashboardPage } from './features/dashboard/dashboard-page';
+import { UsersPage } from './features/users/users-page';
 import { AppShell } from './shared/layout/app-shell';
 import { EmptyState, PermissionDeniedState } from './shared/ui/screen-state';
 
@@ -134,10 +135,7 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={['Admin']}>
-                  <UpcomingPage
-                    title="Usuarios"
-                    description="Administra las cuentas del equipo."
-                  />
+                  <UsersPage />
                 </RoleRoute>
               }
               path="users"

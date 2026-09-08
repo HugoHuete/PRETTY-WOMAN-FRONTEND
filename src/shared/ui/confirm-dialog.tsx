@@ -5,6 +5,7 @@ type ConfirmDialogProps = {
   title: string;
   description: string;
   confirmLabel: string;
+  isPending?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 };
@@ -14,6 +15,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  isPending = false,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -29,12 +31,13 @@ export function ConfirmDialog({
     }
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
-    cancelRef.current?.focus();
+    if (isPending) dialogRef.current?.focus();
+    else cancelRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        if (!isPending) onClose();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -44,6 +47,11 @@ export function ConfirmDialog({
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         ),
       ).filter((element) => !element.hasAttribute("disabled"));
+      if (isPending) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -58,7 +66,7 @@ export function ConfirmDialog({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, open]);
+  }, [isPending, onClose, open]);
 
   if (!open) return null;
 
@@ -71,6 +79,7 @@ export function ConfirmDialog({
         ref={dialogRef}
         className="w-full max-w-md rounded-xl border border-pw-line bg-white p-6 shadow-xl"
         role="dialog"
+        tabIndex={isPending ? 0 : undefined}
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
       >
@@ -81,6 +90,7 @@ export function ConfirmDialog({
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             ref={cancelRef}
+            disabled={isPending}
             className="min-h-11 rounded-lg border border-pw-line px-4 font-bold hover:bg-pw-canvas focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2"
             type="button"
             onClick={onClose}
@@ -88,11 +98,12 @@ export function ConfirmDialog({
             Cancelar
           </button>
           <button
-            className="min-h-11 rounded-lg bg-red-700 px-4 font-extrabold text-white hover:bg-red-800 focus-visible:outline-3 focus-visible:outline-red-700 focus-visible:outline-offset-2"
+            className="min-h-11 rounded-lg bg-red-700 px-4 font-extrabold text-white hover:bg-red-800 focus-visible:outline-3 focus-visible:outline-red-700 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isPending}
             type="button"
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {isPending ? "Actualizando…" : confirmLabel}
           </button>
         </div>
       </div>

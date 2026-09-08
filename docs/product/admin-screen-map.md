@@ -112,10 +112,13 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Tracking de orden | panel de `/purchases/orders/:id` | Admin | `GET/POST /api/v1/orders/{id}/tracking-numbers`, `PUT/DELETE /api/v1/orders/{id}/tracking-numbers/{trackingId}` |
 | Recepción | `/purchases/orders/:id/receipts` | Admin | `POST /api/v1/orders/{orderId}/receipts` |
 | Campañas | `/discounts/campaigns` | Admin | `GET/POST /api/v1/discountcampaigns`, `PUT /api/v1/discountcampaigns/{id}`, `PATCH /api/v1/discountcampaigns/{id}/disable` |
-| Usuarios | `/users` | Admin | `POST /api/v1/auth/users`, `POST /api/v1/auth/users/{id}/unlock` |
+| Usuarios | Lista, detalle y formulario — `/users`. Incluye listar, filtrar, consultar el detalle por id, crear usuarios, actualizar sus datos y credenciales; administrar su estado | Admin | `GET /api/v1/auth/users?user=&role=&enabled=`, `GET /api/v1/auth/users/{id}`, `POST /api/v1/auth/users`, `PUT /api/v1/auth/users/{id}` |
+| Usuarios | Estado — acciones desde usuario: desbloquear, deshabilitar o habilitar | Admin | `POST /api/v1/auth/users/{id}/unlock`, `POST /api/v1/auth/users/{id}/disable`, `POST /api/v1/auth/users/{id}/enable` |
 | Agencias de envío | `/settings/delivery-agencies` | Admin | `GET/POST /api/v1/deliveryagencies`, `PUT /api/v1/deliveryagencies/{id}` |
 | Terminales de pago | `/settings/payment-terminals` | Admin | `GET/POST /api/v1/paymentterminals`, `PUT /api/v1/paymentterminals/{id}` |
 | Categorías de gasto | `/settings/expense-categories` | Admin | `GET/POST /api/v1/expensecategories`, `PUT /api/v1/expensecategories/{id}` |
+
+El listado de usuarios acepta filtros opcionales combinables: `user` busca parcialmente, sin distinguir mayúsculas, en usuario, nombre, apellido o correo; `role` admite `Admin` o `Employee`; `enabled` filtra por estado (`true` o `false`). Ejemplos: `GET /api/v1/auth/users?user=maria` y `GET /api/v1/auth/users?role=Employee&enabled=true`.
 
 ## Inventario: incidencias
 

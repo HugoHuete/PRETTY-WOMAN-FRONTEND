@@ -32,6 +32,20 @@ function DialogHarness() {
   );
 }
 
+function PendingDialogHarness() {
+  return (
+    <ConfirmDialog
+      open
+      isPending
+      title="Deshabilitar usuario"
+      description="Actualizando el estado de la cuenta."
+      confirmLabel="Deshabilitar"
+      onConfirm={() => undefined}
+      onClose={() => undefined}
+    />
+  );
+}
+
 function ToastHarness({ detail }: { detail: string }) {
   const { showToast } = useToast();
   return (
@@ -102,6 +116,18 @@ describe('shared UI primitives', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('keeps a pending dialog open and traps focus while actions are disabled', async () => {
+    const user = userEvent.setup();
+    render(<PendingDialogHarness />);
+    const dialog = screen.getByRole('dialog');
+
+    expect(dialog).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(dialog).toBeVisible();
+    await user.tab();
+    expect(dialog).toHaveFocus();
   });
 
   it('renders API error detail in a toast', async () => {

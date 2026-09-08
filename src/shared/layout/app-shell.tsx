@@ -6,6 +6,7 @@ import {
   type NavigationGroup,
   type NavigationIcon,
 } from "../navigation/app-navigation";
+import { PageActionsProvider, usePageActions } from "./page-actions-context";
 import { ToastProvider } from "../ui/toast-provider";
 
 const brandLogoUrl =
@@ -319,8 +320,9 @@ function NavigationDrawer({
   );
 }
 
-export function AppShell() {
+function AppShellContent() {
   const { session, signOut } = useAuth();
+  const { action } = usePageActions();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     try {
@@ -344,9 +346,7 @@ export function AppShell() {
   const userName =
     `${session?.user.name ?? ""} ${session?.user.lastname ?? ""}`.trim() ||
     "Equipo Pretty Woman";
-  const userRole = session?.user.roles.includes("Admin")
-    ? "Administradora"
-    : "Vendedora";
+  const userRole = session?.user.roles.includes("Admin") ? "Admin" : "Ventas";
   const closeDrawer = () => setDrawerOpen(false);
 
   useEffect(() => {
@@ -363,72 +363,81 @@ export function AppShell() {
   }, [drawerOpen]);
 
   return (
-    <ToastProvider>
-      <div className="pw-app-shell">
-        <aside aria-label="Navegación principal" className="pw-sidebar">
-          <SidebarContent
-            groups={groups}
-            name={userName}
-            role={userRole}
-            onSignOut={() => void signOut()}
-          />
-        </aside>
+    <div className="pw-app-shell">
+      <aside aria-label="Navegación principal" className="pw-sidebar">
+        <SidebarContent
+          groups={groups}
+          name={userName}
+          role={userRole}
+          onSignOut={() => void signOut()}
+        />
+      </aside>
 
-        {drawerOpen ? (
-          <NavigationDrawer
-            groups={groups}
-            name={userName}
-            role={userRole}
-            onSignOut={() => void signOut()}
-            onClose={closeDrawer}
-          />
-        ) : null}
+      {drawerOpen ? (
+        <NavigationDrawer
+          groups={groups}
+          name={userName}
+          role={userRole}
+          onSignOut={() => void signOut()}
+          onClose={closeDrawer}
+        />
+      ) : null}
 
-        <div className="pw-app-main">
-          <header className="pw-topbar">
-            <div className="pw-topbar-heading">
-              <button
-                ref={menuButtonRef}
-                aria-label="Abrir navegación"
-                aria-expanded={drawerOpen}
-                className="pw-menu-button"
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-              >
-                <span aria-hidden="true">☰</span>
-              </button>
-              <div>
-                <p className="pw-crumb">
-                  {currentGroup?.label ?? "Pretty Woman"}
-                </p>
-                <h1>{currentItem?.label ?? "Panel administrativo"}</h1>
-              </div>
+      <div className="pw-app-main">
+        <header className="pw-topbar">
+          <div className="pw-topbar-heading">
+            <button
+              ref={menuButtonRef}
+              aria-label="Abrir navegación"
+              aria-expanded={drawerOpen}
+              className="pw-menu-button"
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <span aria-hidden="true">☰</span>
+            </button>
+            <div>
+              <p className="pw-crumb">
+                {currentGroup?.label ?? "Pretty Woman"}
+              </p>
+              <h1>{currentItem?.label ?? "Panel administrativo"}</h1>
             </div>
-            <div className="pw-top-actions">
-              <button
-                aria-label={
-                  darkMode ? "Activar modo claro" : "Activar modo oscuro"
-                }
-                aria-pressed={darkMode}
-                className="pw-theme-button"
-                type="button"
-                onClick={() => setDarkMode((value) => !value)}
-              >
-                <span aria-hidden="true" className="pw-theme-switch">
-                  ◐
-                </span>
-                <span className="pw-theme-label">
-                  {darkMode ? "Modo claro" : "Modo oscuro"}
-                </span>
-              </button>
-            </div>
-          </header>
+          </div>
+          <div className="pw-top-actions">
+            {action}
+            <button
+              aria-label={
+                darkMode ? "Activar modo claro" : "Activar modo oscuro"
+              }
+              aria-pressed={darkMode}
+              className="pw-theme-button"
+              type="button"
+              onClick={() => setDarkMode((value) => !value)}
+            >
+              <span aria-hidden="true" className="pw-theme-switch">
+                ◐
+              </span>
+              <span className="pw-theme-label">
+                {darkMode ? "Modo claro" : "Modo oscuro"}
+              </span>
+            </button>
+          </div>
+        </header>
 
-          <main className="pw-workspace">
-            <Outlet />
-          </main>
-        </div>
+        <main className="pw-workspace">
+          <Outlet />
+        </main>
       </div>
+    </div>
+  );
+}
+
+export function AppShell() {
+  return (
+    <ToastProvider>
+      <PageActionsProvider>
+        <AppShellContent />
+      </PageActionsProvider>
     </ToastProvider>
   );
 }

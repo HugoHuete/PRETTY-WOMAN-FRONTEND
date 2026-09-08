@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -13,15 +13,24 @@ type DataTableProps<T> = {
   caption?: string;
 };
 
-export function DataTable<T>({ columns, rows, rowKey, caption }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  caption,
+}: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto rounded-xl border border-pw-line bg-white">
       <table className="min-w-full border-collapse text-left text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead className="bg-stone-50 text-xs uppercase tracking-wide text-pw-muted">
+        <thead className="bg-pw-brand-soft text-[0.9375rem] uppercase tracking-[0.045em] text-pw-ink">
           <tr>
             {columns.map((column) => (
-              <th className="px-4 py-3 font-extrabold" scope="col" key={column.key}>
+              <th
+                className="border-b border-pw-brand/35 px-4 py-3.5 font-extrabold"
+                scope="col"
+                key={column.key}
+              >
                 {column.header}
               </th>
             ))}
