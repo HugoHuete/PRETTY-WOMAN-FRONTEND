@@ -108,7 +108,7 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Subcategorías | `/catalog/subcategories` | Admin | `GET /api/v1/subcategories`, `GET /api/v1/categories/{id}/subcategories`, `POST /api/v1/subcategories`, `PUT /api/v1/subcategories/{id}` |
 | Tallas | `/catalog/sizes` | Admin | `GET/POST /api/v1/sizes`, `PUT /api/v1/sizes/{id}` |
 | Proveedores | `/suppliers` | Admin | `GET/POST /api/v1/suppliers`, `PUT /api/v1/suppliers/{id}` |
-| Órdenes de compra | `/purchases/orders` | Admin | `GET/POST /api/v1/orders`, `PUT /api/v1/orders/{id}` |
+| Órdenes de compra | `/purchases/orders` | Admin | `GET /api/v1/orders`, `GET /api/v1/orders/statuses`, `GET /api/v1/suppliers`, `POST /api/v1/orders`, `PUT /api/v1/orders/{id}` |
 | Tracking de orden | panel de `/purchases/orders/:id` | Admin | `GET/POST /api/v1/orders/{id}/tracking-numbers`, `PUT/DELETE /api/v1/orders/{id}/tracking-numbers/{trackingId}` |
 | Recepción | `/purchases/orders/:id/receipts` | Admin | `POST /api/v1/orders/{orderId}/receipts` |
 | Campañas | `/discounts/campaigns` | Admin | `GET/POST /api/v1/discountcampaigns`, `PUT /api/v1/discountcampaigns/{id}`, `PATCH /api/v1/discountcampaigns/{id}/disable` |

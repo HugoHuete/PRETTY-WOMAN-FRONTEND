@@ -105,4 +105,15 @@ describe('protected application routes', () => {
       screen.getByText('Esta sección estará disponible pronto'),
     ).toBeVisible();
   });
+
+  it('shows the explicit heading for the purchase order creation placeholder', () => {
+    renderAppAt('/purchases/orders/new', 'authenticated', ['Admin']);
+
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Nueva orden de compra',
+      }),
+    ).toBeVisible();
+  });
 });

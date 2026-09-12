@@ -322,7 +322,7 @@ function NavigationDrawer({
 
 function AppShellContent() {
   const { session, signOut } = useAuth();
-  const { action } = usePageActions();
+  const { action, heading } = usePageActions();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     try {
@@ -398,9 +398,11 @@ function AppShellContent() {
             </button>
             <div>
               <p className="pw-crumb">
-                {currentGroup?.label ?? "Pretty Woman"}
+                {heading?.breadcrumbs ?? currentGroup?.label ?? "Pretty Woman"}
               </p>
-              <h1>{currentItem?.label ?? "Panel administrativo"}</h1>
+              <h1>
+                {heading?.title ?? currentItem?.label ?? "Panel administrativo"}
+              </h1>
             </div>
           </div>
           <div className="pw-top-actions">

@@ -1,11 +1,20 @@
-import type { ReactNode } from 'react';
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { useAuth } from './features/auth/auth-provider';
-import { LoginPage } from './features/auth/login-page';
-import { DashboardPage } from './features/dashboard/dashboard-page';
-import { UsersPage } from './features/users/users-page';
-import { AppShell } from './shared/layout/app-shell';
-import { EmptyState, PermissionDeniedState } from './shared/ui/screen-state';
+import { useEffect, type ReactNode } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
+import { useAuth } from "./features/auth/auth-provider";
+import { LoginPage } from "./features/auth/login-page";
+import { DashboardPage } from "./features/dashboard/dashboard-page";
+import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
+import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
+import { UsersPage } from "./features/users/users-page";
+import { AppShell } from "./shared/layout/app-shell";
+import { usePageActions } from "./shared/layout/page-actions-context";
+import { EmptyState, PermissionDeniedState } from "./shared/ui/screen-state";
 
 function SessionLoading() {
   return (
@@ -17,25 +26,44 @@ function SessionLoading() {
 
 function ProtectedRoutes() {
   const { status } = useAuth();
-  if (status === 'loading') return <SessionLoading />;
-  if (status === 'anonymous') return <Navigate to="/login" replace />;
+  if (status === "loading") return <SessionLoading />;
+  if (status === "anonymous") return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 
 function LoginRoute() {
   const { status } = useAuth();
-  if (status === 'loading') return <SessionLoading />;
-  if (status === 'authenticated') return <Navigate to="/" replace />;
+  if (status === "loading") return <SessionLoading />;
+  if (status === "authenticated") return <Navigate to="/" replace />;
   return <LoginPage />;
 }
 
-function RoleRoute({ roles, children }: { roles: readonly string[]; children: ReactNode }) {
+function RoleRoute({
+  roles,
+  children,
+}: {
+  roles: readonly string[];
+  children: ReactNode;
+}) {
   const { session } = useAuth();
   const hasRole = roles.some((role) => session?.user.roles.includes(role));
   return hasRole ? children : <PermissionDeniedState />;
 }
 
-function UpcomingPage({ title: _title, description }: { title: string; description: string }) {
+function UpcomingPage({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  const { setHeading } = usePageActions();
+
+  useEffect(() => {
+    setHeading({ title, breadcrumbs: null });
+    return () => setHeading(null);
+  }, [title, setHeading]);
+
   return (
     <EmptyState
       title="Esta sección estará disponible pronto"
@@ -99,14 +127,30 @@ function App() {
             />
             <Route
               element={
-                <RoleRoute roles={['Admin']}>
-                  <UpcomingPage
-                    title="Compras"
-                    description="Gestiona órdenes de compra y recepción de mercancía."
-                  />
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrdersPage />
                 </RoleRoute>
               }
               path="purchases/orders"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <UpcomingPage
+                    title="Nueva orden de compra"
+                    description="Registra una nueva orden de compra para la boutique."
+                  />
+                </RoleRoute>
+              }
+              path="purchases/orders/new"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderDetailPage />
+                </RoleRoute>
+              }
+              path="purchases/orders/:id"
             />
             <Route
               element={
@@ -119,7 +163,7 @@ function App() {
             />
             <Route
               element={
-                <RoleRoute roles={['Admin']}>
+                <RoleRoute roles={["Admin"]}>
                   <UpcomingPage
                     title="Campañas"
                     description="Administra campañas y descuentos de la boutique."
@@ -134,7 +178,7 @@ function App() {
             />
             <Route
               element={
-                <RoleRoute roles={['Admin']}>
+                <RoleRoute roles={["Admin"]}>
                   <UsersPage />
                 </RoleRoute>
               }
@@ -142,7 +186,7 @@ function App() {
             />
             <Route
               element={
-                <RoleRoute roles={['Admin']}>
+                <RoleRoute roles={["Admin"]}>
                   <UpcomingPage
                     title="Finanzas"
                     description="Consulta el estado financiero de la boutique."
