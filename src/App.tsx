@@ -11,7 +11,9 @@ import { LoginPage } from "./features/auth/login-page";
 import { DashboardPage } from "./features/dashboard/dashboard-page";
 import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
 import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
+import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-create-page";
 import { UsersPage } from "./features/users/users-page";
+import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
 import { EmptyState, PermissionDeniedState } from "./shared/ui/screen-state";
@@ -74,7 +76,8 @@ function UpcomingPage({
 
 function App() {
   return (
-    <BrowserRouter>
+    <ExchangeRateProvider>
+      <BrowserRouter>
       <Routes>
         <Route element={<LoginRoute />} path="/login" />
         <Route element={<ProtectedRoutes />}>
@@ -136,10 +139,7 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
-                  <UpcomingPage
-                    title="Nueva orden de compra"
-                    description="Registra una nueva orden de compra para la boutique."
-                  />
+                  <PurchaseOrderCreatePage />
                 </RoleRoute>
               }
               path="purchases/orders/new"
@@ -199,7 +199,8 @@ function App() {
         </Route>
         <Route element={<Navigate to="/" replace />} path="*" />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ExchangeRateProvider>
   );
 }
 

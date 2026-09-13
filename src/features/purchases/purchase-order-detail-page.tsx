@@ -58,6 +58,14 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatExchangeRate(value: number) {
+  const formatted = new Intl.NumberFormat("es-NI", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `C$ ${formatted} por $1`;
+}
+
 function nullableMoney(value: number | null) {
   return formatCordobas(value ?? 0);
 }
@@ -217,8 +225,8 @@ export function PurchaseOrderDetailPage() {
   if (!order) return null;
 
   return (
-    <div className="space-y-5">
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="pw-order-detail space-y-6">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section
           className="rounded-xl border border-pw-line bg-white p-5"
           aria-labelledby="order-data-title"
@@ -246,14 +254,14 @@ export function PurchaseOrderDetailPage() {
             />
             <DetailField
               label="Tasa de cambio"
-              value={String(order.exchangeRate)}
+              value={formatExchangeRate(order.exchangeRate)}
             />
           </dl>
         </section>
 
         <aside
-          className="rounded-xl border border-pw-line bg-white p-5 lg:row-span-5"
-          aria-labelledby="summary-title"
+          className="self-start rounded-xl border border-pw-line bg-white p-5 lg:sticky lg:top-6 lg:row-span-5"
+          aria-label="Resumen financiero de la orden"
         >
           <h2 id="summary-title" className="text-lg font-extrabold">
             Resumen de compra
@@ -293,6 +301,9 @@ export function PurchaseOrderDetailPage() {
           <h2 id="products-title" className="text-lg font-extrabold">
             Productos de la orden
           </h2>
+          <p className="mt-1 max-w-2xl text-sm text-pw-muted">
+            Cantidad solicitada, recepción y costo por variante.
+          </p>
           <div className="mt-4 space-y-4">
             {order.products.length === 0 ? (
               <p className="text-sm text-pw-muted">
@@ -302,7 +313,9 @@ export function PurchaseOrderDetailPage() {
             {order.products.map((product) => (
               <article
                 key={product.id}
-                className="overflow-x-auto rounded-lg border border-pw-line"
+                role="region"
+                aria-label={`Variantes de ${product.name}`}
+                className="overflow-hidden rounded-lg border border-pw-line"
               >
                 <div className="border-b border-pw-line bg-pw-brand-soft px-4 py-3">
                   <h3 className="font-extrabold">{product.name}</h3>
@@ -315,7 +328,8 @@ export function PurchaseOrderDetailPage() {
                     No hay variantes registradas para este producto.
                   </p>
                 ) : (
-                  <table className="min-w-full text-left text-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[42rem] text-left text-sm">
                     <thead className="bg-pw-canvas text-xs text-pw-muted">
                       <tr>
                         <th className="px-4 py-3 font-extrabold">Variante</th>
@@ -357,7 +371,8 @@ export function PurchaseOrderDetailPage() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
                 )}
               </article>
             ))}

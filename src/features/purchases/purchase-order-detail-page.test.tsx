@@ -200,6 +200,20 @@ describe('PurchaseOrderDetailPage', () => {
     expect(screen.getByText('Pendientes: 2')).toBeInTheDocument();
   });
 
+  it('formats the exchange rate as an operational currency instruction', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    expect(await screen.findByText('C$ 36.62 por $1')).toBeInTheDocument();
+  });
+
+  it('gives the financial summary and product table descriptive landmarks', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    expect(screen.getByRole('complementary', { name: 'Resumen financiero de la orden' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Variantes de Vestido satinado' })).toBeInTheDocument();
+  });
+
   it('renders totalShortageLossNio, totalSupplierRefundNio, and netShortageLossNio from the API', async () => {
     auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
     renderDetail();

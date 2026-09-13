@@ -1,10 +1,21 @@
-import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from 'react';
 
 export type SelectOption = {
   value: string;
   label: string;
   disabled?: boolean;
 };
+
+function normalizeSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+}
 
 type SelectControlProps = {
   id: string;
@@ -14,6 +25,8 @@ type SelectControlProps = {
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   'aria-label': string;
   disabled?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 };
 
 export function SelectControl({
@@ -24,17 +37,35 @@ export function SelectControl({
   onChange,
   'aria-label': ariaLabel,
   disabled = false,
+  searchable = false,
+  searchPlaceholder = 'Buscar…',
 }: SelectControlProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedOption = options.find((option) => option.value === value) ?? options[0];
-  const selectedIndex = Math.max(options.findIndex((option) => option.value === value), 0);
+  const visibleOptions = useMemo(() => {
+    const normalizedSearch = normalizeSearch(searchTerm.trim());
+    if (!normalizedSearch) return options;
+    return options.filter((option) => normalizeSearch(option.label).includes(normalizedSearch));
+  }, [options, searchTerm]);
+  const selectedIndex = Math.max(visibleOptions.findIndex((option) => option.value === value), 0);
+
+  const close = () => {
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  useEffect(() => {
+    if (isOpen && searchable) searchRef.current?.focus();
+  }, [isOpen, searchable]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) setIsOpen(false);
+      if (!wrapperRef.current?.contains(event.target as Node)) close();
     };
 
     document.addEventListener('pointerdown', handlePointerDown);
@@ -46,7 +77,7 @@ export function SelectControl({
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      setIsOpen(false);
+      close();
       triggerRef.current?.focus();
     };
 
@@ -60,12 +91,12 @@ export function SelectControl({
     if (!nativeSelect) return;
     nativeSelect.value = option.value;
     nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    setIsOpen(false);
+    close();
     triggerRef.current?.focus();
   };
 
   const moveActive = (direction: 1 | -1) => {
-    const enabledIndexes = options
+    const enabledIndexes = visibleOptions
       .map((option, index) => (option.disabled ? -1 : index))
       .filter((index) => index >= 0);
     if (!enabledIndexes.length) return;
@@ -75,11 +106,12 @@ export function SelectControl({
   };
 
   const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     setIsOpen(true);
     requestAnimationFrame(() => {
-      optionRefs.current[selectedIndex]?.focus();
+      if (searchable) searchRef.current?.focus();
+      else optionRefs.current[selectedIndex]?.focus();
     });
   };
 
@@ -88,7 +120,7 @@ export function SelectControl({
       ref={wrapperRef}
       className={`pw-select-control${isOpen ? ' is-open' : ''}`}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsOpen(false);
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close();
       }}
     >
       <select
@@ -115,17 +147,45 @@ export function SelectControl({
         aria-expanded={isOpen}
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={(event) => {
+          // Keyboard activation dispatches a click after keydown. Keep the
+          // control open instead of toggling it closed again.
+          if (event.detail === 0) {
+            setIsOpen(true);
+            return;
+          }
+          setIsOpen((open) => !open);
+        }}
         onKeyDown={handleTriggerKeyDown}
       >
-        <span className="pw-select-value">{selectedOption?.label ?? 'Seleccionar'}</span>
+        <span className="pw-select-value font-normal">{selectedOption?.label ?? 'Seleccionar'}</span>
         <span className="pw-select-arrow" aria-hidden="true" />
       </button>
 
       {isOpen ? (
         <div className="pw-select-panel">
+          {searchable ? (
+            <div className="pw-select-search-wrap">
+              <input
+                ref={searchRef}
+                className="pw-select-search"
+                type="search"
+                value={searchTerm}
+                placeholder={searchPlaceholder}
+                aria-label={`Buscar ${ariaLabel.toLocaleLowerCase()}`}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.preventDefault();
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    optionRefs.current[0]?.focus();
+                  }
+                }}
+              />
+            </div>
+          ) : null}
           <div className="pw-select-options" role="listbox" aria-label={ariaLabel}>
-            {options.map((option, index) => (
+            {visibleOptions.length ? visibleOptions.map((option, index) => (
               <button
                 key={option.value}
                 ref={(element) => {
@@ -151,7 +211,7 @@ export function SelectControl({
                 <span>{option.label}</span>
                 <span className="pw-select-check" aria-hidden="true">✓</span>
               </button>
-            ))}
+            )) : <p className="pw-select-empty">No encontramos resultados.</p>}
           </div>
         </div>
       ) : null}
