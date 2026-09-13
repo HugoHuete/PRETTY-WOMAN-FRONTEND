@@ -30,6 +30,12 @@ export type SupplierDTO = {
   isNational: boolean;
 };
 
+export type ShippingCompanyDTO = {
+  id: number;
+  name: string;
+  url: string | null;
+};
+
 export type OrderTrackingNumberDTO = {
   id: number;
   orderId: number;
