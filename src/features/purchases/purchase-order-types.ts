@@ -47,7 +47,6 @@ export type OrderProductVariantDTO = {
   id: number;
   sizeId: number;
   sizeName: string | null;
-  variant: string | null;
   quantity: number;
   receivedQuantity: number;
   availableQuantity: number;
@@ -60,6 +59,13 @@ export type OrderProductVariantDTO = {
   salePrice: number;
 };
 
+export type OrderProductPresentationDTO = {
+  id: number;
+  name: string | null;
+  sortOrder: number;
+  sizes: OrderProductVariantDTO[];
+};
+
 export type OrderProductDTO = {
   id: number;
   supplierProductCode: string;
@@ -67,7 +73,7 @@ export type OrderProductDTO = {
   name: string;
   subcategoryId: number;
   subcategoryName: string | null;
-  variants: OrderProductVariantDTO[];
+  presentations: OrderProductPresentationDTO[];
 };
 
 export type PurchaseShortageDTO = {

@@ -62,7 +62,6 @@ const variantFixture = {
   id: 301,
   sizeId: 12,
   sizeName: null,
-  variant: 'Azul',
   quantity: 3,
   receivedQuantity: 1,
   availableQuantity: 1,
@@ -82,7 +81,12 @@ const productFixture = {
   name: 'Vestido satinado',
   subcategoryId: 4,
   subcategoryName: null,
-  variants: [variantFixture],
+  presentations: [{
+    id: 401,
+    name: 'Azul',
+    sortOrder: 0,
+    sizes: [variantFixture],
+  }],
 } satisfies OrderProductDTO;
 
 const shortageFixture = {
@@ -140,7 +144,7 @@ describe('purchase order helpers', () => {
     expectTypeOf(shortageFixture).toMatchTypeOf<PurchaseShortageDTO>();
     expectTypeOf(refundFixture).toMatchTypeOf<SupplierRefundDTO>();
     expectTypeOf(orderFixture).toMatchTypeOf<OrderDTO>();
-    expect(orderFixture.products[0].variants[0].salePrice).toBe(1250);
+    expect(orderFixture.products[0].presentations[0].sizes[0].salePrice).toBe(1250);
   });
 
   it('serializes only active order filters', () => {

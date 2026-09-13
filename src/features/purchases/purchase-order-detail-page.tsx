@@ -13,6 +13,8 @@ import {
   formatCordobas,
   orderStatusLabel,
   orderStatusTone,
+  type OrderProductDTO,
+  type OrderProductVariantDTO,
   type OrderDTO,
   type OrderTrackingNumberDTO,
 } from "./purchase-order-types";
@@ -68,6 +70,20 @@ function formatExchangeRate(value: number) {
 
 function nullableMoney(value: number | null) {
   return formatCordobas(value ?? 0);
+}
+
+
+type OrderProductRow = OrderProductVariantDTO & {
+  presentationName: string;
+};
+
+function productRows(product: OrderProductDTO): OrderProductRow[] {
+  return product.presentations.flatMap((presentation) =>
+    presentation.sizes.map((size) => ({
+      ...size,
+      presentationName: presentation.name ?? "Sin presentación",
+    })),
+  );
 }
 
 export function PurchaseOrderDetailPage() {
@@ -129,7 +145,10 @@ export function PurchaseOrderDetailPage() {
             ...loadedOrder,
             products: (loadedOrder.products ?? []).map((product) => ({
               ...product,
-              variants: product.variants ?? [],
+              presentations: (product.presentations ?? []).map((presentation) => ({
+                ...presentation,
+                sizes: presentation.sizes ?? [],
+              })),
             })),
             purchaseShortages: loadedOrder.purchaseShortages ?? [],
           });
@@ -188,7 +207,7 @@ export function PurchaseOrderDetailPage() {
 
   const summary = useMemo(() => {
     const products = order?.products ?? [];
-    const variants = products.flatMap((product) => product.variants);
+    const variants = products.flatMap(productRows);
     return {
       products: products.length,
       variants: variants.length,
@@ -229,6 +248,7 @@ export function PurchaseOrderDetailPage() {
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section
           className="rounded-xl border border-pw-line bg-white p-5"
+          role="region"
           aria-labelledby="order-data-title"
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -239,20 +259,24 @@ export function PurchaseOrderDetailPage() {
               {orderStatusLabel(order.orderStatusId, order.orderStatusName)}
             </StatusBadge>
           </div>
-          <dl className="mt-4 grid gap-4 rounded-lg bg-pw-canvas p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <DetailField
+              className="rounded-lg border border-pw-line bg-pw-canvas p-3"
               label="Proveedor"
               value={order.supplierName ?? `Proveedor #${order.supplierId}`}
             />
             <DetailField
+              className="rounded-lg border border-pw-line bg-pw-canvas p-3"
               label="Fecha de compra"
               value={formatDate(order.purchaseDate)}
             />
             <DetailField
+              className="rounded-lg border border-pw-line bg-pw-canvas p-3"
               label="Moneda de compra"
               value={order.purchaseCurrencyName ?? "Sin especificar"}
             />
             <DetailField
+              className="rounded-lg border border-pw-line bg-pw-canvas p-3"
               label="Tasa de cambio"
               value={formatExchangeRate(order.exchangeRate)}
             />
@@ -266,30 +290,21 @@ export function PurchaseOrderDetailPage() {
           <h2 id="summary-title" className="text-lg font-extrabold">
             Resumen de compra
           </h2>
-          <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <DetailField label="Productos" value={String(summary.products)} />
-            <DetailField label="Variantes" value={String(summary.variants)} />
-            <DetailField label="Unidades" value={String(summary.units)} />
+          <dl className="mt-5 grid grid-cols-3 divide-x divide-pw-line border-y border-pw-line py-3 text-center">
+            <SummaryMetric label="Productos" value={String(summary.products)} />
+            <SummaryMetric label="Variantes" value={String(summary.variants)} />
+            <SummaryMetric label="Unidades" value={String(summary.units)} />
           </dl>
           <h3 className="mt-6 font-extrabold">Costos</h3>
           <dl className="mt-3 space-y-3">
-            <DetailField
-              label="Costo de mercadería"
-              value={formatCordobas(order.merchandiseTotalNio)}
-            />
-            <DetailField
-              label="Envío proveedor"
-              value={formatUsd(order.supplierShippingCostUsd)}
-            />
-            <DetailField
-              label="Envío a bodega"
-              value={formatUsd(order.warehouseShippingCostUsd)}
-            />
+            <SummaryCostRow label="Costo de mercadería" value={formatCordobas(order.merchandiseTotalNio)} />
+            <SummaryCostRow label="Envío proveedor" value={formatUsd(order.supplierShippingCostUsd)} />
+            <SummaryCostRow label="Envío a bodega" value={formatUsd(order.warehouseShippingCostUsd)} />
             <div className="border-t border-pw-line pt-3">
-              <DetailField
-                label="Costo total"
-                value={formatCordobas(order.totalCostNio)}
-              />
+              <SummaryCostRow label="Valor recibido" value={formatCordobas(order.receivedAmountNio)} />
+            </div>
+            <div className="border-t border-pw-line pt-3">
+              <SummaryCostRow label="Costo total" value={formatCordobas(order.totalCostNio)} emphasis />
             </div>
           </dl>
         </aside>
@@ -301,81 +316,111 @@ export function PurchaseOrderDetailPage() {
           <h2 id="products-title" className="text-lg font-extrabold">
             Productos de la orden
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-pw-muted">
-            Cantidad solicitada, recepción y costo por variante.
-          </p>
           <div className="mt-4 space-y-4">
             {order.products.length === 0 ? (
               <p className="text-sm text-pw-muted">
                 No hay productos registrados para esta orden.
               </p>
             ) : null}
-            {order.products.map((product) => (
+            {order.products.map((product) => {
+              const rows = productRows(product);
+              return (
               <article
                 key={product.id}
                 role="region"
-                aria-label={`Variantes de ${product.name}`}
+                aria-label={`Presentaciones de ${product.name}`}
                 className="overflow-hidden rounded-lg border border-pw-line"
               >
                 <div className="border-b border-pw-line bg-pw-brand-soft px-4 py-3">
-                  <h3 className="font-extrabold">{product.name}</h3>
-                  <p className="mt-1 text-xs text-pw-muted">
-                    Código proveedor: {product.supplierProductCode}
-                  </p>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(12rem,0.7fr)_minmax(0,1.3fr)] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="text-xs font-extrabold uppercase tracking-wide text-pw-muted">
+                        Código proveedor
+                      </p>
+                      <h3 className="truncate font-mono text-sm font-black tracking-tight text-pw-ink">
+                        {product.supplierProductCode}
+                      </h3>
+                    </div>
+                    <div className="min-w-0 sm:border-l sm:border-pw-line sm:pl-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-pw-muted">
+                        Producto
+                      </p>
+                      <p
+                        className="mt-1 truncate text-sm font-semibold text-pw-ink"
+                        title={product.name}
+                      >
+                        {product.name}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                {product.variants.length === 0 ? (
+                {rows.length === 0 ? (
                   <p className="px-4 py-3 text-sm text-pw-muted">
                     No hay variantes registradas para este producto.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[42rem] text-left text-sm">
+                    <table className="w-full min-w-232 text-left text-sm">
                     <thead className="bg-pw-canvas text-xs text-pw-muted">
                       <tr>
-                        <th className="px-4 py-3 font-extrabold">Variante</th>
                         <th className="px-4 py-3 font-extrabold">
+                          Presentación
+                        </th>
+                        <th className="px-4 py-3 text-center font-extrabold">Talla</th>
+                        <th className="px-4 py-3 text-center font-extrabold">
                           Solicitadas
                         </th>
-                        <th className="px-4 py-3 font-extrabold">Recibidas</th>
-                        <th className="px-4 py-3 font-extrabold">Pendientes</th>
-                        <th className="px-4 py-3 font-extrabold">
-                          Costo total
+                        <th className="px-4 py-3 text-center font-extrabold">Recibidas</th>
+                        <th className="px-4 py-3 text-center font-extrabold">Pendientes</th>
+                        <th className="px-4 py-3 text-center font-extrabold">
+                          Costo unitario
                         </th>
+                        <th className="px-4 py-3 text-center font-extrabold">Precio venta</th>
+                        <th className="px-4 py-3 text-center font-extrabold">Ganancia</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {product.variants.map((variant) => (
+                      {rows.map((row) => {
+                        return (
                         <tr
-                          key={variant.id}
+                          key={row.id}
                           className="border-t border-pw-line"
                         >
                           <td className="px-4 py-3 font-bold">
-                            {[variant.variant, variant.sizeName]
-                              .filter(Boolean)
-                              .join(" · ") || "Sin variante"}
+                            {row.presentationName}
                           </td>
-                          <td className="px-4 py-3">{variant.quantity}</td>
-                          <td className="px-4 py-3">
-                            Recibidas: {variant.receivedQuantity}
+                          <td className="px-4 py-3 text-center">
+                            {row.sizeName ?? "Sin talla"}
                           </td>
-                          <td className="px-4 py-3">
-                            Pendientes:{" "}
+                          <td className="px-4 py-3 text-center tabular-nums">{row.quantity}</td>
+                          <td className="px-4 py-3 text-center tabular-nums">
+                            {row.receivedQuantity}
+                          </td>
+                          <td className="px-4 py-3 text-center tabular-nums">
                             {Math.max(
-                              variant.quantity - variant.receivedQuantity,
+                              row.quantity - row.receivedQuantity,
                               0,
                             )}
                           </td>
-                          <td className="px-4 py-3">
-                            {formatCordobas(variant.totalCostNio)}
+                          <td className="px-4 py-3 text-center tabular-nums">
+                            {formatCordobas(row.unitCostNio)}
+                          </td>
+                          <td className="px-4 py-3 text-center font-extrabold tabular-nums">
+                            {formatCordobas(row.salePrice)}
+                          </td>
+                          <td className="px-4 py-3 text-center font-extrabold text-pw-brand-deep tabular-nums">
+                            {formatCordobas(row.salePrice - row.unitCostNio)}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                     </table>
                   </div>
                 )}
               </article>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -490,11 +535,29 @@ export function PurchaseOrderDetailPage() {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
+function DetailField({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <dt className="text-xs font-extrabold text-pw-muted">{label}</dt>
       <dd className="mt-1 font-extrabold text-pw-ink">{value}</dd>
+    </div>
+  );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-2">
+      <dt className="text-xs font-extrabold text-pw-muted">{label}</dt>
+      <dd className="mt-1 font-extrabold tabular-nums text-pw-ink">{value}</dd>
+    </div>
+  );
+}
+
+function SummaryCostRow({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-xs font-extrabold text-pw-muted">{label}</dt>
+      <dd className={emphasis ? "text-base font-black text-pw-brand-deep tabular-nums" : "font-extrabold text-pw-ink tabular-nums"}>{value}</dd>
     </div>
   );
 }

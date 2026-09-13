@@ -37,11 +37,14 @@ const orderFixture = {
     name: 'Vestido satinado',
     subcategoryId: 4,
     subcategoryName: 'Vestidos',
-    variants: [{
+    presentations: [{
+      id: 501,
+      name: 'Pañuelo cuadrado',
+      sortOrder: 0,
+      sizes: [{
       id: 301,
       sizeId: 12,
       sizeName: 'M',
-      variant: 'Azul',
       quantity: 3,
       receivedQuantity: 1,
       availableQuantity: 1,
@@ -53,6 +56,7 @@ const orderFixture = {
       unitCostNio: 310.02,
       salePrice: 1250,
     }],
+  }],
   }],
   purchaseShortages: [{
     id: 1,
@@ -141,9 +145,9 @@ describe('PurchaseOrderDetailPage', () => {
     expect(screen.getByText('C$6,150.00')).toBeInTheDocument();
   });
 
-  it.each([{ variants: undefined }, { variants: null }, { variants: [] }])('shows a contextual empty state for variants: $variants', async ({ variants }) => {
+  it.each([{ presentations: undefined }, { presentations: null }, { presentations: [] }])('shows a contextual empty state for presentations: $presentations', async ({ presentations }) => {
     auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : {
-      ...orderFixture, products: [{ ...orderFixture.products[0], variants }],
+      ...orderFixture, products: [{ ...orderFixture.products[0], presentations }],
     }));
     renderDetail();
     expect(await screen.findByText('No hay variantes registradas para este producto.')).toBeInTheDocument();
@@ -196,10 +200,68 @@ describe('PurchaseOrderDetailPage', () => {
     auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
     renderDetail();
     expect(await screen.findByText('Vestido satinado')).toBeInTheDocument();
-    expect(screen.getByText('Recibidas: 1')).toBeInTheDocument();
-    expect(screen.getByText('Pendientes: 2')).toBeInTheDocument();
+    const productRow = screen.getByRole('row', { name: /Pañuelo cuadrado M 3 1 2/ });
+    expect(within(productRow).getByRole('cell', { name: /^1$/ })).toBeInTheDocument();
+    expect(within(productRow).getByRole('cell', { name: /^2$/ })).toBeInTheDocument();
+    expect(productRow).not.toHaveTextContent('Recibidas:');
+    expect(productRow).not.toHaveTextContent('Pendientes:');
   });
 
+  it('centers quantity values and shows price and profit for each variant', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    const productRow = screen.getByRole('row', { name: /Pañuelo cuadrado M 3 1 2/ });
+
+    expect(within(productRow).getByRole('cell', { name: '3' })).toHaveClass('text-center');
+    expect(within(productRow).getByRole('cell', { name: 'C$310.02' })).toBeInTheDocument();
+    expect(within(productRow).getByRole('cell', { name: 'C$1,250.00' })).toBeInTheDocument();
+    expect(within(productRow).getByRole('cell', { name: 'C$939.98' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Talla' })).toHaveClass('text-center');
+    expect(screen.getByRole('columnheader', { name: 'Costo unitario' })).toHaveClass('text-center');
+    expect(screen.getByRole('columnheader', { name: 'Precio venta' })).toHaveClass('text-center');
+    expect(screen.getByRole('columnheader', { name: 'Ganancia' })).toHaveClass('text-center');
+    expect(screen.getByText('SOHO25120')).toHaveClass('font-mono');
+    expect(screen.getByText('Producto')).toBeInTheDocument();
+  });
+
+  it('removes the explanatory sentence from the products section', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    expect(screen.queryByText('Cantidad solicitada, recepción y costo por presentación y talla.')).not.toBeInTheDocument();
+  });
+
+  it('aligns financial summary values for faster scanning', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    const summary = screen.getByRole('complementary', { name: 'Resumen financiero de la orden' });
+    const merchandiseCosts = within(summary).getAllByText('C$5,600.00');
+    const merchandiseCost = merchandiseCosts[0];
+    expect(merchandiseCost).toHaveClass('tabular-nums');
+    expect(merchandiseCost.parentElement).toHaveClass('flex', 'justify-between');
+  });
+
+  it('shows the received amount in cordobas in the financial summary', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    const summary = screen.getByRole('complementary', { name: 'Resumen financiero de la orden' });
+
+    expect(within(summary).getByText('Valor recibido')).toBeInTheDocument();
+    expect(within(summary).getByText('Valor recibido').parentElement).toHaveTextContent('C$5,600.00');
+  });
+
+  it('groups order metadata into readable fields', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    await screen.findByText('Vestido satinado');
+    const metadata = screen.getByRole('region', { name: 'Datos de la orden' });
+
+    expect(within(metadata).getByText('Proveedor').parentElement).toHaveClass('rounded-lg', 'border');
+    expect(within(metadata).getByText('Fecha de compra').parentElement).toHaveClass('rounded-lg', 'border');
+  });
   it('formats the exchange rate as an operational currency instruction', async () => {
     auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
     renderDetail();
@@ -211,7 +273,16 @@ describe('PurchaseOrderDetailPage', () => {
     renderDetail();
     await screen.findByText('Vestido satinado');
     expect(screen.getByRole('complementary', { name: 'Resumen financiero de la orden' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Variantes de Vestido satinado' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Presentaciones de Vestido satinado' })).toBeInTheDocument();
+  });
+
+  it('renders the backend presentation and size shape instead of treating it as empty', async () => {
+    auth.request.mockImplementation((path: string) => jsonResponse(path.endsWith('tracking-numbers') ? [] : orderFixture));
+    renderDetail();
+    expect(await screen.findByText('SOHO25120')).toBeInTheDocument();
+    expect(screen.getByText('Pañuelo cuadrado')).toBeInTheDocument();
+    expect(screen.getByText('M')).toBeInTheDocument();
+    expect(screen.queryByText('No hay variantes registradas para este producto.')).not.toBeInTheDocument();
   });
 
   it('renders totalShortageLossNio, totalSupplierRefundNio, and netShortageLossNio from the API', async () => {
