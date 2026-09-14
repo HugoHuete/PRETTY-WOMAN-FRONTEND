@@ -9,6 +9,7 @@ import {
 import { useAuth } from "./features/auth/auth-provider";
 import { LoginPage } from "./features/auth/login-page";
 import { DashboardPage } from "./features/dashboard/dashboard-page";
+import { ProductsPage } from "./features/products/products-page";
 import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
 import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
 import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-create-page";
@@ -92,15 +93,7 @@ function App() {
               }
               path="shipments"
             />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Productos"
-                  description="Consulta el catálogo y la disponibilidad de prendas."
-                />
-              }
-              path="products"
-            />
+            <Route element={<ProductsPage />} path="products" />
             <Route
               element={
                 <UpcomingPage
