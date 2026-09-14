@@ -140,6 +140,7 @@ function renderDetail(path = "/purchases/orders/48") {
             element={<PurchaseOrderDetailPage />}
           />
           <Route path="/purchases/orders" element={<p>Listado de compras</p>} />
+          <Route path="/purchases/orders/:id/edit" element={<p>Editar orden de compra</p>} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -169,7 +170,7 @@ describe("PurchaseOrderDetailPage", () => {
     expect(
       await header.findByRole("heading", { level: 1, name: "Orden #48" }),
     ).toBeInTheDocument();
-    expect(header.getByRole("button", { name: "Editar orden" })).toBeDisabled();
+    expect(header.getByRole("button", { name: "Editar orden" })).toBeEnabled();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     await user.click(header.getByRole("link", { name: /regresar a compras/i }));
     expect(await screen.findByText("Listado de compras")).toBeInTheDocument();
@@ -905,5 +906,15 @@ describe("PurchaseOrderDetailPage", () => {
       expect(screen.queryByText("Proveedor anterior")).not.toBeInTheDocument(),
     );
     expect(screen.getByText("Proveedor actual")).toBeInTheDocument();
+  });
+  it("abre la pantalla de edición desde la acción del detalle", async () => {
+    const user = userEvent.setup();
+    auth.request.mockImplementation((path: string) =>
+      jsonResponse(path.endsWith("tracking-numbers") ? [] : orderFixture),
+    );
+    renderDetail();
+    await screen.findByText("Vestido satinado");
+    await user.click(within(screen.getByRole("banner")).getByRole("button", { name: "Editar orden" }));
+    expect(await screen.findByText("Editar orden de compra")).toBeInTheDocument();
   });
 });

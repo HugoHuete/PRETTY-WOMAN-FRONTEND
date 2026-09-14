@@ -19,21 +19,23 @@ import { convertToCordobas, useExchangeRate } from "../../shared/finance/exchang
 import { type SupplierDTO } from "./purchase-order-types";
 import { parsePurchaseOrderCsv, type ImportedPurchaseOrderProduct, type PurchaseOrderCsvDelimiter, type PurchaseOrderCsvResult } from "./purchase-order-csv";
 
-type CatalogOption = { id: number; name: string };
+export type CatalogOption = { id: number; name: string };
 
-type VariantDraft = {
+export type VariantDraft = {
+  id?: number;
   sizeId: string;
   quantity: string;
   unitCost: string;
 };
 
-type PresentationDraft = {
+export type PresentationDraft = {
   id: number;
+  sourcePresentationId?: number;
   name: string;
   variants: VariantDraft[];
 };
 
-type ProductDraft = {
+export type ProductDraft = {
   id: number;
   supplierProductCode: string;
   name: string;
@@ -49,9 +51,9 @@ type OrderDraft = {
   comments: string;
 };
 
-type FieldError = { path: string; message: string };
+export type FieldError = { path: string; message: string };
 
-type CatalogState = {
+export type CatalogState = {
   suppliers: SupplierDTO[];
   subcategories: CatalogOption[];
   sizes: CatalogOption[];
@@ -930,7 +932,7 @@ function TrashIcon() {
   </svg>;
 }
 
-function PresentationEditor({
+export function PresentationEditor({
   catalog, errors, productIndex, presentation, presentationIndex, purchaseCurrencyId, bankRate, exchangeRateStatus, isCollapsed, onToggle, onPresentationChange, onVariantChange, onRemove, onDuplicatePresentation, onAddVariant, onDuplicateVariant, onRemoveVariant,
 }: {
   catalog: CatalogState;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
 import { StatusBadge } from "../../shared/ui/status-badge";
@@ -134,6 +134,7 @@ export function PurchaseOrderDetailPage() {
   const { id } = useParams();
   const { request } = useAuth();
   const { setAction, setHeading } = usePageActions();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDTO | null>(null);
   const [tracking, setTracking] = useState<OrderTrackingNumberDTO[] | null>(
     null,
@@ -201,10 +202,9 @@ export function PurchaseOrderDetailPage() {
     setAction(
       order && String(order.id) === id ? (
         <button
-          className="inline-flex min-h-10 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted disabled:cursor-not-allowed disabled:opacity-60"
-          disabled
-          title="Disponible próximamente"
+          className="inline-flex min-h-10 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep"
           type="button"
+          onClick={() => navigate(`/purchases/orders/${id}/edit`)}
         >
           Editar orden
         </button>
@@ -214,7 +214,7 @@ export function PurchaseOrderDetailPage() {
       setHeading(null);
       setAction(null);
     };
-  }, [id, order, setAction, setHeading]);
+  }, [id, navigate, order, setAction, setHeading]);
 
   useEffect(() => {
     const requestId = ++orderRequestId.current;

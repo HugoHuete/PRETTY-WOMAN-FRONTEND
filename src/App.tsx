@@ -12,6 +12,7 @@ import { DashboardPage } from "./features/dashboard/dashboard-page";
 import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
 import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
 import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-create-page";
+import { PurchaseOrderEditPage } from "./features/purchases/purchase-order-edit-page";
 import { UsersPage } from "./features/users/users-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
@@ -151,6 +152,14 @@ function App() {
                 </RoleRoute>
               }
               path="purchases/orders/:id"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderEditPage />
+                </RoleRoute>
+              }
+              path="purchases/orders/:id/edit"
             />
             <Route
               element={
