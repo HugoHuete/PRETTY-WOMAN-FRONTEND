@@ -192,7 +192,7 @@ export function PurchaseOrderDetailPage() {
           : "Detalle de compra",
       breadcrumbs: (
         <Link
-          className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-pw-brand-deep"
+          className="inline-flex items-center underline underline-offset-4 hover:text-pw-brand-deep"
           to="/purchases/orders"
         >
           ← Regresar a compras
@@ -556,11 +556,13 @@ export function PurchaseOrderDetailPage() {
             </p>
             <button
               className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              disabled
-              title="Disponible próximamente"
               type="button"
+              onClick={() => navigate("/purchases/orders/" + id + "/receive")}
+              disabled={order.orderStatusId === 4}
+              title={order.orderStatusId === 4 ? "No se puede recibir una orden cancelada." : undefined}
             >
               Registrar recepción
+
             </button>
             <button
               className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted disabled:cursor-not-allowed disabled:opacity-60"
@@ -688,12 +690,12 @@ export function PurchaseOrderDetailPage() {
                                   {formatCordobas(row.unitCostNio)}
                                 </td>
                                 <td className="px-4 py-3 text-center font-extrabold tabular-nums">
-                                  {formatCordobas(row.salePrice)}
+                                  {row.salePrice === null ? "Sin definir" : formatCordobas(row.salePrice)}
                                 </td>
                                 <td className="px-4 py-3 text-center font-extrabold text-pw-brand-deep tabular-nums">
-                                  {formatCordobas(
-                                    row.salePrice - row.unitCostNio,
-                                  )}
+                                  {row.salePrice === null
+                                    ? "Sin definir"
+                                    : formatCordobas(row.salePrice - row.unitCostNio)}
                                 </td>
                               </tr>
                             );

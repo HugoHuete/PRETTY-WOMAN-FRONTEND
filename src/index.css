@@ -10,6 +10,10 @@
   --color-pw-brand-soft: #fff3f6;
 }
 
+:root {
+  --pw-topbar-height: 96px;
+}
+
 @layer base {
   body {
     min-width: 320px;
@@ -203,7 +207,7 @@
 
 .pw-topbar {
   display: flex;
-  min-height: 96px;
+  min-height: var(--pw-topbar-height);
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -590,7 +594,7 @@
   .pw-app-shell { display: block; }
   .pw-sidebar { display: none; }
   .pw-topbar {
-    min-height: 96px;
+    min-height: var(--pw-topbar-height);
     align-items: center;
     padding: 20px 16px 12px;
   }

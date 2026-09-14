@@ -19,6 +19,7 @@ type EditDraft = {
   purchaseDate: string;
   supplierId: string;
   purchaseCurrencyId: string;
+  supplierShippingCostUsd: string;
   comments: string;
 };
 
@@ -72,6 +73,15 @@ function toCordobas(amount: number, purchaseCurrencyId: string, exchangeRate: nu
   return exchangeRate === null ? null : amount * exchangeRate;
 }
 
+function merchandiseUnitCostNio(size: { quantity: number; merchandiseTotalCostNio: number }) {
+  return size.quantity > 0 ? size.merchandiseTotalCostNio / size.quantity : 0;
+}
+
+function unitCostForCurrency(size: { quantity: number; merchandiseTotalCostNio: number }, purchaseCurrencyId: string, exchangeRate: number) {
+  const merchandiseCostNio = merchandiseUnitCostNio(size);
+  return purchaseCurrencyId === "1" ? merchandiseCostNio / exchangeRate : merchandiseCostNio;
+}
+
 function SummaryRow({ label, value, emphasized = false }: { label: string; value: React.ReactNode; emphasized?: boolean }) {
   return (
     <div className={"flex items-center justify-between gap-3 py-3 " + (emphasized ? "border-t border-pw-line pt-4" : "")}>
@@ -86,11 +96,14 @@ function draftFromOrder(order: OrderDTO): EditDraft {
     purchaseDate: order.purchaseDate.slice(0, 10),
     supplierId: String(order.supplierId),
     purchaseCurrencyId: String(order.purchaseCurrencyId),
+    supplierShippingCostUsd: String(order.supplierShippingCostUsd),
     comments: order.comments ?? "",
   };
 }
 
-function productsFromOrder(order: OrderDTO, purchaseCurrencyId: string): ProductDraft[] {
+function productsFromOrder(order: OrderDTO, purchaseCurrencyId: string, exchangeRate: number): ProductDraft[] {
+  const historicalExchangeRate = Number(order.exchangeRate);
+  const hydrationExchangeRate = Number.isFinite(historicalExchangeRate) && historicalExchangeRate > 0 ? historicalExchangeRate : exchangeRate;
   return order.products.map((product) => ({
     id: product.id,
     supplierProductCode: product.supplierProductCode,
@@ -104,7 +117,7 @@ function productsFromOrder(order: OrderDTO, purchaseCurrencyId: string): Product
         id: size.id,
         sizeId: String(size.sizeId),
         quantity: String(size.quantity),
-        unitCost: String(purchaseCurrencyId === "1" ? size.unitCostUsd : size.unitCostNio),
+        unitCost: String(unitCostForCurrency(size, purchaseCurrencyId, hydrationExchangeRate)),
       })),
     })),
   }));
@@ -128,7 +141,7 @@ function emptyProduct(id: number, presentationId: number): ProductDraft {
   };
 }
 
-function productsForCurrency(products: ProductDraft[], order: OrderDTO, fromCurrencyId: string, toCurrencyId: string) {
+function productsForCurrency(products: ProductDraft[], order: OrderDTO, fromCurrencyId: string, toCurrencyId: string, exchangeRate: number) {
   if (fromCurrencyId === toCurrencyId) return products;
 
   return products.map((product) => {
@@ -147,12 +160,13 @@ function productsForCurrency(products: ProductDraft[], order: OrderDTO, fromCurr
             const sourceVariant = sourcePresentation.sizes.find((item) => item.id === variant.id);
             if (!sourceVariant) return variant;
 
-            const originalValue = fromCurrencyId === "1" ? sourceVariant.unitCostUsd : sourceVariant.unitCostNio;
+            const sourceExchangeRate = fromCurrencyId === String(order.purchaseCurrencyId) ? order.exchangeRate : exchangeRate;
+            const originalValue = unitCostForCurrency(sourceVariant, fromCurrencyId, sourceExchangeRate);
             if (Number(variant.unitCost) !== originalValue) return variant;
 
             return {
               ...variant,
-              unitCost: String(toCurrencyId === "1" ? sourceVariant.unitCostUsd : sourceVariant.unitCostNio),
+              unitCost: String(unitCostForCurrency(sourceVariant, toCurrencyId, exchangeRate)),
             };
           }),
         };
@@ -194,7 +208,7 @@ function updatePayload(order: OrderDTO, draft: EditDraft, products: ProductDraft
     purchaseDate: draft.purchaseDate,
     supplierId: Number(draft.supplierId),
     purchaseCurrencyId: Number(draft.purchaseCurrencyId),
-    supplierShippingCostUsd: order.supplierShippingCostUsd,
+    supplierShippingCostUsd: Number(draft.supplierShippingCostUsd),
     comments: draft.comments.trim() || null,
     products: productsPayload(products, order),
   };
@@ -204,6 +218,17 @@ function hasReceipts(order: OrderDTO) {
   return order.receivedAmountNio > 0 || order.products.some((product) =>
     product.presentations.some((presentation) => presentation.sizes.some((size) => size.receivedQuantity > 0)),
   );
+}
+function hasProductLocks(order: OrderDTO) {
+  return hasReceipts(order) || order.purchaseShortages.length > 0 || order.products.some((product) =>
+    product.presentations.some((presentation) => presentation.sizes.some((size) => size.availableQuantity > 0 || size.reservedQuantity > 0)),
+  );
+}
+
+function productLockMessage(order: OrderDTO) {
+  if (hasReceipts(order)) return "Esta orden tiene recepciones y sus productos no se pueden modificar.";
+  if (order.purchaseShortages.length > 0) return "Esta orden tiene faltantes registrados y sus productos no se pueden modificar.";
+  return "Esta orden tiene inventario disponible o reservado y sus productos no se pueden modificar.";
 }
 
 function validateProducts(products: ProductDraft[]) {
@@ -247,6 +272,7 @@ export function PurchaseOrderEditPage() {
   const { setAction, setHeading } = usePageActions();
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDTO | null>(null);
+  const [appliedExchangeRate, setAppliedExchangeRate] = useState<number | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierDTO[]>([]);
   const [catalog, setCatalog] = useState<CatalogState | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
@@ -262,12 +288,22 @@ export function PurchaseOrderEditPage() {
 
   useEffect(() => {
     if (!id) return undefined;
+    setIsLoading(true);
+    setLoadError(null);
+    setMutationError(null);
+    setOrder(null);
+    setDraft(null);
+    setCatalog(null);
+    setSuppliers([]);
+    setProducts([]);
+    setAppliedExchangeRate(null);
     let active = true;
     void Promise.all([
       request("/api/v1/orders/" + id),
       request("/api/v1/suppliers"),
       request("/api/v1/subcategories"),
       request("/api/v1/sizes"),
+
     ])
       .then(async ([orderResponse, suppliersResponse, subcategoriesResponse, sizesResponse]) => {
         if (!orderResponse.ok) {
@@ -300,6 +336,7 @@ export function PurchaseOrderEditPage() {
             subcategories: (await subcategoriesResponse.json()) as CatalogState["subcategories"],
             sizes: (await sizesResponse.json()) as CatalogState["sizes"],
           },
+
         };
       })
       .then((result) => {
@@ -313,11 +350,17 @@ export function PurchaseOrderEditPage() {
           });
           return;
         }
+        const historicalExchangeRate = Number(result.order.exchangeRate);
+        if (!Number.isFinite(historicalExchangeRate) || historicalExchangeRate <= 0) {
+          setLoadError({ orderId: id, detail: "La tasa de cambio histórica de la orden no es válida.", isForbidden: false, isNotFound: false });
+          return;
+        }
+        setAppliedExchangeRate(historicalExchangeRate);
         setOrder(result.order);
         setSuppliers(result.catalog.suppliers);
         setCatalog(result.catalog);
         setDraft(draftFromOrder(result.order));
-        setProducts(productsFromOrder(result.order, String(result.order.purchaseCurrencyId)));
+        setProducts(productsFromOrder(result.order, String(result.order.purchaseCurrencyId), historicalExchangeRate));
       })
       .catch(() => {
         if (active) {
@@ -372,7 +415,7 @@ export function PurchaseOrderEditPage() {
   const updateDraft = (key: keyof EditDraft, value: string) => {
     setDraft((current) => current ? { ...current, [key]: value } : current);
     if (key === "purchaseCurrencyId" && order && draft) {
-      setProducts((current) => productsForCurrency(current, order, draft.purchaseCurrencyId, value));
+      if (appliedExchangeRate !== null) setProducts((current) => productsForCurrency(current, order, draft.purchaseCurrencyId, value, appliedExchangeRate));
     }
     setMutationError(null);
   };
@@ -491,19 +534,32 @@ export function PurchaseOrderEditPage() {
       setMutationError("La fecha de compra no puede ser futura.");
       return;
     }
-    const receiptLock = hasReceipts(order);
-    if (!receiptLock) {
+    const shippingCost = Number(draft.supplierShippingCostUsd);
+    if (!draft.supplierShippingCostUsd.trim() || !Number.isFinite(shippingCost) || shippingCost < 0) {
+      setMutationError("El costo de envío del proveedor debe ser un monto mayor o igual que cero.");
+      return;
+    }
+    const productLock = hasProductLocks(order);
+    if (productLock) {
+      setMutationError("No se puede actualizar una orden con recepciones, inventario o faltantes cerrados.");
+      return;
+    }
+    {
       const productError = validateProducts(products);
       if (productError) {
         setMutationError(productError);
         return;
       }
     }
+    if (appliedExchangeRate === null) {
+      setMutationError("No se pudo cargar la tasa de cambio bancaria vigente.");
+      return;
+    }
 
     setIsSubmitting(true);
     setMutationError(null);
     try {
-      const editableProducts = receiptLock ? productsFromOrder(order, draft.purchaseCurrencyId) : products;
+      const editableProducts = products;
       const response = await request("/api/v1/orders/" + id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -523,7 +579,7 @@ export function PurchaseOrderEditPage() {
   if (currentLoadError?.isForbidden) return <ErrorState title="Acceso restringido" description={currentLoadError.detail} />;
   if (currentLoadError?.isNotFound) return <ErrorState title="No encontramos esta orden" description={currentLoadError.detail} />;
   if (currentLoadError) return <ErrorState title="No pudimos preparar la edición" description={currentLoadError.detail} onRetry={retryLoad} />;
-  if (!order || !draft || !catalog || String(order.id) !== id) return <LoadingState />;
+  if (!order || !draft || !catalog || appliedExchangeRate === null || String(order.id) !== id) return <LoadingState />;
 
   const variants = products.flatMap((product) => product.presentations.flatMap((presentation) => presentation.variants));
   const totals = {
@@ -534,18 +590,18 @@ export function PurchaseOrderEditPage() {
       (total, variant) => total + (Number(variant.quantity) || 0) * (Number(variant.unitCost) || 0),
       0,
     ),
-    shipping: order.supplierShippingCostUsd,
+    shipping: Math.max(0, Number(draft.supplierShippingCostUsd) || 0),
   };
-  const merchandiseUsd = toUsd(totals.merchandise, draft.purchaseCurrencyId, order.exchangeRate);
-  const merchandiseCordobas = toCordobas(totals.merchandise, draft.purchaseCurrencyId, order.exchangeRate);
+  const merchandiseUsd = toUsd(totals.merchandise, draft.purchaseCurrencyId, appliedExchangeRate);
+  const merchandiseCordobas = toCordobas(totals.merchandise, draft.purchaseCurrencyId, appliedExchangeRate);
   const summaryTotals = {
     merchandise: money(totals.merchandise, draft.purchaseCurrencyId === "1" ? "USD" : "C$"),
     shipping: money(totals.shipping, "USD"),
     totalUsd: money(merchandiseUsd === null ? null : merchandiseUsd + totals.shipping, "USD"),
-    totalCordobas: money(merchandiseCordobas === null ? null : merchandiseCordobas + (totals.shipping * order.exchangeRate), "C$"),
+    totalCordobas: money(merchandiseCordobas === null ? null : merchandiseCordobas + (totals.shipping * appliedExchangeRate), "C$"),
   };
 
-  const receiptLock = hasReceipts(order);
+  const productLock = hasProductLocks(order);
   const emptyErrors: FieldError[] = [];
 
   return (
@@ -566,7 +622,7 @@ export function PurchaseOrderEditPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
           <label className="grid gap-1.5 text-sm font-medium text-pw-ink">
             Proveedor
             <SelectControl aria-label="Proveedor" id="purchase-order-edit-supplier" value={draft.supplierId} options={supplierOptions} searchable searchPlaceholder="Buscar proveedor…" onChange={(event) => updateDraft("supplierId", event.target.value)} />
@@ -583,7 +639,11 @@ export function PurchaseOrderEditPage() {
             Tasa de cambio
             <input aria-label="Tasa de cambio" className={inputClass() + " cursor-default bg-pw-canvas text-pw-muted"} readOnly value={formatExchangeRate(order.exchangeRate)} />
           </label>
-          <label className="grid gap-1.5 text-sm font-medium text-pw-ink sm:col-span-2 xl:col-span-4">
+          <label className="grid gap-1.5 text-sm font-medium text-pw-ink">
+            Envío proveedor (USD)
+            <input aria-label="Envío proveedor (USD)" className={inputClass()} inputMode="decimal" min="0" step="0.01" type="number" value={draft.supplierShippingCostUsd} onChange={(event) => updateDraft("supplierShippingCostUsd", event.target.value)} />
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium text-pw-ink sm:col-span-2 xl:col-span-5">
             Comentario interno (opcional)
             <textarea aria-label="Comentario interno" className={inputClass() + " min-h-16 py-2.5"} maxLength={280} placeholder="Ej. Compra colección agosto" value={draft.comments} onChange={(event) => updateDraft("comments", event.target.value)} />
           </label>
@@ -596,20 +656,20 @@ export function PurchaseOrderEditPage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-pw-muted">Detalle de la orden</p>
             <h2 id="products-edit-title" className="mt-1 text-xl font-extrabold">Productos de la orden</h2>
           </div>
-          <button className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={receiptLock} onClick={addProduct}>+ Agregar producto</button>
+          <button className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={productLock} onClick={addProduct}>+ Agregar producto</button>
         </div>
-        {receiptLock ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">Esta orden tiene recepciones y sus productos no se pueden modificar.</p> : null}
-        <fieldset className="mt-5 space-y-5 border-0 p-0" disabled={receiptLock}>
+        {productLock ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">{productLockMessage(order)}</p> : null}
+        <fieldset className="mt-5 space-y-5 border-0 p-0" disabled={productLock}>
           {products.map((product, productIndex) => (
             <article className="rounded-lg border border-pw-line p-4" key={product.id}>
-              <header className="flex flex-wrap items-center justify-between gap-3">
-                <div>
+              <header className="flex flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-pw-muted">Producto {productIndex + 1}</p>
-                  <h3 className="text-base font-extrabold text-pw-ink">{product.name.trim() || "Producto sin nombre"}</h3>
+                  <h3 className="block truncate text-base font-extrabold text-pw-ink">{product.name.trim() || "Producto sin nombre"}</h3>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={receiptLock} onClick={() => addPresentation(productIndex)}>+ Agregar presentación</button>
-                  <button className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={receiptLock} onClick={() => removeProduct(product.id)}>Eliminar producto</button>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <button className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={productLock} onClick={() => addPresentation(productIndex)}>+ Agregar presentación</button>
+                  <button className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={productLock} onClick={() => removeProduct(product.id)}>Eliminar producto</button>
                 </div>
               </header>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -636,9 +696,11 @@ export function PurchaseOrderEditPage() {
                     presentation={presentation}
                     presentationIndex={presentationIndex}
                     purchaseCurrencyId={draft.purchaseCurrencyId}
-                    bankRate={order.exchangeRate}
+                    bankRate={appliedExchangeRate}
                     exchangeRateStatus="ready"
                     isCollapsed={collapsedPresentationIds.has(presentation.id)}
+                    presentationCount={product.presentations.length}
+                    allowRemoveFirstPresentation
                     onToggle={() => togglePresentation(presentation.id)}
                     onPresentationChange={updatePresentation}
                     onVariantChange={updateVariant}

@@ -8,12 +8,14 @@ import {
 } from "react-router-dom";
 import { useAuth } from "./features/auth/auth-provider";
 import { LoginPage } from "./features/auth/login-page";
+import { TrackingNumbersPage } from "./features/purchases/tracking-numbers-page";
 import { DashboardPage } from "./features/dashboard/dashboard-page";
 import { ProductsPage } from "./features/products/products-page";
 import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
 import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
 import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-create-page";
 import { PurchaseOrderEditPage } from "./features/purchases/purchase-order-edit-page";
+import { PurchaseOrderReceivePage } from "./features/purchases/purchase-order-receive-page";
 import { UsersPage } from "./features/users/users-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
@@ -133,6 +135,14 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
+                  <TrackingNumbersPage />
+                </RoleRoute>
+              }
+              path="purchases/tracking-numbers"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
                   <PurchaseOrderCreatePage />
                 </RoleRoute>
               }
@@ -145,6 +155,14 @@ function App() {
                 </RoleRoute>
               }
               path="purchases/orders/:id"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderReceivePage />
+                </RoleRoute>
+              }
+              path="purchases/orders/:id/receive"
             />
             <Route
               element={

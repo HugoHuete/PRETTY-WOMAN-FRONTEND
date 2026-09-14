@@ -933,7 +933,7 @@ function TrashIcon() {
 }
 
 export function PresentationEditor({
-  catalog, errors, productIndex, presentation, presentationIndex, purchaseCurrencyId, bankRate, exchangeRateStatus, isCollapsed, onToggle, onPresentationChange, onVariantChange, onRemove, onDuplicatePresentation, onAddVariant, onDuplicateVariant, onRemoveVariant,
+  catalog, errors, productIndex, presentation, presentationIndex, purchaseCurrencyId, bankRate, exchangeRateStatus, isCollapsed, presentationCount, allowRemoveFirstPresentation = false, onToggle, onPresentationChange, onVariantChange, onRemove, onDuplicatePresentation, onAddVariant, onDuplicateVariant, onRemoveVariant,
 }: {
   catalog: CatalogState;
   errors: FieldError[];
@@ -944,6 +944,8 @@ export function PresentationEditor({
   bankRate: number | null;
   exchangeRateStatus: "idle" | "loading" | "ready" | "error";
   isCollapsed: boolean;
+  presentationCount?: number;
+  allowRemoveFirstPresentation?: boolean;
   onToggle: () => void;
   onPresentationChange: (productIndex: number, presentationIndex: number, value: string) => void;
   onVariantChange: (productIndex: number, presentationIndex: number, variantIndex: number, key: keyof VariantDraft, value: string) => void;
@@ -964,7 +966,7 @@ export function PresentationEditor({
         </button>
         <Field label={`Presentación ${presentationIndex + 1}`} error={fieldError(errors, `product-${productIndex}-presentation-${presentationIndex}-name`)} className="w-full min-w-0 sm:max-w-md"><input aria-label={`Presentación ${presentationIndex + 1} del producto ${productIndex + 1}`} className={inputClass(fieldError(errors, `product-${productIndex}-presentation-${presentationIndex}-name`))} maxLength={50} placeholder="Ej. Azul" value={presentation.name} onChange={(event) => onPresentationChange(productIndex, presentationIndex, event.target.value)} /></Field>
       </div>
-      <div className="flex shrink-0 items-center gap-1"><button className="h-11 min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep" type="button" onClick={onAddVariant}>+ Agregar talla</button><button className="grid h-11 w-11 place-items-center rounded-lg border border-pw-line bg-white text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep" type="button" title="Duplicar presentación" aria-label={`Duplicar presentación ${presentationIndex + 1}`} onClick={onDuplicatePresentation}><DuplicateIcon /></button><button className="grid h-11 w-11 place-items-center rounded-lg border border-pw-line bg-white text-pw-muted hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" title="Eliminar presentación" aria-label={`Eliminar presentación ${presentationIndex + 1}`} disabled={presentationIndex === 0} onClick={onRemove}><TrashIcon /></button></div>
+      <div className="flex shrink-0 items-center gap-1"><button className="h-11 min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep" type="button" onClick={onAddVariant}>+ Agregar talla</button><button className="grid h-11 w-11 place-items-center rounded-lg border border-pw-line bg-white text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep" type="button" title="Duplicar presentación" aria-label={`Duplicar presentación ${presentationIndex + 1}`} onClick={onDuplicatePresentation}><DuplicateIcon /></button><button className="grid h-11 w-11 place-items-center rounded-lg border border-pw-line bg-white text-pw-muted hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" title="Eliminar presentación" aria-label={`Eliminar presentación ${presentationIndex + 1}`} disabled={presentationCount === 1 || (!allowRemoveFirstPresentation && presentationIndex === 0)} onClick={onRemove}><TrashIcon /></button></div>
     </div>
     <h4 id={`presentation-${productIndex}-${presentationIndex}`} className="sr-only">Tallas de la presentación {presentationIndex + 1}</h4>
     {!isCollapsed ? <div id={presentationDetailsId} className="mt-4 space-y-3">

@@ -7,6 +7,17 @@ export type OrderFilters = {
   supplierId: string;
 };
 
+export type TrackingNumberFilters = {
+  page: number;
+  pageSize: number;
+  isReceived: string;
+  trackingNumber: string;
+  shippingCompanyId: string;
+  orderStatusId: string;
+  purchaseDateFrom: string;
+  purchaseDateTo: string;
+};
+
 export type PaginatedResult<T> = {
   items: T[];
   page: number;
@@ -62,7 +73,7 @@ export type OrderProductVariantDTO = {
   allocatedShippingCostNio: number;
   totalCostNio: number;
   unitCostNio: number;
-  salePrice: number;
+  salePrice: number | null;
 };
 
 export type OrderProductPresentationDTO = {
@@ -117,6 +128,7 @@ export type OrderDTO = {
   supplierShippingCostUsd: number;
   warehouseShippingCostUsd: number;
   totalCostNio: number;
+
   exchangeRate: number;
   products: OrderProductDTO[];
   purchaseShortages: PurchaseShortageDTO[];
@@ -192,3 +204,41 @@ export function formatCordobas(value: number): string {
     currency: "NIO",
   }).format(value);
 }
+export function buildTrackingNumbersPath(
+  filters: TrackingNumberFilters,
+): string {
+  const params = new URLSearchParams();
+
+  params.set("page", String(filters.page));
+  params.set("pageSize", String(filters.pageSize));
+
+  if (filters.isReceived.trim()) {
+    params.set("isReceived", filters.isReceived.trim());
+  }
+
+  if (filters.trackingNumber.trim()) {
+    params.set("trackingNumber", filters.trackingNumber.trim());
+  }
+
+  if (filters.shippingCompanyId.trim()) {
+    params.set("shippingCompanyId", filters.shippingCompanyId.trim());
+  }
+
+  if (filters.orderStatusId.trim()) {
+    params.set("orderStatusId", filters.orderStatusId.trim());
+  }
+
+  if (filters.purchaseDateFrom.trim()) {
+    params.set("purchaseDateFrom", filters.purchaseDateFrom.trim());
+  }
+
+  if (filters.purchaseDateTo.trim()) {
+    params.set("purchaseDateTo", filters.purchaseDateTo.trim());
+  }
+
+  const query = params.toString();
+  return query
+    ? `/api/v1/tracking-numbers?${query}`
+    : "/api/v1/tracking-numbers";
+}
+
