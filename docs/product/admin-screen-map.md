@@ -111,7 +111,7 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Órdenes de compra | `/purchases/orders` | Admin | `GET /api/v1/orders`, `GET /api/v1/orders/statuses`, `GET /api/v1/suppliers`, `POST /api/v1/orders`, `PUT /api/v1/orders/{id}` |
 | Tracking de orden | panel de `/purchases/orders/:id` | Admin | `GET/POST /api/v1/orders/{id}/tracking-numbers`, `PUT/DELETE /api/v1/orders/{id}/tracking-numbers/{trackingId}` |
 | Números de tracking | `/purchases/tracking-numbers` | Admin | `GET /api/v1/tracking-numbers` (listado paginado y filtros), `PUT/DELETE /api/v1/orders/{orderId}/tracking-numbers/{trackingId}` |
-| Recepción | `/purchases/orders/:id/receipts` | Admin | `POST /api/v1/orders/{orderId}/receipts` |
+| Recepciones de orden | panel de `/purchases/orders/:id` | Admin | `GET /api/v1/orders/{orderId}/receipts`, `GET /api/v1/orders/{orderId}/receipts/{receiptId}`, `POST /api/v1/orders/{orderId}/receipts`, `PATCH /api/v1/orders/{orderId}/receipts/{receiptId}` |
 | Campañas | `/discounts/campaigns` | Admin | `GET/POST /api/v1/discountcampaigns`, `PUT /api/v1/discountcampaigns/{id}`, `PATCH /api/v1/discountcampaigns/{id}/disable` |
 | Usuarios | Lista, detalle y formulario — `/users`. Incluye listar, filtrar, consultar el detalle por id, crear usuarios, actualizar sus datos y credenciales; administrar su estado | Admin | `GET /api/v1/auth/users?user=&role=&enabled=`, `GET /api/v1/auth/users/{id}`, `POST /api/v1/auth/users`, `PUT /api/v1/auth/users/{id}` |
 | Usuarios | Estado — acciones desde usuario: desbloquear, deshabilitar o habilitar | Admin | `POST /api/v1/auth/users/{id}/unlock`, `POST /api/v1/auth/users/{id}/disable`, `POST /api/v1/auth/users/{id}/enable` |

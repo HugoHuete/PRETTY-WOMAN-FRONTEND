@@ -463,15 +463,31 @@ describe("PurchaseOrderReceivePage", () => {
     expect(screen.getByRole("heading", { name: "Registrar recepción de orden #48" })).toBeInTheDocument();
     expect(screen.queryByText("Detalle de orden")).not.toBeInTheDocument();
   });
-  it("conserva como orden con tracking una orden cuyos trackings ya fueron recepcionados", async () => {
-    mockReceiveRequests({ tracking: [{ ...trackingFixture, productReceiptId: 71 }] });
+  it("oculta los trackings ya recepcionados de una nueva recepción", async () => {
+    mockReceiveRequests({
+      tracking: [
+        { ...trackingFixture, receiptId: 71 },
+        { ...trackingFixture, id: 23, trackingNumber: "SOHO-782191" },
+      ],
+    });
     renderReceive();
 
     expect(await screen.findByRole("heading", { name: "Registrar recepción de orden #48" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Trackings a recibir" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Recibir tracking SOHO-782190")).toBeDisabled();
-    expect(screen.queryByLabelText("Envío de bodega a Nicaragua (USD)")).not.toBeInTheDocument();
-    expect(screen.getByText("Todos los trackings de esta orden ya fueron recepcionados. Agrega un tracking nuevo antes de continuar.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Recibir tracking SOHO-782190")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Recibir tracking SOHO-782191")).toBeInTheDocument();
+    expect(screen.queryByText("Todos los trackings de esta orden ya fueron recepcionados. Agrega un tracking nuevo antes de continuar.")).not.toBeInTheDocument();
+  });
+
+  it("bloquea una orden completamente recibida aunque se abra la ruta directamente", async () => {
+    mockReceiveRequests({
+      order: { ...orderFixture, orderStatusId: 3, orderStatusName: "Recibida" },
+    });
+    renderReceive();
+
+    expect(await screen.findByRole("heading", { name: "No se puede registrar la recepción" })).toBeInTheDocument();
+    expect(screen.getByText("Las órdenes completamente recibidas no pueden recibir mercancía adicional.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardar recepción" })).not.toBeInTheDocument();
   });
   it("confirma explícitamente una recepción marcada como sobrante", async () => {
     const user = userEvent.setup();

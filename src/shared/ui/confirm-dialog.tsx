@@ -5,6 +5,7 @@ type ConfirmDialogProps = {
   title: string;
   description: string;
   confirmLabel: string;
+  error?: string | null;
   isPending?: boolean;
   onConfirm: () => void;
   onClose: () => void;
@@ -15,6 +16,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  error = null,
   isPending = false,
   onConfirm,
   onClose,
@@ -87,6 +89,14 @@ export function ConfirmDialog({
           {title}
         </h2>
         <p className="mt-2 text-sm text-pw-muted">{description}</p>
+        {error ? (
+          <p
+            className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             ref={cancelRef}

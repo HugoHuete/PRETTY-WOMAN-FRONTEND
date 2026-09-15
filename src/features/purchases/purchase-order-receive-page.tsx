@@ -129,7 +129,7 @@ function trackingDraftsFromItems(items: OrderTrackingNumberDTO[]): TrackingDraft
   return items.map((item) => ({
     item,
     selected: false,
-    isReceived: Boolean(item.productReceiptId),
+    isReceived: item.productReceiptId != null || item.receiptId != null,
     weight: item.weight > 0 ? String(item.weight) : "0",
     shippingCostUsd: item.shippingCost > 0 ? String(item.shippingCost) : "0",
   }));
@@ -372,6 +372,10 @@ export function PurchaseOrderReceivePage() {
     () => tracking.filter((draft) => draft.selected).length,
     [tracking],
   );
+  const availableTrackingCount = useMemo(
+    () => tracking.filter((draft) => !draft.isReceived).length,
+    [tracking],
+  );
   const selectedShippingCostUsd = useMemo(
     () => tracking.length > 0
       ? tracking.reduce((total, draft) => total + (draft.selected ? Number(draft.shippingCostUsd) || 0 : 0), 0)
@@ -410,7 +414,7 @@ export function PurchaseOrderReceivePage() {
   if (currentLoadError?.isNotFound) return <ErrorState title="No encontramos esta orden" description={currentLoadError.detail} />;
   if (currentLoadError) return <ErrorState title="No pudimos preparar la recepción" description={currentLoadError.detail} onRetry={() => setRetryVersion((version) => version + 1)} />;
   if (!order || String(order.id) !== id) return <LoadingState />;
-  if (order.orderStatusId === 4) return <ErrorState title="No se puede registrar la recepción" description="Las órdenes canceladas no pueden recibir mercancía." />;
+  if (order.orderStatusId === 3 || order.orderStatusId === 4) return <ErrorState title="No se puede registrar la recepción" description={order.orderStatusId === 3 ? "Las órdenes completamente recibidas no pueden recibir mercancía adicional." : "Las órdenes canceladas no pueden recibir mercancía."} />;
 
   return (
     <>
@@ -437,12 +441,12 @@ export function PurchaseOrderReceivePage() {
                     <div>
                       <h3 id="receive-tracking-title" className="text-base font-extrabold">Trackings a recibir</h3>
                     </div>
-                    <p className="text-sm text-pw-muted">{selectedTrackingCount} de {tracking.length} seleccionados</p>
+                    <p className="text-sm text-pw-muted">{selectedTrackingCount} de {availableTrackingCount} seleccionados</p>
                   </div>
                   <div className="mt-3 overflow-hidden rounded-lg border border-pw-line">
-                    {tracking.every((draft) => draft.isReceived) ? <p className="bg-pw-brand-soft p-3 text-sm text-pw-muted" role="status">Todos los trackings de esta orden ya fueron recepcionados. Agrega un tracking nuevo antes de continuar.</p> : null}
+                    {availableTrackingCount === 0 ? <p className="bg-pw-brand-soft p-3 text-sm text-pw-muted" role="status">Todos los trackings de esta orden ya fueron recepcionados. Agrega un tracking nuevo antes de continuar.</p> : null}
                     <div className="divide-y divide-pw-line">
-                      {tracking.map((draft) => {
+                      {tracking.filter((draft) => !draft.isReceived).map((draft) => {
                         const trackingWeightInvalid = validationTarget?.type === "tracking" && validationTarget.id === draft.item.id && validationTarget.field === "weight";
                         const trackingShippingInvalid = validationTarget?.type === "tracking" && validationTarget.id === draft.item.id && validationTarget.field === "shippingCostUsd";
                         return (
@@ -569,7 +573,7 @@ export function PurchaseOrderReceivePage() {
         <aside className="rounded-xl border border-pw-line bg-white p-5 lg:sticky lg:top-5" aria-label="Resumen de recepción">
           <h2 className="text-xl font-extrabold">Resumen de recepción</h2>
           <dl className="mt-4 divide-y divide-pw-line border-y border-pw-line">
-            {tracking.length > 0 ? <div className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-pw-muted">Paquetes</dt><dd className="font-bold">{selectedTrackingCount} de {tracking.length}</dd></div> : null}
+            {tracking.length > 0 ? <div className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-pw-muted">Paquetes</dt><dd className="font-bold">{selectedTrackingCount} de {availableTrackingCount}</dd></div> : null}
             <div className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-pw-muted">Variantes pendientes</dt><dd className="font-bold">{lines.filter((line) => line.pendingQuantity > 0).length}</dd></div>
             <div className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-pw-muted">Unidades pendientes</dt><dd className="font-bold">{pendingUnits}</dd></div>
             <div className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-pw-muted">Sobrantes</dt><dd className="font-bold">{surplusUnits}</dd></div>

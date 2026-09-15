@@ -55,9 +55,44 @@ export type OrderTrackingNumberDTO = {
   supplierShipmentDate: string | null;
   warehouseDeliveryDate: string | null;
   productReceiptId: number | null;
+  receiptId?: number | null;
   weight: number;
   shippingCost: number;
   shippingCompanyName: string | null;
+};
+
+export type OrderReceiptSummaryDTO = {
+  id: number;
+  orderId: number;
+  receivedDate: string;
+  createdAt: string;
+  warehouseShippingCostUsd: number;
+  warehouseShippingCostNio: number;
+  productCount: number;
+  totalQuantity: number;
+  trackingCount: number;
+};
+
+export type OrderReceiptProductDTO = {
+  productReceiptDetailId: number;
+  productId: number;
+  quantity: number;
+  isSurplus: boolean;
+  weight: number;
+  allocatedWarehouseShippingCostNio: number;
+};
+
+export type OrderReceiptDTO = {
+  id: number;
+  orderId: number;
+  receivedDate: string;
+  createdAt: string;
+  warehouseShippingCostUsd: number;
+  warehouseShippingCostNio: number;
+  orderStatusId: number;
+  productVariants: OrderReceiptProductDTO[];
+  trackingNumberIds: number[];
+  trackingNumbers: OrderTrackingNumberDTO[];
 };
 
 export type OrderProductVariantDTO = {

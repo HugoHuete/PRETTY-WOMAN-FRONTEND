@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -183,6 +184,485 @@ describe("PurchaseOrderDetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("muestra las recepciones registradas y ofrece editarlas", async () => {
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 3,
+      trackingCount: 0,
+    };
+    auth.request.mockImplementation((path: string) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts")) return jsonResponse([receiptSummary]);
+      return jsonResponse(orderFixture);
+    });
+
+    renderDetail();
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    expect(within(section).getByText("14 jul 2026")).toBeInTheDocument();
+    expect(within(section).getByText("$12.50")).toBeInTheDocument();
+    expect(within(section).queryByText("Unidades")).not.toBeInTheDocument();
+    expect(within(section).getByRole("button", { name: "Editar recepción #17" })).toBeInTheDocument();
+  });
+
+  it("muestra cada recepción en una sola fila compacta en pantallas amplias", async () => {
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 458.25,
+      productCount: 1,
+      totalQuantity: 3,
+      trackingCount: 2,
+    };
+    auth.request.mockImplementation((path: string) => {
+      if (path.endsWith("/receipts")) return jsonResponse([receiptSummary]);
+      return jsonResponse(orderFixture);
+    });
+
+    renderDetail();
+
+    const receipt = within(await screen.findByRole("region", { name: "Recepciones" }))
+      .getByRole("article");
+    expect(receipt).toHaveClass(
+      "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)_auto]",
+      "lg:items-center",
+    );
+    expect(within(receipt).getByText("2 trackings asociados")).toBeInTheDocument();
+  });
+
+  it("muestra código y nombre en líneas separadas y con jerarquía neutra", async () => {
+    auth.request.mockImplementation((path: string) =>
+      jsonResponse(path.endsWith("tracking-numbers") || path.endsWith("/receipts") ? [] : orderFixture),
+    );
+
+    renderDetail();
+
+    const productRegion = await screen.findByRole("region", {
+      name: "Presentaciones de Vestido satinado",
+    });
+    expect(within(productRegion).getByText("Código proveedor:")).toBeInTheDocument();
+    expect(within(productRegion).getByText("SOHO25120", { exact: true })).toHaveClass(
+      "font-mono",
+      "font-medium",
+      "text-pw-ink",
+    );
+    expect(within(productRegion).getByText("Nombre:")).toBeInTheDocument();
+    const productName = within(productRegion).getByText("Vestido satinado", { exact: true });
+    expect(productName).toHaveClass("font-normal", "text-pw-ink");
+    expect(productName.parentElement).toHaveClass("truncate", "text-sm");
+  });
+  it("edita el envío, el peso y el precio de venta de una recepción", async () => {
+    const user = userEvent.setup();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 2,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+    auth.request.mockImplementation((path: string, init?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts/17") && init?.method === "PATCH") return jsonResponse(receiptDetail);
+      if (path.endsWith("/receipts/17")) return jsonResponse(receiptDetail);
+      if (path.endsWith("/receipts")) return jsonResponse([receiptSummary]);
+      return jsonResponse(orderFixture);
+    });
+
+    renderDetail();
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    const editor = await screen.findByRole("region", { name: "Editar recepción #17" });
+    expect(editor).toHaveClass("w-full", "lg:col-span-full");
+    const warehouseShipping = within(editor).getByRole("spinbutton", { name: "Envío de bodega de recepción #17" });
+    const weight = within(editor).getByRole("spinbutton", { name: /Peso por unidad de Vestido satinado/ });
+    const salePrice = within(editor).getByRole("spinbutton", { name: /Precio de venta de Vestido satinado/ });
+    expect(within(editor).getByRole("columnheader", { name: "Producto" })).toBeInTheDocument();
+    expect(within(editor).getByRole("columnheader", { name: "Presentación" })).toBeInTheDocument();
+    expect(weight).toHaveClass("mx-auto", "w-24");
+    expect(within(editor).getByText("C$")).toBeInTheDocument();
+
+    await user.clear(warehouseShipping);
+    await user.type(warehouseShipping, "18");
+    await user.clear(weight);
+    await user.type(weight, "2.5");
+    await user.clear(salePrice);
+    await user.type(salePrice, "1400");
+    await user.click(within(editor).getByRole("button", { name: "Guardar cambios" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar cambios" }));
+
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith(
+      "/api/v1/orders/48/receipts/17",
+      expect.objectContaining({ method: "PATCH" }),
+    ));
+    const patchCall = auth.request.mock.calls.find((call) => {
+      const pathValue = String(call[0]);
+      const initValue = call[1] as RequestInit | undefined;
+      return pathValue.endsWith("/receipts/17") && initValue?.method === "PATCH";
+    });
+    expect(JSON.parse(patchCall?.[1]?.body as string)).toEqual({
+      warehouseShippingCostUsd: 18,
+      trackingNumbers: [],
+      productVariants: [{ productReceiptDetailId: 701, weight: 2.5, salePrice: 1400 }],
+    });
+    expect(await screen.findByText("Recepción actualizada correctamente.")).toBeInTheDocument();
+  });
+  it("muestra el error de actualización dentro del diálogo de confirmación", async () => {
+    const user = userEvent.setup();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 0,
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+    auth.request.mockImplementation((path: string, init?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts/17") && init?.method === "PATCH") {
+        return jsonResponse({ detail: "La recepción ya no puede actualizarse." }, 400);
+      }
+      if (path.endsWith("/receipts/17")) return jsonResponse(receiptDetail);
+      if (path.endsWith("/receipts")) return jsonResponse([receiptSummary]);
+      return jsonResponse(orderFixture);
+    });
+
+    renderDetail();
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    const editor = await screen.findByRole("region", { name: "Editar recepción #17" });
+    await user.click(within(editor).getByRole("button", { name: "Guardar cambios" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar cambios" }));
+
+    const confirmation = await screen.findByRole("dialog", { name: "Confirmar cambios" });
+    expect(within(confirmation).getByRole("alert")).toHaveTextContent("La recepción ya no puede actualizarse.");
+  });
+
+  it("ignora el detalle de recepción anterior al cambiar de orden", async () => {
+    const user = userEvent.setup();
+    const pendingOldDetail = deferred<Response>();
+    const pendingNewDetail = deferred<Response>();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 0,
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+    auth.request.mockImplementation((path: string) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/48/receipts")) return jsonResponse([receiptSummary]);
+      if (path.endsWith("/49/receipts")) return jsonResponse([{ ...receiptSummary, orderId: 49 }]);
+      if (path.endsWith("/48/receipts/17")) return pendingOldDetail.promise;
+      if (path.endsWith("/49/receipts/17")) return pendingNewDetail.promise;
+      if (path.endsWith("/49")) return jsonResponse({ ...orderFixture, id: 49, supplierName: "Proveedor siguiente" });
+      return jsonResponse(orderFixture);
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/purchases/orders/48"]}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/purchases/orders/:id" element={<DetailRoute />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    let section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    await user.click(screen.getByRole("link", { name: "Siguiente orden" }));
+    expect(await screen.findByRole("heading", { name: /orden #?49/i })).toBeInTheDocument();
+
+    section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    expect(screen.getByText("Cargando detalle de la recepción…")).toBeInTheDocument();
+
+    await act(async () => {
+      pendingOldDetail.resolve(await jsonResponse(receiptDetail));
+    });
+
+    expect(screen.getByText("Cargando detalle de la recepción…")).toBeInTheDocument();
+    await act(async () => {
+      pendingNewDetail.resolve(await jsonResponse(receiptDetail));
+    });
+  });
+
+  it("limpia el estado de recepción al navegar a otra orden", async () => {
+    const user = userEvent.setup();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 0,
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+
+    auth.request.mockImplementation((path: string, init?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts/17") && init?.method === "PATCH") return jsonResponse(receiptDetail);
+      if (path.endsWith("/receipts/17")) return jsonResponse(receiptDetail);
+      if (path.endsWith("/49/receipts")) return jsonResponse([]);
+      if (path.endsWith("/48/receipts")) return jsonResponse([receiptSummary]);
+      if (path.endsWith("/49")) return jsonResponse({ ...orderFixture, id: 49, supplierName: "Proveedor siguiente" });
+      return jsonResponse(orderFixture);
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/purchases/orders/48"]}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/purchases/orders/:id" element={<DetailRoute />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    const editor = await screen.findByRole("region", { name: "Editar recepción #17" });
+    await user.click(within(editor).getByRole("button", { name: "Guardar cambios" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar cambios" }));
+    expect(await screen.findByText("Recepción actualizada correctamente.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Siguiente orden" }));
+    expect(await screen.findByRole("heading", { name: /orden #?49/i })).toBeInTheDocument();
+    expect(screen.queryByText("Recepción actualizada correctamente.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Editar recepción #17" })).not.toBeInTheDocument();
+  });
+
+  it("ignora el resultado de guardar una recepción después de cambiar de orden", async () => {
+    const user = userEvent.setup();
+    const pendingPatch = deferred<Response>();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 12.5,
+      warehouseShippingCostNio: 457.75,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 0,
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 457.75,
+        },
+      ],
+      trackingNumberIds: [],
+      trackingNumbers: [],
+    };
+    let nextOrderReceiptsCalls = 0;
+    auth.request.mockImplementation((path: string, init?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts/17") && init?.method === "PATCH") return pendingPatch.promise;
+      if (path.endsWith("/48/receipts")) return jsonResponse([receiptSummary]);
+      if (path.endsWith("/49/receipts")) {
+        nextOrderReceiptsCalls += 1;
+        return jsonResponse([]);
+      }
+      if (path.endsWith("/receipts/17")) return jsonResponse(receiptDetail);
+      if (path.endsWith("/49")) return jsonResponse({ ...orderFixture, id: 49, supplierName: "Proveedor siguiente" });
+      return jsonResponse(orderFixture);
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/purchases/orders/48"]}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/purchases/orders/:id" element={<DetailRoute />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    const editor = await screen.findByRole("region", { name: "Editar recepción #17" });
+    await user.click(within(editor).getByRole("button", { name: "Guardar cambios" }));
+    await user.click(screen.getByRole("button", { name: "Confirmar cambios" }));
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith(
+      "/api/v1/orders/48/receipts/17",
+      expect.objectContaining({ method: "PATCH" }),
+    ));
+
+    await user.click(screen.getByRole("link", { name: "Siguiente orden" }));
+    expect(await screen.findByRole("heading", { name: /orden #?49/i })).toBeInTheDocument();
+    await waitFor(() => expect(nextOrderReceiptsCalls).toBe(1));
+
+    await act(async () => {
+      pendingPatch.resolve(await jsonResponse(receiptDetail));
+    });
+    expect(screen.queryByText("Recepción actualizada correctamente.")).not.toBeInTheDocument();
+    expect(nextOrderReceiptsCalls).toBe(1);
+  });
+
+  it("identifica claramente el costo de cada tracking en el editor", async () => {
+    const user = userEvent.setup();
+    const receiptSummary = {
+      id: 17,
+      orderId: 48,
+      receivedDate: "2026-07-14T00:00:00Z",
+      createdAt: "2026-07-14T15:30:00Z",
+      warehouseShippingCostUsd: 40,
+      warehouseShippingCostNio: 1464.8,
+      productCount: 1,
+      totalQuantity: 2,
+      trackingCount: 2,
+    };
+    const receiptDetail = {
+      ...receiptSummary,
+      orderStatusId: 2,
+      productVariants: [
+        {
+          productReceiptDetailId: 701,
+          productId: 301,
+          quantity: 2,
+          isSurplus: false,
+          weight: 1.5,
+          allocatedWarehouseShippingCostNio: 1464.8,
+        },
+      ],
+      trackingNumberIds: [22, 23],
+      trackingNumbers: [
+        { ...trackingFixture, shippingCost: 20 },
+        { ...trackingFixture, id: 23, trackingNumber: "SOHO-782191", shippingCost: 20 },
+      ],
+    };
+    auth.request.mockImplementation((path: string) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts/17")) return jsonResponse(receiptDetail);
+      if (path.endsWith("/receipts")) return jsonResponse([receiptSummary]);
+      return jsonResponse(orderFixture);
+    });
+
+    renderDetail();
+
+    const section = await screen.findByRole("region", { name: "Recepciones" });
+    await user.click(within(section).getByRole("button", { name: "Editar recepción #17" }));
+    const editor = await screen.findByRole("region", { name: "Editar recepción #17" });
+
+    expect(
+      within(editor).queryByText("Ajusta los costos y valores registrados en esta recepción."),
+    ).not.toBeInTheDocument();
+    expect(within(editor).getByText("Costos de envío por tracking")).toBeInTheDocument();
+    const trackingCosts = within(editor).getAllByLabelText("Costo de envío (USD)");
+    expect(trackingCosts).toHaveLength(2);
+    expect(trackingCosts[0].parentElement).toHaveClass("w-24");
+    expect(trackingCosts[0].parentElement?.parentElement).toHaveClass("flex", "items-center");
+    expect(within(editor).getByText("SOHO-782190 · Cargo Express")).toBeInTheDocument();
+  });
   it.each([{ products: undefined }, { products: null }, { products: [] }])(
     "shows a contextual empty state for products: $products",
     async ({ products }) => {
@@ -371,7 +851,7 @@ describe("PurchaseOrderDetailPage", () => {
       "text-center",
     );
     expect(screen.getByText("SOHO25120")).toHaveClass("font-mono");
-    expect(screen.getByText("Producto")).toBeInTheDocument();
+    expect(screen.getByText("Nombre:")).toBeInTheDocument();
   });
 
   it("removes the explanatory sentence from the products section", async () => {
@@ -488,6 +968,154 @@ describe("PurchaseOrderDetailPage", () => {
     expect(document.querySelector("#tracking-section")).toBeInTheDocument();
   });
 
+  it("cierra definitivamente todos los pendientes sin enviar variantes", async () => {
+    const user = userEvent.setup();
+    const closableOrder = {
+      ...orderFixture,
+      purchaseShortages: [],
+      supplierRefund: null,
+      totalShortageLossNio: null,
+      totalSupplierRefundNio: null,
+      netShortageLossNio: null,
+    };
+    const closedOrder = {
+      ...closableOrder,
+      orderStatusId: 5,
+      orderStatusName: "Pendiente de reembolso",
+      purchaseShortages: [
+        {
+          id: 99,
+          productId: 301,
+          quantity: 2,
+          lossAmountNio: 250,
+          shortageDate: "2026-09-14",
+          refundStatus: 1,
+        },
+      ],
+      totalShortageLossNio: 250,
+      totalSupplierRefundNio: null,
+      netShortageLossNio: 250,
+    };
+    let orderLoadCount = 0;
+    auth.request.mockImplementation((path: string) => {
+      if (path.endsWith("/tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("/receipts")) return jsonResponse([]);
+      if (path.endsWith("/shortages/close")) return jsonResponse(closedOrder);
+      if (path === "/api/v1/orders/48") {
+        orderLoadCount += 1;
+        return jsonResponse(orderLoadCount > 1 ? closedOrder : closableOrder);
+      }
+      return jsonResponse(closableOrder);
+    });
+
+    renderDetail();
+
+    const summary = await screen.findByRole("complementary", {
+      name: "Resumen financiero de la orden",
+    });
+    const closeButton = within(summary).getByRole("button", {
+      name: "Cerrar con faltantes",
+    });
+    expect(closeButton).toBeEnabled();
+
+    await user.click(closeButton);
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Esta es una decisión definitiva");
+    expect(dialog).toHaveTextContent(
+      "Todas las cantidades pendientes se registrarán como faltantes",
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Cerrar con faltantes" }),
+    );
+
+    await waitFor(() =>
+      expect(auth.request).toHaveBeenCalledWith(
+        "/api/v1/orders/48/shortages/close",
+        expect.objectContaining({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        }),
+      ),
+    );
+    expect(
+      await screen.findByText(/faltante\(s\) registrado\(s\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Reembolso pendiente")).toBeInTheDocument();
+  });
+  it("permite registrar un reembolso parcial de los faltantes", async () => {
+    const user = userEvent.setup();
+    const unresolvedOrder = {
+      ...orderFixture,
+      supplierRefund: null,
+      totalSupplierRefundNio: 0,
+      netShortageLossNio: 250,
+      supplierRefundDeclinedAt: null,
+    };
+    const refundedOrder = {
+      ...unresolvedOrder,
+      supplierRefund: {
+        id: 11,
+        financialMovementId: 80,
+        amountNio: 125,
+        refundedAt: "2026-09-15",
+        reference: null,
+        comments: null,
+      },
+      totalSupplierRefundNio: 125,
+      netShortageLossNio: 125,
+    };
+    auth.request.mockImplementation((path: string, options?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers") || path.endsWith("/receipts")) return jsonResponse([]);
+      if (path.endsWith("/supplier-refund")) return jsonResponse(refundedOrder);
+      if (options?.method === "POST") throw new Error(`Unexpected POST: ${path}`);
+      return jsonResponse(unresolvedOrder);
+    });
+
+    renderDetail();
+    const shortages = await screen.findByRole("region", { name: "Faltantes" });
+    await user.click(within(shortages).getByRole("button", { name: "Registrar reembolso" }));
+    const dialog = await screen.findByRole("dialog", { name: "Registrar reembolso" });
+    const amount = within(dialog).getByLabelText("Monto del reembolso (C$)");
+    await user.clear(amount);
+    await user.type(amount, "125");
+    await user.click(within(dialog).getByRole("button", { name: "Registrar reembolso" }));
+
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith(
+      "/api/v1/orders/48/supplier-refund",
+      expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amountNio: 125 }) }),
+    ));
+    expect((await screen.findAllByText("C$125.00")).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole("region", { name: "Faltantes" })).queryByRole("button", { name: "Registrar reembolso" })).not.toBeInTheDocument();
+  });
+
+  it("permite marcar definitivamente los faltantes sin reembolso", async () => {
+    const user = userEvent.setup();
+    const unresolvedOrder = { ...orderFixture, supplierRefund: null, totalSupplierRefundNio: 0, netShortageLossNio: 250, supplierRefundDeclinedAt: null };
+    const declinedOrder = { ...unresolvedOrder, supplierRefundDeclinedAt: "2026-09-15", supplierRefundDeclineComments: null };
+    auth.request.mockImplementation((path: string, options?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers") || path.endsWith("/receipts")) return jsonResponse([]);
+      if (path.endsWith("/supplier-refund/decline")) return jsonResponse(declinedOrder);
+      if (options?.method === "POST") throw new Error(`Unexpected POST: ${path}`);
+      return jsonResponse(unresolvedOrder);
+    });
+
+    renderDetail();
+    const shortages = await screen.findByRole("region", { name: "Faltantes" });
+    await user.click(within(shortages).getByRole("button", { name: "Marcar como pérdida" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Esta decisión es definitiva");
+    expect(dialog).toHaveTextContent("no se podrá solicitar un reembolso después");
+    await user.click(within(dialog).getByRole("button", { name: "Marcar como pérdida" }));
+
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith(
+      "/api/v1/orders/48/supplier-refund/decline",
+      expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }),
+    ));
+    expect(await screen.findByText("El faltante se marcó como pérdida sin reembolso.")).toBeInTheDocument();
+  });
+
   it("renders the backend presentation and size shape instead of treating it as empty", async () => {
     auth.request.mockImplementation((path: string) =>
       jsonResponse(path.endsWith("tracking-numbers") ? [] : orderFixture),
@@ -525,6 +1153,7 @@ describe("PurchaseOrderDetailPage", () => {
       "Datos de la orden",
       "Resumen de compra",
       "Productos de la orden",
+      "Recepciones",
       "Faltantes",
       "Números de seguimiento",
       "Comentario interno",
@@ -874,7 +1503,8 @@ describe("PurchaseOrderDetailPage", () => {
     const firstOrder = deferred<Response>();
     const secondOrder = deferred<Response>();
     auth.request.mockImplementation((path: string) => {
-      if (path.endsWith("tracking-numbers")) return jsonResponse([]);
+      if (path.endsWith("tracking-numbers") || path.endsWith("/receipts"))
+        return jsonResponse([]);
       return path.endsWith("/48") ? firstOrder.promise : secondOrder.promise;
     });
     render(
@@ -915,10 +1545,19 @@ describe("PurchaseOrderDetailPage", () => {
     );
     renderDetail();
     await screen.findByText("Vestido satinado");
-    await user.click(within(screen.getByRole("banner")).getByRole("button", { name: "Editar orden" }));
+    await user.click(await within(screen.getByRole("banner")).findByRole("button", { name: "Editar orden" }));
     expect(await screen.findByText("Editar orden de compra")).toBeInTheDocument();
   });
 });
+  it("deshabilita registrar recepción para una orden recibida", async () => {
+    auth.request.mockImplementation((path: string) =>
+      jsonResponse(path.endsWith("tracking-numbers") ? [] : { ...orderFixture, orderStatusId: 3, orderStatusName: "Recibida" }),
+    );
+    renderDetail();
+    const summary = await screen.findByRole("complementary", { name: "Resumen financiero de la orden" });
+    expect(within(summary).getByRole("button", { name: "Registrar recepción" })).toBeDisabled();
+  });
+
   it("deshabilita registrar recepción para una orden cancelada", async () => {
     auth.request.mockImplementation((path: string) =>
       jsonResponse(path.endsWith("tracking-numbers") ? [] : { ...orderFixture, orderStatusId: 4, orderStatusName: "Cancelada" }),
