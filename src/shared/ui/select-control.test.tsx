@@ -44,6 +44,49 @@ describe('SelectControl', () => {
     expect(within(screen.getByRole('listbox', { name: 'Subcategoría' })).getByRole('option', { name: 'Pantalón' })).toBeVisible();
   });
 
+  it('notifies changes when selecting an option from the custom dropdown', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SelectControl
+        id="role"
+        value=""
+        options={[
+          { value: "", label: "Selecciona un rol" },
+          { value: "sales", label: "Ventas" },
+        ]}
+        onChange={onChange}
+        aria-label="Rol"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Rol" }));
+    await user.click(within(screen.getByRole("listbox", { name: "Rol" })).getByRole("option", { name: "Ventas" }));
+
+    expect(onChange).toHaveBeenCalled();
+  });
+  it('can render its dropdown outside an overflow container', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <div className="overflow-auto">
+        <SelectControl
+          id="issue-type"
+          value=""
+          options={[{ value: '', label: 'Selecciona un tipo' }, { value: 'damaged', label: 'Dañada' }]}
+          onChange={vi.fn()}
+          aria-label="Tipo de incidencia"
+          portal
+        />
+      </div>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Tipo de incidencia' }));
+
+    expect(screen.getByRole('listbox', { name: 'Tipo de incidencia' })).toBeVisible();
+    expect(screen.getByRole('listbox', { name: 'Tipo de incidencia' }).closest('.pw-select-control')).toBeNull();
+    expect(container.querySelector('.pw-select-control')).toBeTruthy();
+  });
+
   it('clears the search when focus leaves the control', async () => {
     const user = userEvent.setup();
     render(

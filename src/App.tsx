@@ -17,6 +17,8 @@ import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-cre
 import { PurchaseOrderEditPage } from "./features/purchases/purchase-order-edit-page";
 import { PurchaseOrderReceivePage } from "./features/purchases/purchase-order-receive-page";
 import { UsersPage } from "./features/users/users-page";
+import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
+import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
@@ -172,15 +174,8 @@ function App() {
               }
               path="purchases/orders/:id/edit"
             />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Incidencias"
-                  description="Consulta incidencias y disponibilidad relacionada."
-                />
-              }
-              path="inventory/issues"
-            />
+            <Route element={<InventoryIssuesPage />} path="inventory/issues" />
+            <Route element={<InventoryIssueDetailPage />} path="inventory/issues/:id" />
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
