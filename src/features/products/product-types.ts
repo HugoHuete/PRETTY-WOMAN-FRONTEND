@@ -10,6 +10,7 @@ export type ProductVariantDTO = {
   reservedQuantity: number;
   unavailableQuantity: number;
   salePrice: number;
+  unitCostNio: number;
   discountedSalePrice: number | null;
   discountCampaignId: number | null;
   discountCampaignName: string | null;
@@ -21,6 +22,16 @@ export type ProductPresentationDTO = {
   sortOrder: number;
   primaryImageUrl: string | null;
   sizes: ProductVariantDTO[];
+};
+
+
+export type ProductImageDTO = {
+  id: number;
+  thumbnailUrl: string;
+  webUrl: string;
+  productPresentationId: number | null;
+  isPrimary: boolean;
+  sortOrder: number;
 };
 
 export type ProductDTO = {
@@ -37,6 +48,21 @@ export type ProductDTO = {
 };
 
 export type ProductCategory = { id: number; name: string };
+export type ProductSubcategory = { id: number; categoryId: number; name: string; categoryName?: string | null };
+export type ProductInventoryMovementDTO = {
+  id: number;
+  productId: number;
+  productVariantId: number;
+  sizeId: number;
+  sizeName: string | null;
+  variant: string | null;
+  movementDate: string;
+  inventoryMovementTypeName: string | null;
+  fromStockBucketName: string | null;
+  toStockBucketName: string | null;
+  quantity: number;
+  comments?: string | null;
+};
 export type ProductSize = { id: number; name: string };
 
 export type PaginatedProducts = {
@@ -64,7 +90,7 @@ export type ProductAvailability = "available" | "reserved" | "unavailable";
 export const defaultProductFilters: ProductFilters = {
   page: 1,
   pageSize: 20,
-  availability: "",
+  availability: "1",
   code: "",
   categoryId: "",
   subcategoryId: "",

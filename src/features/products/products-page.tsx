@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+﻿import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
@@ -8,297 +8,89 @@ import { EmptyState, ErrorState, LoadingState } from "../../shared/ui/screen-sta
 import { SelectControl } from "../../shared/ui/select-control";
 import { StatusBadge } from "../../shared/ui/status-badge";
 import { useToast } from "../../shared/ui/toast-context";
-import {
-  buildProductsPath,
-  defaultProductFilters,
-  formatProductPrice,
-  productAvailability,
-  productAvailabilityLabel,
-  productAvailabilityTone,
-  productPresentationLabel,
-  productSizeCount,
-  productTotals,
-  type PaginatedProducts,
-  type ProductCategory,
-  type ProductDTO,
-  type ProductFilters,
-  type ProductSize,
-} from "./product-types";
+import { ProductPresentationImages } from "./product-presentation-images";
+import { buildProductsPath, defaultProductFilters, formatProductPrice, productAvailability, productAvailabilityLabel, productAvailabilityTone, productPresentationLabel, productSizeCount, productTotals, type PaginatedProducts, type ProductCategory, type ProductDTO, type ProductFilters, type ProductImageDTO, type ProductInventoryMovementDTO, type ProductSize, type ProductSubcategory } from "./product-types";
+import type { RequestFn } from "./product-images-api";
 
-type ProductLoadError = { detail: string; forbidden: boolean };
+type Presentation = ProductDTO["presentations"][number];
+type Variant = Presentation["sizes"][number];
+type GroupMode = "product" | "presentation";
+type ProductError = { detail: string; forbidden: boolean };
 
-function filtersFromSearchParams(params: URLSearchParams): ProductFilters {
-  const page = Number(params.get("page"));
-  const pageSize = Number(params.get("pageSize"));
-  return {
-    ...defaultProductFilters,
-    page: Number.isInteger(page) && page > 0 ? page : 1,
-    pageSize: Number.isInteger(pageSize) && pageSize > 0 ? Math.min(pageSize, 100) : 20,
-    availability: params.get("availability") ?? "",
-    code: params.get("code") ?? "",
-    categoryId: params.get("categoryId") ?? "",
-    subcategoryId: params.get("subcategoryId") ?? "",
-    sizeId: params.get("sizeId") ?? "",
-  };
+function fromParams(params: URLSearchParams): ProductFilters {
+  const page = Number(params.get("page")), pageSize = Number(params.get("pageSize"));
+  return { ...defaultProductFilters, page: Number.isInteger(page) && page > 0 ? page : 1, pageSize: Number.isInteger(pageSize) && pageSize > 0 ? Math.min(pageSize, 100) : 20, availability: params.get("availability") ?? defaultProductFilters.availability, code: params.get("code") ?? "", categoryId: params.get("categoryId") ?? "", subcategoryId: params.get("subcategoryId") ?? "", sizeId: params.get("sizeId") ?? "" };
 }
+async function detail(response: Response, fallback: string) { try { const body = await response.json() as { detail?: string; title?: string }; return body.detail ?? body.title ?? fallback; } catch { return fallback; } }
+function query(filters: ProductFilters) { return buildProductsPath(filters).slice("/api/v1/products?".length); }
+function text(value: string | null | undefined, fallback = "Sin nombre") { return value?.trim() || fallback; }
+function price(product: ProductDTO) { const values = product.presentations.flatMap((p) => p.sizes.map((s) => s.discountedSalePrice ?? s.salePrice)); return values.length ? formatProductPrice(Math.min(...values)) : "Sin precio"; }
+function imageFor(product: ProductDTO, cache: Record<number, ProductImageDTO[]>) { return product.presentations.flatMap((p) => cache[p.id] ?? []).find((image) => image.isPrimary)?.thumbnailUrl ?? product.primaryImageUrl ?? product.presentations[0]?.primaryImageUrl ?? null; }
 
-async function problemDetail(response: Response, fallback: string) {
-  try {
-    const problem = (await response.json()) as { detail?: string; title?: string };
-    return problem.detail ?? problem.title ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function searchParamsFromFilters(filters: ProductFilters) {
-  return buildProductsPath(filters).slice("/api/v1/products?".length);
-}
-
-async function exportProducts(
-  request: ReturnType<typeof useAuth>["request"],
-  filters: ProductFilters,
-  setIsExporting: (value: boolean) => void,
-  showToast: ReturnType<typeof useToast>["showToast"],
-) {
-  setIsExporting(true);
-  try {
-    const response = await request("/api/v1/products/export?" + searchParamsFromFilters(filters));
-    if (!response.ok) {
-      showToast({
-        tone: "error",
-        title: "No pudimos exportar los productos",
-        detail: await problemDetail(response, "Intenta nuevamente en unos segundos."),
-      });
-      return;
-    }
-
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "productos.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch {
-    showToast({
-      tone: "error",
-      title: "No pudimos exportar los productos",
-      detail: "Intenta nuevamente en unos segundos.",
-    });
-  } finally {
-    setIsExporting(false);
-  }
-}
 export function ProductsPage() {
-  const { request } = useAuth();
-  const { showToast } = useToast();
-  const { setAction, setHeading } = usePageActions();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const filters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
-  const [products, setProducts] = useState<PaginatedProducts | null>(null);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [sizes, setSizes] = useState<ProductSize[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<ProductLoadError | null>(null);
-  const [retryVersion, setRetryVersion] = useState(0);
-  const [selectedProduct, setSelectedProduct] = useState<ProductDTO | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const productRequestId = useRef(0);
-
+  const { request } = useAuth(); const { showToast } = useToast(); const { setAction, setHeading } = usePageActions();
+  const [params, setParams] = useSearchParams(); const filters = useMemo(() => fromParams(params), [params]);
+  const [products, setProducts] = useState<PaginatedProducts | null>(null); const [categories, setCategories] = useState<ProductCategory[]>([]); const [subcategories, setSubcategories] = useState<ProductSubcategory[]>([]); const [sizes, setSizes] = useState<ProductSize[]>([]);
+  const [loading, setLoading] = useState(true); const [error, setError] = useState<ProductError | null>(null); const [retry, setRetry] = useState(0); const [expanded, setExpanded] = useState<number | null>(null); const [view, setView] = useState<"table" | "grid">("table"); const [group, setGroup] = useState<GroupMode>("product"); const [cache, setCache] = useState<Record<number, ProductImageDTO[]>>({}); const [dialog, setDialog] = useState<{ product: ProductDTO; presentation?: Presentation } | null>(null); const [movement, setMovement] = useState<{ product: ProductDTO; presentation: Presentation; variant: Variant } | null>(null); const [code, setCode] = useState(filters.code); const [exporting, setExporting] = useState(false); const requestId = useRef(0);
+  useEffect(() => { setHeading({ title: "Productos", breadcrumbs: "Inventario" }); return () => setHeading(null); }, [setHeading]);
+  useEffect(() => { setAction(<button type="button" disabled={exporting} className="inline-flex min-h-11 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-ink" onClick={() => void exportProducts(request, filters, setExporting, showToast)}>{exporting ? "Preparando Excel…" : "Descargar Excel"}</button>); return () => setAction(null); }, [exporting, filters, request, setAction, showToast]);
+  useEffect(() => setCode(filters.code), [filters.code]);
+  useEffect(() => { if (code === filters.code) return undefined; const timer = window.setTimeout(() => setParams(query({ ...filters, code, availability: params.has("availability") ? filters.availability : "", page: 1 })), 600); return () => window.clearTimeout(timer); }, [code, filters, setParams]);
   useEffect(() => {
-    setHeading({ title: "Productos", breadcrumbs: "Inventario" });
-    return () => setHeading(null);
-  }, [setHeading]);
-
-  useEffect(() => {
-    setAction(
-      <button
-        className="inline-flex min-h-11 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-60"
-        type="button"
-        disabled={isExporting}
-        onClick={() => void exportProducts(request, filters, setIsExporting, showToast)}
-      >
-        {isExporting ? "Preparando Excel…" : "Descargar Excel"}
-      </button>,
-    );
-    return () => setAction(null);
-  }, [filters, isExporting, request, setAction, showToast]);
-
-  useEffect(() => {
-    let active = true;
-    const loadOptions = async () => {
-      const [categoryResponse, sizeResponse] = await Promise.all([
-        request("/api/v1/categories"),
-        request("/api/v1/sizes"),
-      ]);
-      if (!active) return;
-      if (categoryResponse.ok) setCategories((await categoryResponse.json()) as ProductCategory[]);
-      if (sizeResponse.ok) setSizes((await sizeResponse.json()) as ProductSize[]);
-    };
-    void loadOptions().catch(() => undefined);
-    return () => {
-      active = false;
-    };
+    let active = true; const load = async (path: string) => { try { const response = await request(path); return response.ok ? await response.json() : null; } catch { return null; } };
+    void Promise.all([load("/api/v1/categories"), load("/api/v1/sizes"), load("/api/v1/subcategories")]).then(([a, b, c]) => { if (!active) return; if (a) setCategories(a as ProductCategory[]); if (b) setSizes(b as ProductSize[]); if (c) setSubcategories(c as ProductSubcategory[]); }); return () => { active = false; };
   }, [request]);
-
   useEffect(() => {
-    const requestId = ++productRequestId.current;
-    const loadProducts = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await request(buildProductsPath(filters));
-        if (!response.ok) {
-          if (requestId === productRequestId.current) {
-            setError({ detail: await problemDetail(response, "No se pudieron cargar los productos."), forbidden: response.status === 403 });
-          }
-          return;
-        }
-        const result = (await response.json()) as PaginatedProducts;
-        if (requestId === productRequestId.current) setProducts(result);
-      } catch {
-        if (requestId === productRequestId.current) setError({ detail: "No se pudieron cargar los productos.", forbidden: false });
-      } finally {
-        if (requestId === productRequestId.current) setIsLoading(false);
-      }
-    };
-    void loadProducts();
-  }, [filters, request, retryVersion]);
-
-  useEffect(() => {
-    if (!selectedProduct) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedProduct(null);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selectedProduct]);
-
-  const updateFilters = (next: ProductFilters) => setSearchParams(searchParamsFromFilters(next));
-  const changeFilter =
-    (key: keyof Pick<ProductFilters, "availability" | "code" | "categoryId" | "sizeId">) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => updateFilters({ ...filters, [key]: event.target.value, page: 1 });
-  const clearFilters = () => updateFilters(defaultProductFilters);
-  const hasActiveFilters = Boolean(filters.availability || filters.code || filters.categoryId || filters.subcategoryId || filters.sizeId);
-
-  return (
-    <div className="space-y-5">
-      <FilterBar aria-label="Filtros de productos" onSubmit={(event) => event.preventDefault()}>
-        <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-code">
-          Código o referencia
-          <input className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30" id="product-code" inputMode="numeric" placeholder="Ej. 1042" type="search" value={filters.code} onChange={changeFilter("code")} />
-        </label>
-        <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-category">
-          Categoría
-          <SelectControl aria-label="Categoría" id="product-category" searchable searchPlaceholder="Buscar categoría…" value={filters.categoryId} options={[{ value: "", label: "Todas" }, ...categories.map((category) => ({ value: String(category.id), label: category.name }))]} onChange={changeFilter("categoryId")} />
-        </label>
-        <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-size">
-          Talla
-          <SelectControl aria-label="Talla" id="product-size" searchable searchPlaceholder="Buscar talla…" value={filters.sizeId} options={[{ value: "", label: "Todas" }, ...sizes.map((size) => ({ value: String(size.id), label: size.name }))]} onChange={changeFilter("sizeId")} />
-        </label>
-        <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-availability">
-          Disponibilidad
-          <SelectControl aria-label="Disponibilidad" id="product-availability" value={filters.availability} options={[{ value: "", label: "Todos" }, { value: "1", label: "Disponible" }, { value: "2", label: "Reservado" }, { value: "3", label: "No disponible" }]} onChange={changeFilter("availability")} />
-        </label>
-        {hasActiveFilters ? <button className="min-h-11 rounded-lg border border-pw-line px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-canvas focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={clearFilters}>Limpiar filtros</button> : null}
-      </FilterBar>
-
-      {isLoading ? <LoadingState /> : null}
-      {!isLoading && error?.forbidden ? <ErrorState title="Acceso restringido" description="No tienes permiso para ver los productos." /> : null}
-      {!isLoading && error && !error.forbidden ? <ErrorState title="No pudimos cargar los productos" description={error.detail} onRetry={() => setRetryVersion((version) => version + 1)} /> : null}
-      {!isLoading && !error && products?.totalCount === 0 ? <EmptyState title={hasActiveFilters ? "No hay productos que coincidan" : "Aún no hay productos"} description={hasActiveFilters ? "Prueba con otros filtros o restablece los valores." : "Los productos aparecerán aquí cuando estén registrados en el catálogo."} action={hasActiveFilters ? <button className="min-h-11 rounded-lg bg-pw-brand px-4 font-extrabold text-white hover:bg-pw-brand-deep" type="button" onClick={clearFilters}>Limpiar filtros</button> : undefined} /> : null}
-      {!isLoading && !error && products && products.totalCount > 0 ? (
-        <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p aria-live="polite" className="text-sm text-pw-muted"><strong className="text-pw-ink">{products.totalCount} {products.totalCount === 1 ? "producto" : "productos"}</strong> en el catálogo</p>
-            <p className="text-xs text-pw-muted">Cada color se gestiona como una presentación</p>
-          </div>
-          <ProductsTable products={products.items} onSelect={setSelectedProduct} />
-          <Pagination page={products.page} totalPages={products.totalPages} onPageChange={(page) => updateFilters({ ...filters, page })} />
-        </>
-      ) : null}
-      {selectedProduct ? <ProductDetail product={selectedProduct} onClose={() => setSelectedProduct(null)} /> : null}
-    </div>
-  );
+    const current = ++requestId.current; const requestFilters = params.has("availability") ? filters : { ...filters, availability: "" }; setLoading(true); setError(null);
+    void (async () => { try { const response = await request(buildProductsPath(requestFilters)); if (!response.ok) { if (current === requestId.current) setError({ detail: await detail(response, "No se pudieron cargar los productos."), forbidden: response.status === 403 }); return; } const result = await response.json() as PaginatedProducts; if (current === requestId.current) setProducts(result); } catch { if (current === requestId.current) setError({ detail: "No se pudieron cargar los productos.", forbidden: false }); } finally { if (current === requestId.current) setLoading(false); } })();
+  }, [filters, params, request, retry]);
+  const update = (next: ProductFilters) => { const nextParams = new URLSearchParams(query(next)); if (next.availability === "") nextParams.set("availability", ""); setParams(nextParams.toString()); };
+  const filter = (key: keyof Pick<ProductFilters, "availability" | "categoryId" | "subcategoryId" | "sizeId">) => (event: ChangeEvent<HTMLSelectElement>) => update({ ...filters, [key]: event.target.value, ...(key === "categoryId" ? { subcategoryId: "" } : {}), page: 1 });
+  const clear = () => { setCode(""); update(defaultProductFilters); };
+  const activeFilters = Boolean(filters.availability || filters.code || filters.categoryId || filters.subcategoryId || filters.sizeId);
+  const subcategoryOptions = filters.categoryId ? subcategories.filter((item) => String(item.categoryId) === filters.categoryId) : subcategories;
+  const imagesChanged = (id: number, images: ProductImageDTO[]) => { setCache((old) => ({ ...old, [id]: images })); const primary = images.find((image) => image.isPrimary)?.thumbnailUrl; if (!primary) return; setProducts((old) => old ? { ...old, items: old.items.map((product) => ({ ...product, primaryImageUrl: product.presentations.some((p) => p.id === id) ? primary : product.primaryImageUrl, presentations: product.presentations.map((p) => p.id === id ? { ...p, primaryImageUrl: primary } : p) })) } : old); };
+  return <div className="space-y-5">
+    <FilterBar aria-label="Filtros de productos" onSubmit={(event) => event.preventDefault()}>
+      <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-code">Código o referencia<input aria-label="Código o referencia" id="product-code" type="search" inputMode="numeric" placeholder="Ej. 1042" value={code} onChange={(event) => setCode(event.target.value)} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink" /></label>
+      <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-category">Categoría<SelectControl aria-label="Categoría" id="product-category" searchable searchPlaceholder="Buscar categoría…" value={filters.categoryId} options={[{ value: "", label: "Todas" }, ...categories.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={filter("categoryId")} /></label>
+      <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-subcategory">Subcategoría<SelectControl aria-label="Subcategoría" id="product-subcategory" searchable searchPlaceholder="Buscar subcategoría…" value={filters.subcategoryId} options={[{ value: "", label: "Todas" }, ...subcategoryOptions.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={filter("subcategoryId")} /></label>
+      <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-size">Talla<SelectControl aria-label="Talla" id="product-size" searchable searchPlaceholder="Buscar talla…" value={filters.sizeId} options={[{ value: "", label: "Todas" }, ...sizes.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={filter("sizeId")} /></label>
+      <label className="grid min-w-44 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="product-availability">Disponibilidad<SelectControl aria-label="Disponibilidad" id="product-availability" value={filters.availability} options={[{ value: "", label: "Todos" }, { value: "1", label: "Disponible" }, { value: "2", label: "Reservado" }, { value: "3", label: "No disponible" }]} onChange={filter("availability")} /></label>
+      {activeFilters ? <button type="button" onClick={clear} className="min-h-11 rounded-lg border border-pw-line px-4 text-sm font-extrabold text-pw-ink">Limpiar filtros</button> : null}
+    </FilterBar>
+    {loading ? <LoadingState /> : null}{!loading && error?.forbidden ? <ErrorState title="Acceso restringido" description="No tienes permiso para ver los productos." /> : null}{!loading && error && !error.forbidden ? <ErrorState title="No pudimos cargar los productos" description={error.detail} onRetry={() => setRetry((value) => value + 1)} /> : null}
+    {!loading && !error && products?.totalCount === 0 ? <EmptyState title={activeFilters ? "No hay productos que coincidan" : "Aún no hay productos"} description="Prueba con otros filtros o restablece los valores." /> : null}
+    {!loading && !error && products && products.totalCount > 0 ? <><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p aria-live="polite" className="text-sm text-pw-muted"><strong className="text-pw-ink">{products.totalCount} {products.totalCount === 1 ? "producto" : "productos"}</strong> en el catálogo</p><div className="flex flex-wrap items-center gap-3"><SelectControl aria-label="Agrupar por" id="product-group" value={group} options={[{ value: "product", label: "Producto" }, { value: "presentation", label: "Presentación" }]} onChange={(event) => setGroup(event.target.value as GroupMode)} /><div aria-label="Vista" className="inline-flex min-h-11 rounded-lg border border-pw-line bg-pw-canvas p-1"><button type="button" aria-label="Tabla" aria-pressed={view === "table"} className={view === "table" ? "rounded-md bg-white px-3 text-sm font-extrabold text-pw-brand-deep" : "rounded-md px-3 text-sm font-extrabold text-pw-muted"} onClick={() => setView("table")}>▤ Tabla</button><button type="button" aria-label="Cuadrícula" aria-pressed={view === "grid"} className={view === "grid" ? "rounded-md bg-white px-3 text-sm font-extrabold text-pw-brand-deep" : "rounded-md px-3 text-sm font-extrabold text-pw-muted"} onClick={() => setView("grid")}>▦ Cuadrícula</button></div></div></div>{view === "table" ? <ProductsTable products={products.items} expanded={expanded} toggle={(product) => setExpanded((old) => old === product.id ? null : product.id)} request={request} cache={cache} onImagesChange={imagesChanged} onMovement={(product, presentation, variant) => setMovement({ product, presentation, variant })} /> : <ProductGrid products={products.items} group={group} cache={cache} onVariants={(product, presentation) => setDialog({ product, presentation })} />}<Pagination page={products.page} totalPages={products.totalPages} onPageChange={(page) => update({ ...filters, page })} /></> : null}
+    {dialog ? <VariantsDialog item={dialog} onClose={() => setDialog(null)} onMovement={(product, presentation, variant) => { setDialog(null); setMovement({ product, presentation, variant }); }} /> : null}{movement ? <MovementsDialog request={request} product={movement.product} presentation={movement.presentation} variant={movement.variant} onClose={() => setMovement(null)} /> : null}
+  </div>;
 }
 
-function ProductsTable({ products, onSelect }: { products: ProductDTO[]; onSelect: (product: ProductDTO) => void }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-pw-line bg-white">
-      <table className="min-w-[900px] border-collapse text-left text-sm">
-        <caption className="sr-only">Productos agrupados por producto, con sus presentaciones y disponibilidad.</caption>
-        <thead className="bg-pw-brand-soft text-[0.8125rem] uppercase tracking-[0.045em] text-pw-ink">
-          <tr>
-            {['Producto', 'Código', 'Presentaciones', 'Tallas', 'Precio desde', 'Disponible', 'Estado'].map((header) => <th className="border-b border-pw-brand/35 px-4 py-3.5 font-extrabold" scope="col" key={header}>{header}</th>)}
-            <th className="border-b border-pw-brand/35 px-4 py-3.5 font-extrabold" scope="col"><span className="sr-only">Acciones</span></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-pw-line">
-          {products.map((product) => {
-            const totals = productTotals(product);
-            const availability = productAvailability(product);
-            return (
-              <tr className="hover:bg-pw-brand-soft/40" key={product.id}>
-                <td className="px-4 py-3"><div className="flex min-w-52 items-center gap-3"><ProductImage alt="" src={product.primaryImageUrl} /><span className="min-w-0"><strong className="block truncate">{product.name}</strong><span className="block text-xs text-pw-muted">{product.categoryName ?? "Sin categoría"} · {product.subcategoryName ?? "Sin subcategoría"}</span></span></div></td>
-                <td className="whitespace-nowrap px-4 py-3 font-semibold text-pw-muted">{product.code}</td>
-                <td className="px-4 py-3"><button className="font-extrabold text-pw-brand-deep underline underline-offset-4" type="button" onClick={() => onSelect(product)}>{productPresentationLabel(product.presentations.length)}</button><span className="mt-1 block max-w-44 truncate text-xs text-pw-muted">{product.presentations.map((presentation) => presentation.name ?? "Sin nombre").join(" · ")}</span></td>
-                <td className="whitespace-nowrap px-4 py-3">{productSizeCount(product)}</td>
-                <td className="whitespace-nowrap px-4 py-3 font-bold">{lowestProductPrice(product)}</td>
-                <td className="whitespace-nowrap px-4 py-3 font-extrabold text-green-800">{totals.available}</td>
-                <td className="px-4 py-3"><StatusBadge tone={productAvailabilityTone(availability)}>{productAvailabilityLabel(availability)}</StatusBadge></td>
-                <td className="px-4 py-3"><button aria-label={`Ver presentaciones de ${product.name}`} className="min-h-10 rounded-lg border border-pw-line px-3 text-xs font-extrabold text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={() => onSelect(product)}>Ver detalle</button></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+function ProductImage({ src, alt, className = "h-12 w-10" }: { src: string | null; alt: string; className?: string }) { return src ? <img src={src} alt={alt} className={className + " aspect-square rounded-lg bg-pw-brand-soft object-cover"} /> : <span aria-hidden="true" className={className + " grid place-items-center rounded-lg bg-pw-brand-soft text-pw-brand-deep"}>✦</span>; }
+function ProductsTable({ products, expanded, toggle, request, cache, onImagesChange, onMovement }: { products: ProductDTO[]; expanded: number | null; toggle: (product: ProductDTO) => void; request: RequestFn; cache: Record<number, ProductImageDTO[]>; onImagesChange: (id: number, images: ProductImageDTO[]) => void; onMovement: (product: ProductDTO, presentation: Presentation, variant: Variant) => void }) {
+  return <div className="overflow-x-auto rounded-xl border border-pw-line bg-white"><table aria-label="Productos agrupados por producto, con sus presentaciones y disponibilidad." className="w-full border-collapse text-left text-sm"><caption className="sr-only">Productos agrupados por producto, con sus presentaciones y disponibilidad.</caption><thead className="bg-pw-brand-soft text-[0.8125rem] uppercase text-pw-ink"><tr>{["Producto", "Código", "Categoría", "Subcategoría", "Presentaciones", "Tallas", "Precio", "Disponible", "Estado", ""].map((header) => <th key={header} scope="col" className={"border-b border-pw-brand/35 px-4 py-3.5 font-extrabold " + (["Código", "Tallas", "Precio", "Disponible"].includes(header) ? "text-center " : "") + (header === "Producto" ? "w-[280px]" : "")}>{header}</th>)}</tr></thead><tbody className="divide-y divide-pw-line">{products.map((product) => { const totals = productTotals(product); const state = productAvailability(product); const isExpanded = expanded === product.id; return <Fragment key={product.id}><tr key={product.id}><td className="px-4 py-3"><div className="flex min-w-0 items-center gap-3"><button aria-label={"Ver detalles de " + product.name} type="button" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-ink" onClick={() => toggle(product)}>{isExpanded ? "⌃" : "⌄"}</button><ProductImage alt={"Imagen de " + product.name} src={product.primaryImageUrl} /><span className="min-w-0"><strong className="block truncate">{product.name}</strong><span className="block truncate text-xs text-pw-muted">{product.supplierProductCode}</span></span></div></td><td className="px-4 py-3 text-center font-semibold text-pw-muted">{product.code}</td><td className="px-4 py-3">{text(product.categoryName, "Sin categoría")}</td><td className="px-4 py-3">{text(product.subcategoryName, "Sin subcategoría")}</td><td className="px-4 py-3"><button type="button" className="font-extrabold text-pw-brand-deep underline" onClick={() => toggle(product)}>{productPresentationLabel(product.presentations.length)}</button><span className="mt-1 block truncate text-xs text-pw-muted">{product.presentations.map((p) => text(p.name)).join(" · ")}</span></td><td className="px-4 py-3 text-center">{productSizeCount(product)}</td><td className="px-4 py-3 text-center font-bold">{price(product)}</td><td className="px-4 py-3 text-center font-extrabold text-green-800">{totals.available}</td><td className="px-4 py-3"><StatusBadge tone={productAvailabilityTone(state)}>{productAvailabilityLabel(state)}</StatusBadge></td><td className="px-4 py-3"><button aria-label={"Ver detalles de " + product.name} type="button" className="min-h-10 rounded-lg border border-pw-line px-3 text-xs font-extrabold text-pw-ink" onClick={() => toggle(product)}>{isExpanded ? "Ocultar detalle" : "Ver detalle"}</button></td></tr>{isExpanded ? <tr key={String(product.id) + "-details"}><td colSpan={10} className="px-5 py-4"><div className="w-full space-y-5">{product.presentations.map((presentation) => <div key={presentation.id}><VariantTable product={product} presentation={presentation} onMovement={onMovement} /><ProductPresentationImages request={request} productId={product.id} presentationId={presentation.id} presentationName={text(presentation.name)} initialImages={cache[presentation.id]} onImagesChange={onImagesChange} /></div>)}</div></td></tr> : null}</Fragment>; })}</tbody></table></div>;
 }
-
-function lowestProductPrice(product: ProductDTO) {
-  const prices = product.presentations.flatMap((presentation) => presentation.sizes.map((size) => size.discountedSalePrice ?? size.salePrice));
-  return prices.length ? formatProductPrice(Math.min(...prices)) : "Sin precio";
+function VariantTable({ product, presentation, onMovement, label }: { product: ProductDTO; presentation: Presentation; onMovement: (product: ProductDTO, presentation: Presentation, variant: Variant) => void; label?: string }) {
+  return <div className="w-full overflow-x-auto rounded-lg border border-pw-line"><table aria-label={"Variantes de " + (label ?? product.name)} className="w-full text-left text-sm"><thead className="bg-pw-brand-soft text-xs uppercase text-pw-muted"><tr>{["Presentación", "Talla", "Costo unitario", "Precio", "Disponible", "Reservado", "Acciones"].map((header, index) => <th key={header} className={"px-3 py-2.5 font-extrabold " + (index > 1 ? "text-center" : "")}>{header}</th>)}</tr></thead><tbody className="divide-y divide-pw-line">{presentation.sizes.map((variant) => <tr key={variant.id}><td className="px-3 py-2.5 font-extrabold">{text(presentation.name)}</td><td className="px-3 py-2.5 font-extrabold">{text(variant.sizeName, "Sin definir")}</td><td className="px-3 py-2.5 text-center">{formatProductPrice(variant.unitCostNio)}</td><td className="px-3 py-2.5 text-center">{formatProductPrice(variant.discountedSalePrice ?? variant.salePrice)}</td><td className="px-3 py-2.5 text-center font-bold text-green-800">{variant.availableQuantity}</td><td className="px-3 py-2.5 text-center font-bold text-amber-800">{variant.reservedQuantity}</td><td className="px-3 py-2.5 text-center"><button type="button" aria-label={"Ver movimientos de " + text(presentation.name) + " · " + text(variant.sizeName, "Sin definir")} className="whitespace-nowrap rounded-lg border border-pw-line px-2.5 py-2 text-xs font-extrabold text-pw-ink" onClick={() => onMovement(product, presentation, variant)}>Ver movimientos</button></td></tr>)}</tbody></table></div>;
 }
-
-function ProductImage({ src, alt }: { src: string | null; alt: string }) {
-  return src ? <img alt={alt} className="h-12 w-10 rounded-lg bg-pw-brand-soft object-cover" src={src} /> : <span aria-hidden="true" className="grid h-12 w-10 place-items-center rounded-lg bg-pw-brand-soft text-lg text-pw-brand-deep">✦</span>;
+function ProductGrid({ products, group, cache, onVariants }: { products: ProductDTO[]; group: GroupMode; cache: Record<number, ProductImageDTO[]>; onVariants: (product: ProductDTO, presentation?: Presentation) => void }) {
+  const items = group === "product" ? products.map((product) => ({ product, presentation: undefined })) : products.flatMap((product) => product.presentations.map((presentation) => ({ product, presentation })));
+  return <section aria-label="Catálogo en cuadrícula" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">{items.map(({ product, presentation }) => <GridCard key={presentation ? String(product.id) + "-" + presentation.id : product.id} product={product} presentation={presentation} cache={cache} onVariants={onVariants} />)}</section>;
 }
-
-function ProductDetail({ product, onClose }: { product: ProductDTO; onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const totals = productTotals(product);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div aria-label={product.name} aria-modal="true" className="max-h-[90dvh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-pw-line bg-white shadow-2xl" role="dialog">
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-pw-line bg-white px-5 py-4 sm:px-6">
-          <div><p className="text-xs font-extrabold uppercase tracking-[0.08em] text-pw-brand-deep">Detalle del producto</p><h2 className="mt-1 text-xl font-extrabold text-pw-ink">{product.name}</h2><p className="mt-1 text-sm text-pw-muted">Código {product.code} · {product.categoryName ?? "Sin categoría"}</p></div>
-          <button ref={closeRef} aria-label="Cerrar detalle del producto" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-pw-line text-2xl text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={onClose}>×</button>
-        </header>
-        <section className="grid gap-4 border-b border-pw-line bg-pw-canvas px-5 py-4 sm:grid-cols-3 sm:px-6" aria-label="Resumen de existencias"><Stat label="Presentaciones" value={String(product.presentations.length)} /><Stat label="Disponible" value={String(totals.available)} /><Stat label="Reservado" value={String(totals.reserved)} /></section>
-        <div className="space-y-5 p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-base font-extrabold text-pw-ink">Presentaciones por color</h3><span className="text-sm text-pw-muted">{productPresentationLabel(product.presentations.length)}</span></div><div className="grid gap-4 md:grid-cols-2">{product.presentations.map((presentation) => <PresentationCard key={presentation.id} presentation={presentation} />)}</div></div>
-      </div>
-    </div>
-  );
+function GridCard({ product, presentation, cache, onVariants }: { product: ProductDTO; presentation?: Presentation; cache: Record<number, ProductImageDTO[]>; onVariants: (product: ProductDTO, presentation?: Presentation) => void }) {
+  const title = presentation ? text(presentation.name) : product.name; const item = presentation ? { ...product, presentations: [presentation] } : product; const image = presentation ? cache[presentation.id]?.find((current) => current.isPrimary)?.thumbnailUrl ?? presentation.primaryImageUrl : imageFor(product, cache); const totals = productTotals(item);
+  return <article aria-label={"Producto " + title} className="group overflow-hidden rounded-xl border border-pw-line bg-white shadow-sm"><div className="relative aspect-square bg-pw-brand-soft"><ProductImage src={image} alt={"Imagen de " + title} className="h-full w-full rounded-none" /><span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[0.6875rem] font-extrabold text-pw-brand-deep shadow-sm">{productAvailabilityLabel(productAvailability(item))}</span></div><div className="min-h-36 p-2.5"><h3 className="truncate text-sm font-extrabold text-pw-ink" title={title}>{title}</h3><p className="truncate text-[0.6875rem] text-pw-muted">{presentation ? product.name : product.supplierProductCode}</p><div className="mt-3 flex items-end justify-between gap-2"><span><span className="block text-[0.6875rem] text-pw-muted">Precio</span><strong className="text-sm text-pw-ink">{price(item)}</strong></span><span className="text-right"><span className="block text-[0.6875rem] text-pw-muted">Disponible</span><strong className="text-sm text-green-700">{totals.available}</strong></span></div><button type="button" aria-label={"Ver variantes de " + title} className="mt-2 min-h-9 w-full rounded-lg border border-pw-line px-2 text-xs font-extrabold text-pw-ink" onClick={() => onVariants(product, presentation)}>Ver variantes</button></div></article>;
 }
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return <div><span className="block text-xs font-bold text-pw-muted">{label}</span><strong className="mt-1 block text-lg text-pw-ink">{value}</strong></div>;
+function VariantsDialog({ item, onClose, onMovement }: { item: { product: ProductDTO; presentation?: Presentation }; onClose: () => void; onMovement: (product: ProductDTO, presentation: Presentation, variant: Variant) => void }) {
+  const ref = useRef<HTMLButtonElement>(null); const presentations = item.presentation ? [item.presentation] : item.product.presentations; useEffect(() => ref.current?.focus(), []);
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div role="dialog" aria-modal="true" aria-label={"Variantes de " + (item.presentation ? text(item.presentation.name) : item.product.name)} className="max-h-[90dvh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-pw-line bg-white shadow-2xl"><header className="flex items-start justify-between gap-4 border-b border-pw-line px-5 py-4"><div className="flex min-w-0 items-center gap-3"><ProductImage src={item.presentation?.primaryImageUrl ?? item.product.primaryImageUrl} alt={"Imagen de " + (item.presentation ? text(item.presentation.name) : item.product.name)} className="h-14 w-14 shrink-0" /><div><h2 className="text-lg font-extrabold text-pw-ink">Variantes de {item.presentation ? text(item.presentation.name) : item.product.name}</h2><p className="mt-1 text-xs text-pw-muted">{item.product.name} · código {item.product.code}</p></div></div><button ref={ref} type="button" aria-label="Cerrar variantes" className="grid h-10 w-10 place-items-center rounded-lg border border-pw-line text-xl text-pw-ink" onClick={onClose}>×</button></header><div className="space-y-4 p-5">{presentations.map((presentation) => <VariantTable key={presentation.id} product={item.product} presentation={presentation} label={item.presentation ? text(item.presentation.name) : undefined} onMovement={onMovement} />)}</div></div></div>;
 }
-
-function PresentationCard({ presentation }: { presentation: ProductDTO["presentations"][number] }) {
-  const totals = presentation.sizes.reduce((result, size) => ({ available: result.available + size.availableQuantity, reserved: result.reserved + size.reservedQuantity }), { available: 0, reserved: 0 });
-  return (
-    <article className="overflow-hidden rounded-xl border border-pw-line bg-white">
-      <header className="flex items-center gap-3 border-b border-pw-line bg-pw-brand-soft/45 px-4 py-3"><ProductImage alt="" src={presentation.primaryImageUrl} /><div><h4 className="font-extrabold text-pw-ink">{presentation.name ?? "Presentación sin nombre"}</h4><p className="mt-1 text-xs text-pw-muted">Disponible: <strong className="text-green-800">{totals.available}</strong> · Reservado: <strong className="text-amber-800">{totals.reserved}</strong></p></div></header>
-      <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><caption className="sr-only">Tallas de la presentación {presentation.name ?? "sin nombre"}</caption><thead className="text-xs uppercase tracking-[0.04em] text-pw-muted"><tr><th className="px-4 py-2.5 font-extrabold" scope="col">Talla</th><th className="px-4 py-2.5 font-extrabold" scope="col">Precio</th><th className="px-4 py-2.5 font-extrabold" scope="col">Disponible</th><th className="px-4 py-2.5 font-extrabold" scope="col">Reservado</th></tr></thead><tbody className="divide-y divide-pw-line">{presentation.sizes.map((size) => <tr key={size.id}><td className="px-4 py-2.5 font-extrabold">Talla {size.sizeName ?? "sin definir"}</td><td className="px-4 py-2.5">{formatProductPrice(size.discountedSalePrice ?? size.salePrice)}</td><td className="px-4 py-2.5 font-bold text-green-800">{size.availableQuantity}</td><td className="px-4 py-2.5 font-bold text-amber-800">{size.reservedQuantity}</td></tr>)}</tbody></table></div>
-    </article>
-  );
+const movementTypes: Record<string, string> = { PurchaseReceived: "Recepción de compra", PurchaseShortage: "Faltante de compra", PurchaseSurplus: "Sobrante de compra", Sale: "Venta", SaleCancelled: "Venta cancelada", Adjustment: "Ajuste", Return: "Devolución" };
+const buckets: Record<string, string> = { External: "Externo", Available: "Disponible", Reserved: "Reservado", Unavailable: "No disponible", Damaged: "Dañado" };
+function translate(value: string | null | undefined, values: Record<string, string>) { return value ? values[value] ?? value : "—"; }
+function MovementsDialog({ request, product, presentation, variant, onClose }: { request: RequestFn; product: ProductDTO; presentation: Presentation; variant: Variant; onClose: () => void }) {
+  const [items, setItems] = useState<ProductInventoryMovementDTO[] | null>(null); const [error, setError] = useState<string | null>(null);
+  useEffect(() => { let active = true; void request("/api/v1/products/" + product.id + "/variants/" + variant.id + "/inventory-movements").then(async (response) => { if (!response.ok) throw new Error(await detail(response, "No se pudieron cargar los movimientos.")); return response.json(); }).then((result) => { if (active) setItems(result as ProductInventoryMovementDTO[]); }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "No se pudieron cargar los movimientos."); }); return () => { active = false; }; }, [product.id, request, variant.id]);
+  return <div className="fixed inset-0 z-[60] grid place-items-center bg-black/45 p-4" role="presentation"><div role="dialog" aria-modal="true" aria-label="Movimientos de inventario" className="max-h-[85dvh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-pw-line bg-white shadow-2xl"><header className="flex items-start justify-between gap-4 border-b border-pw-line px-5 py-4"><div><h2 className="text-lg font-extrabold text-pw-ink">Movimientos de inventario</h2><p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-pw-muted"><span><span className="mr-1 text-pw-muted">Presentación</span>{text(presentation.name)}</span><span><span className="mr-1 text-pw-muted">Talla</span>{text(variant.sizeName, "Sin definir")}</span></p></div><button type="button" aria-label="Cerrar movimientos" className="grid h-10 w-10 place-items-center rounded-lg border border-pw-line text-xl text-pw-ink" onClick={onClose}>×</button></header><div className="p-5">{error ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : items === null ? <p className="text-sm text-pw-muted">Cargando movimientos…</p> : <div className="overflow-x-auto rounded-lg border border-pw-line"><table className="w-full text-left text-sm"><thead className="bg-pw-brand-soft text-xs uppercase text-pw-muted"><tr>{["Fecha", "Tipo", "Origen", "Destino", "Cantidad", "Comentario"].map((header) => <th key={header} className="px-3 py-2.5 font-extrabold">{header}</th>)}</tr></thead><tbody className="divide-y divide-pw-line">{items.map((entry) => <tr key={entry.id}><td className="whitespace-nowrap px-3 py-2.5">{new Intl.DateTimeFormat("es-NI", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(entry.movementDate))}</td><td className="px-3 py-2.5">{translate(entry.inventoryMovementTypeName, movementTypes)}</td><td className="px-3 py-2.5">{translate(entry.fromStockBucketName, buckets)}</td><td className="px-3 py-2.5">{translate(entry.toStockBucketName, buckets)}</td><td className="px-3 py-2.5 text-center font-bold">{entry.quantity}</td><td className="px-3 py-2.5">{entry.comments ?? "—"}</td></tr>)}</tbody></table></div>}</div></div></div>;
 }
+async function exportProducts(request: RequestFn, filters: ProductFilters, setBusy: (value: boolean) => void, showToast: ReturnType<typeof useToast>["showToast"]) { setBusy(true); try { const response = await request("/api/v1/products/export?" + query(filters)); if (!response.ok) { showToast({ tone: "error", title: "No pudimos exportar los productos", detail: await detail(response, "Intenta nuevamente en unos segundos.") }); return; } const url = URL.createObjectURL(await response.blob()); const link = document.createElement("a"); link.href = url; link.download = "productos.xlsx"; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); } catch { showToast({ tone: "error", title: "No pudimos exportar los productos", detail: "Intenta nuevamente en unos segundos." }); } finally { setBusy(false); } }
