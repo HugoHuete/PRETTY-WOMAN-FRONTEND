@@ -118,7 +118,25 @@ export async function createInventoryIssue(request: AuthenticatedRequest, payloa
   });
   if (!response.ok) throw new InventoryIssueApiError(response.status, await problemDetail(response, "No se pudo crear la incidencia."));
   return (await response.json()) as number;
-}export async function loadInventoryIssue(request: AuthenticatedRequest, id: string): Promise<InventoryIssue> {
+}
+
+export async function resolveInventoryIssue(request: AuthenticatedRequest, id: string, productInventoryIssueStatusId: number, comments?: string) {
+  const response = await request(`/api/v1/product-inventory-issues/${encodeURIComponent(id)}/resolution`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productInventoryIssueStatusId, ...(comments ? { comments } : {}) }),
+  });
+  if (!response.ok) throw new InventoryIssueApiError(response.status, await problemDetail(response, "No se pudo resolver la incidencia."));
+  return mapInventoryIssue((await response.json()) as InventoryIssueApiDTO);
+}
+
+export async function deleteInventoryIssue(request: AuthenticatedRequest, id: string) {
+  const response = await request(`/api/v1/product-inventory-issues/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!response.ok) throw new InventoryIssueApiError(response.status, await problemDetail(response, "No se pudo eliminar la incidencia."));
+  return mapInventoryIssue((await response.json()) as InventoryIssueApiDTO);
+}
+
+export async function loadInventoryIssue(request: AuthenticatedRequest, id: string): Promise<InventoryIssue> {
   const response = await request(`/api/v1/product-inventory-issues/${encodeURIComponent(id)}`);
   if (!response.ok) throw new InventoryIssueApiError(response.status, await problemDetail(response, "No se pudo cargar la incidencia."));
   return mapInventoryIssue((await response.json()) as InventoryIssueApiDTO);

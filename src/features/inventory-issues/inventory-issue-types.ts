@@ -75,6 +75,8 @@ export const inventoryIssueStatusOptions: Array<{ value: InventoryIssueStatus; l
   { value: "cancelled", label: "Cancelada", id: 5 },
 ];
 
+export const inventoryIssueResolutionOptions = inventoryIssueStatusOptions.filter((option) => option.value !== "open" && option.value !== "cancelled");
+
 export function inventoryIssueTypeLabel(type: InventoryIssueType) {
   return inventoryIssueTypeOptions.find((option) => option.value === type)?.label ?? "Tipo desconocido";
 }

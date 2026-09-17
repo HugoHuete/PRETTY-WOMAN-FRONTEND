@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildInventoryIssuesPath,
+  deleteInventoryIssue,
   loadInventoryIssue,
   loadInventoryIssues,
   problemDetail,
+  resolveInventoryIssue,
   searchProductsByCode,
 } from "./inventory-issue-api";
 import {
@@ -53,6 +55,26 @@ describe("inventory issue API", () => {
     await searchProductsByCode(request, "1042");
 
     expect(request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=20&code=1042&availability=1");
+  });
+
+  it("resolves an issue with the selected inventory status", async () => {
+    const request = vi.fn().mockResolvedValue(jsonResponse(issueDto({ productInventoryIssueStatusId: 2 })));
+
+    await resolveInventoryIssue(request, "1042", 2);
+
+    expect(request).toHaveBeenCalledWith("/api/v1/product-inventory-issues/1042/resolution", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productInventoryIssueStatusId: 2 }),
+    });
+  });
+
+  it("deletes an issue through the backend cancellation action", async () => {
+    const request = vi.fn().mockResolvedValue(jsonResponse(issueDto({ productInventoryIssueStatusId: 5 })));
+
+    await deleteInventoryIssue(request, "1042");
+
+    expect(request).toHaveBeenCalledWith("/api/v1/product-inventory-issues/1042", { method: "DELETE" });
   });
 
   it("localizes issue types and statuses", () => {
