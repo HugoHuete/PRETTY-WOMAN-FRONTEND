@@ -62,7 +62,6 @@ const variantFixture = {
   id: 301,
   sizeId: 12,
   sizeName: null,
-  variant: 'Azul',
   quantity: 3,
   receivedQuantity: 1,
   availableQuantity: 1,
@@ -82,7 +81,12 @@ const productFixture = {
   name: 'Vestido satinado',
   subcategoryId: 4,
   subcategoryName: null,
-  variants: [variantFixture],
+  presentations: [{
+    id: 401,
+    name: 'Azul',
+    sortOrder: 0,
+    sizes: [variantFixture],
+  }],
 } satisfies OrderProductDTO;
 
 const shortageFixture = {
@@ -140,7 +144,7 @@ describe('purchase order helpers', () => {
     expectTypeOf(shortageFixture).toMatchTypeOf<PurchaseShortageDTO>();
     expectTypeOf(refundFixture).toMatchTypeOf<SupplierRefundDTO>();
     expectTypeOf(orderFixture).toMatchTypeOf<OrderDTO>();
-    expect(orderFixture.products[0].variants[0].salePrice).toBe(1250);
+    expect(orderFixture.products[0].presentations[0].sizes[0].salePrice).toBe(1250);
   });
 
   it('serializes only active order filters', () => {
@@ -224,6 +228,24 @@ afterEach(() => {
 });
 
 describe('PurchaseOrdersPage', () => {
+  it('offers a tracking numbers view next to the new order action', async () => {
+    auth.request.mockImplementation((url: string) => {
+      if (url.includes('?')) return jsonResponse(orderPage());
+      if (url === '/api/v1/suppliers') return jsonResponse([supplierFixture]);
+      return jsonResponse([{ id: 2, name: 'Recepción parcial' }]);
+    });
+
+    renderOrders();
+
+    expect(await screen.findByRole('link', { name: 'Ver trackings' })).toHaveAttribute(
+      'href',
+      '/purchases/tracking-numbers',
+    );
+    const newOrderLink = screen.getByRole('link', { name: /Nueva orden/ });
+    const trackingLink = screen.getByRole('link', { name: 'Ver trackings' });
+    expect(trackingLink).toHaveClass('h-11', 'justify-center', 'leading-none');
+    expect(newOrderLink).toHaveClass('h-11', 'justify-center', 'leading-none');
+  });
   describe.each([
     { path: '/api/v1/suppliers', otherPath: '/api/v1/orders/statuses', section: 'Opciones de proveedores', control: 'Proveedor', option: 'SOHO', data: [supplierFixture], filter: 'supplierId=7' },
     { path: '/api/v1/orders/statuses', otherPath: '/api/v1/suppliers', section: 'Opciones de estados', control: 'Estado', option: 'Recepción parcial', data: [{ id: 2, name: 'Recepción parcial' }], filter: 'orderStatusId=2' },
@@ -333,14 +355,17 @@ describe('PurchaseOrdersPage', () => {
     auth.request.mockImplementation((path: string) => {
       if (path === '/api/v1/suppliers') return jsonResponse([supplierFixture]);
       if (path === '/api/v1/orders/statuses') return jsonResponse([{ id: 2, name: 'PartiallyReceived' }]);
-      return jsonResponse(orderPage({ items: [{ ...orderFixture, totalCostNio: 4123.45 }] }));
+      return jsonResponse(orderPage({ items: [{ ...orderFixture, totalCostNio: 4123.45, warehouseShippingCostUsd: 4.75 }] }));
     });
 
     renderOrders();
 
     expect(await screen.findByText(/C\$\s*4,123\.45/)).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Envío proveedor (USD)' })).toBeInTheDocument();
-    expect(screen.getByText('$15.00')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Orden' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Proveedor' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Total envíos (USD)' })).toBeInTheDocument();
+    expect(screen.getByText('Proveedor #7')).toBeInTheDocument();
+    expect(screen.getByText('$19.75')).toBeInTheDocument();
     expect(screen.getAllByText('Recepción parcial')).toHaveLength(2);
     expect(screen.queryByText('PartiallyReceived')).not.toBeInTheDocument();
   });

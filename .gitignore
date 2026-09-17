@@ -9,3 +9,4 @@ output/playwright/
 node_modules/
 dist/
 .env.local
+docs/superpowers/

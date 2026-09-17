@@ -8,10 +8,18 @@ import {
 } from "react-router-dom";
 import { useAuth } from "./features/auth/auth-provider";
 import { LoginPage } from "./features/auth/login-page";
+import { TrackingNumbersPage } from "./features/purchases/tracking-numbers-page";
 import { DashboardPage } from "./features/dashboard/dashboard-page";
+import { ProductsPage } from "./features/products/products-page";
 import { PurchaseOrdersPage } from "./features/purchases/purchase-orders-page";
 import { PurchaseOrderDetailPage } from "./features/purchases/purchase-order-detail-page";
+import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-create-page";
+import { PurchaseOrderEditPage } from "./features/purchases/purchase-order-edit-page";
+import { PurchaseOrderReceivePage } from "./features/purchases/purchase-order-receive-page";
 import { UsersPage } from "./features/users/users-page";
+import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
+import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
+import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
 import { EmptyState, PermissionDeniedState } from "./shared/ui/screen-state";
@@ -74,7 +82,8 @@ function UpcomingPage({
 
 function App() {
   return (
-    <BrowserRouter>
+    <ExchangeRateProvider>
+      <BrowserRouter>
       <Routes>
         <Route element={<LoginRoute />} path="/login" />
         <Route element={<ProtectedRoutes />}>
@@ -89,15 +98,7 @@ function App() {
               }
               path="shipments"
             />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Productos"
-                  description="Consulta el catálogo y la disponibilidad de prendas."
-                />
-              }
-              path="products"
-            />
+            <Route element={<ProductsPage />} path="products" />
             <Route
               element={
                 <UpcomingPage
@@ -136,10 +137,15 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
-                  <UpcomingPage
-                    title="Nueva orden de compra"
-                    description="Registra una nueva orden de compra para la boutique."
-                  />
+                  <TrackingNumbersPage />
+                </RoleRoute>
+              }
+              path="purchases/tracking-numbers"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderCreatePage />
                 </RoleRoute>
               }
               path="purchases/orders/new"
@@ -154,13 +160,22 @@ function App() {
             />
             <Route
               element={
-                <UpcomingPage
-                  title="Incidencias"
-                  description="Consulta incidencias y disponibilidad relacionada."
-                />
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderReceivePage />
+                </RoleRoute>
               }
-              path="inventory/issues"
+              path="purchases/orders/:id/receive"
             />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <PurchaseOrderEditPage />
+                </RoleRoute>
+              }
+              path="purchases/orders/:id/edit"
+            />
+            <Route element={<InventoryIssuesPage />} path="inventory/issues" />
+            <Route element={<InventoryIssueDetailPage />} path="inventory/issues/:id" />
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
@@ -199,7 +214,8 @@ function App() {
         </Route>
         <Route element={<Navigate to="/" replace />} path="*" />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ExchangeRateProvider>
   );
 }
 

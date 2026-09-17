@@ -7,6 +7,17 @@ export type OrderFilters = {
   supplierId: string;
 };
 
+export type TrackingNumberFilters = {
+  page: number;
+  pageSize: number;
+  isReceived: string;
+  trackingNumber: string;
+  shippingCompanyId: string;
+  orderStatusId: string;
+  purchaseDateFrom: string;
+  purchaseDateTo: string;
+};
+
 export type PaginatedResult<T> = {
   items: T[];
   page: number;
@@ -30,6 +41,12 @@ export type SupplierDTO = {
   isNational: boolean;
 };
 
+export type ShippingCompanyDTO = {
+  id: number;
+  name: string;
+  url: string | null;
+};
+
 export type OrderTrackingNumberDTO = {
   id: number;
   orderId: number;
@@ -38,16 +55,50 @@ export type OrderTrackingNumberDTO = {
   supplierShipmentDate: string | null;
   warehouseDeliveryDate: string | null;
   productReceiptId: number | null;
+  receiptId?: number | null;
   weight: number;
   shippingCost: number;
   shippingCompanyName: string | null;
+};
+
+export type OrderReceiptSummaryDTO = {
+  id: number;
+  orderId: number;
+  receivedDate: string;
+  createdAt: string;
+  warehouseShippingCostUsd: number;
+  warehouseShippingCostNio: number;
+  productCount: number;
+  totalQuantity: number;
+  trackingCount: number;
+};
+
+export type OrderReceiptProductDTO = {
+  productReceiptDetailId: number;
+  productId: number;
+  quantity: number;
+  isSurplus: boolean;
+  weight: number;
+  allocatedWarehouseShippingCostNio: number;
+};
+
+export type OrderReceiptDTO = {
+  id: number;
+  orderId: number;
+  receivedDate: string;
+  createdAt: string;
+  warehouseShippingCostUsd: number;
+  warehouseShippingCostNio: number;
+  orderStatusId: number;
+  productVariants: OrderReceiptProductDTO[];
+  trackingNumberIds: number[];
+  trackingNumbers: OrderTrackingNumberDTO[];
 };
 
 export type OrderProductVariantDTO = {
   id: number;
   sizeId: number;
   sizeName: string | null;
-  variant: string | null;
   quantity: number;
   receivedQuantity: number;
   availableQuantity: number;
@@ -57,7 +108,14 @@ export type OrderProductVariantDTO = {
   allocatedShippingCostNio: number;
   totalCostNio: number;
   unitCostNio: number;
-  salePrice: number;
+  salePrice: number | null;
+};
+
+export type OrderProductPresentationDTO = {
+  id: number;
+  name: string | null;
+  sortOrder: number;
+  sizes: OrderProductVariantDTO[];
 };
 
 export type OrderProductDTO = {
@@ -67,7 +125,7 @@ export type OrderProductDTO = {
   name: string;
   subcategoryId: number;
   subcategoryName: string | null;
-  variants: OrderProductVariantDTO[];
+  presentations: OrderProductPresentationDTO[];
 };
 
 export type PurchaseShortageDTO = {
@@ -105,6 +163,7 @@ export type OrderDTO = {
   supplierShippingCostUsd: number;
   warehouseShippingCostUsd: number;
   totalCostNio: number;
+
   exchangeRate: number;
   products: OrderProductDTO[];
   purchaseShortages: PurchaseShortageDTO[];
@@ -180,3 +239,41 @@ export function formatCordobas(value: number): string {
     currency: "NIO",
   }).format(value);
 }
+export function buildTrackingNumbersPath(
+  filters: TrackingNumberFilters,
+): string {
+  const params = new URLSearchParams();
+
+  params.set("page", String(filters.page));
+  params.set("pageSize", String(filters.pageSize));
+
+  if (filters.isReceived.trim()) {
+    params.set("isReceived", filters.isReceived.trim());
+  }
+
+  if (filters.trackingNumber.trim()) {
+    params.set("trackingNumber", filters.trackingNumber.trim());
+  }
+
+  if (filters.shippingCompanyId.trim()) {
+    params.set("shippingCompanyId", filters.shippingCompanyId.trim());
+  }
+
+  if (filters.orderStatusId.trim()) {
+    params.set("orderStatusId", filters.orderStatusId.trim());
+  }
+
+  if (filters.purchaseDateFrom.trim()) {
+    params.set("purchaseDateFrom", filters.purchaseDateFrom.trim());
+  }
+
+  if (filters.purchaseDateTo.trim()) {
+    params.set("purchaseDateTo", filters.purchaseDateTo.trim());
+  }
+
+  const query = params.toString();
+  return query
+    ? `/api/v1/tracking-numbers?${query}`
+    : "/api/v1/tracking-numbers";
+}
+

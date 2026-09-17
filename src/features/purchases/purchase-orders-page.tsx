@@ -128,15 +128,23 @@ export function PurchaseOrdersPage() {
   useEffect(() => {
     setHeading({ title: "Órdenes de compra", breadcrumbs: "Inventario" });
     setAction(
-      <Link
-        className="inline-flex min-h-11 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2"
-        to="/purchases/orders/new"
-      >
-        <span aria-hidden="true" className="mr-1 text-lg leading-none">
-          +
-        </span>
-        Nueva orden
-      </Link>,
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Link
+          className="inline-flex h-11 items-center justify-center leading-none rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2"
+          to="/purchases/tracking-numbers"
+        >
+          Ver trackings
+        </Link>
+        <Link
+          className="inline-flex h-11 items-center justify-center leading-none rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2"
+          to="/purchases/orders/new"
+        >
+          <span aria-hidden="true" className="mr-1 text-lg leading-none">
+            +
+          </span>
+          Nueva orden
+        </Link>
+      </div>,
     );
     return () => {
       setHeading(null);
@@ -277,14 +285,20 @@ export function PurchaseOrdersPage() {
   );
   const columns: readonly DataTableColumn<OrderDTO>[] = [
     {
-      key: "order-supplier",
-      header: "Orden y proveedor",
+      key: "order",
+      header: "Orden",
       render: (order) => (
-        <span className="block min-w-40">
+        <span className="block min-w-24">
           <strong className="block">OC-{order.id}</strong>
-          <span className="block text-xs text-pw-muted">
-            {order.supplierName ?? `Proveedor #${order.supplierId}`}
-          </span>
+        </span>
+      ),
+    },
+    {
+      key: "supplier",
+      header: "Proveedor",
+      render: (order) => (
+        <span className="block min-w-32 truncate" title={order.supplierName ?? `Proveedor #${order.supplierId}`}>
+          {order.supplierName ?? `Proveedor #${order.supplierId}`}
         </span>
       ),
     },
@@ -299,9 +313,9 @@ export function PurchaseOrdersPage() {
       render: (order) => formatCordobas(order.merchandiseTotalNio),
     },
     {
-      key: "shipping",
-      header: "Envío proveedor (USD)",
-      render: (order) => formatUsd(order.supplierShippingCostUsd),
+      key: "shipping-total",
+      header: "Total envíos (USD)",
+      render: (order) => formatUsd(order.supplierShippingCostUsd + order.warehouseShippingCostUsd),
     },
     {
       key: "total",

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../../App';
 
@@ -19,6 +19,7 @@ const auth = vi.hoisted(() => ({
         roles: string[];
       };
     },
+    request: vi.fn(),
   },
 }));
 
@@ -27,7 +28,7 @@ vi.mock('../auth/auth-provider', () => ({
     ...auth.state,
     signIn: vi.fn(),
     signOut: vi.fn(),
-    request: vi.fn(),
+    request: auth.state.request,
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -59,6 +60,7 @@ function renderAppAt(path: string, status: 'anonymous' | 'authenticated', roles:
 afterEach(() => {
   auth.state.status = 'anonymous';
   auth.state.session = null;
+  auth.state.request.mockReset();
   window.history.replaceState({}, '', '/');
 });
 
@@ -115,5 +117,63 @@ describe('protected application routes', () => {
         name: 'Nueva orden de compra',
       }),
     ).toBeVisible();
+  });
+
+  it('renders the inventory issues list at the documented route', async () => {
+    auth.state.request.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [],
+          page: 1,
+          pageSize: 20,
+          totalCount: 0,
+          totalPages: 1,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    renderAppAt('/inventory/issues', 'authenticated', ['Employee']);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Incidencias' }),
+    ).toBeVisible();
+    expect(screen.getByText('Aún no hay incidencias')).toBeVisible();
+  });
+
+  it('renders the inventory issue detail route', async () => {
+    auth.state.request.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: 1042,
+          productId: 7,
+          productVariantId: 2,
+          productName: 'Vestido satinado',
+          productCode: 'VST-042',
+          sizeId: 3,
+          sizeName: 'M',
+          variant: 'Negro',
+          productInventoryIssueTypeId: 1,
+          productInventoryIssueTypeName: 'Damaged',
+          productInventoryIssueStatusId: 1,
+          productInventoryIssueStatusName: 'Open',
+          quantity: 1,
+          issueDate: '2026-09-14T15:30:00Z',
+          resolvedAt: null,
+          comments: 'Costura lateral descosida.',
+          createdAt: '2026-09-14T15:30:00Z',
+          updatedAt: '2026-09-14T15:30:00Z',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    renderAppAt('/inventory/issues/1042', 'authenticated', ['Employee']);
+
+    expect(await screen.findByText('Vestido satinado')).toBeVisible();
+    expect(screen.getByText('Costura lateral descosida.')).toBeVisible();
+    await waitFor(() => expect(auth.state.request).toHaveBeenCalledWith('/api/v1/product-inventory-issues/1042'));
   });
 });

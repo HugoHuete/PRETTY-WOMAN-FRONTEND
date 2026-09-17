@@ -6,7 +6,6 @@ import { AuthProvider } from './features/auth/auth-provider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/** Un único proveedor por pestaña cubre todas las pantallas de la SPA. */}
     <AuthProvider>
       <App />
     </AuthProvider>

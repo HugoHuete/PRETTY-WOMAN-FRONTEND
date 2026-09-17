@@ -10,6 +10,10 @@
   --color-pw-brand-soft: #fff3f6;
 }
 
+:root {
+  --pw-topbar-height: 96px;
+}
+
 @layer base {
   body {
     min-width: 320px;
@@ -203,7 +207,7 @@
 
 .pw-topbar {
   display: flex;
-  min-height: 96px;
+  min-height: var(--pw-topbar-height);
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -331,8 +335,8 @@
 
 .pw-workspace {
   width: 100%;
-  max-width: 1500px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 16px 30px 32px;
 }
 
@@ -436,6 +440,39 @@
   display: none;
 }
 
+.pw-select-search-wrap {
+  padding: 1px 1px 7px;
+}
+
+.pw-select-search {
+  display: block;
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--color-pw-line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--color-pw-ink);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+}
+
+.pw-select-search:focus {
+  border-color: var(--color-pw-brand-deep);
+  box-shadow: 0 0 0 3px var(--color-pw-brand-soft);
+}
+
+:root[data-theme='dark'] .pw-select-search {
+  background: var(--color-pw-canvas);
+  color: var(--color-pw-ink);
+}
+
+:root[data-theme='dark'] .pw-select-search::placeholder {
+  color: var(--color-pw-muted);
+}
+
 .pw-select-options {
   display: grid;
   max-height: min(280px, 42vh);
@@ -443,6 +480,14 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 1px;
+}
+
+.pw-select-empty {
+  margin: 0;
+  color: var(--color-pw-muted);
+  font-size: 13px;
+  padding: 10px;
+  text-align: center;
 }
 
 .pw-select-option {
@@ -549,7 +594,7 @@
   .pw-app-shell { display: block; }
   .pw-sidebar { display: none; }
   .pw-topbar {
-    min-height: 92px;
+    min-height: var(--pw-topbar-height);
     align-items: center;
     padding: 20px 16px 12px;
   }
