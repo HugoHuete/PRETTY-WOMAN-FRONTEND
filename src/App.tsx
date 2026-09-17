@@ -17,6 +17,7 @@ import { PurchaseOrderCreatePage } from "./features/purchases/purchase-order-cre
 import { PurchaseOrderEditPage } from "./features/purchases/purchase-order-edit-page";
 import { PurchaseOrderReceivePage } from "./features/purchases/purchase-order-receive-page";
 import { UsersPage } from "./features/users/users-page";
+import { ClientsPage } from "./features/clients/clients-page";
 import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
 import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
@@ -99,15 +100,7 @@ function App() {
               path="shipments"
             />
             <Route element={<ProductsPage />} path="products" />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Clientes"
-                  description="Administra la información de las personas clientas."
-                />
-              }
-              path="clients"
-            />
+            <Route element={<ClientsPage />} path="clients" />
             <Route
               element={
                 <UpcomingPage
