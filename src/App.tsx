@@ -20,6 +20,7 @@ import { UsersPage } from "./features/users/users-page";
 import { ClientsPage } from "./features/clients/clients-page";
 import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
 import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
+import { CampaignsPage } from "./features/campaigns/campaigns-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
@@ -172,13 +173,34 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
-                  <UpcomingPage
-                    title="Campañas"
-                    description="Administra campañas y descuentos de la boutique."
-                  />
+                  <CampaignsPage />
                 </RoleRoute>
               }
               path="discounts/campaigns"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <CampaignsPage />
+                </RoleRoute>
+              }
+              path="discounts/campaigns/new"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <CampaignsPage />
+                </RoleRoute>
+              }
+              path="discounts/campaigns/:id"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <CampaignsPage />
+                </RoleRoute>
+              }
+              path="discounts/campaigns/:id/edit"
             />
             <Route
               element={<Navigate replace to="/discounts/campaigns" />}

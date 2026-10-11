@@ -91,21 +91,40 @@ describe('protected application routes', () => {
     ).toBeVisible();
   });
 
-  it('renders campaigns at the documented route for Admin', () => {
+  it('renders campaigns at the documented route for Admin', async () => {
+    auth.state.request.mockResolvedValueOnce(new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     renderAppAt('/discounts/campaigns', 'authenticated', ['Admin']);
 
-    expect(
-      screen.getByText('Esta sección estará disponible pronto'),
-    ).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Campañas' })).toBeVisible();
   });
 
-  it('redirects the legacy campaigns route to the documented route', () => {
+  it('renders campaign details at the protected detail route', async () => {
+    auth.state.request.mockImplementation((path: string) => {
+      if (path === '/api/v1/discountcampaigns/12') {
+        return Promise.resolve(new Response(JSON.stringify({
+          id: 12,
+          name: 'Verano rosa',
+          startDate: '2026-09-20T00:00:00Z',
+          endDate: '2026-09-30T23:59:59Z',
+          statusId: 2,
+          statusName: 'Activa',
+          targets: [],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    renderAppAt('/discounts/campaigns/12', 'authenticated', ['Admin']);
+
+    expect(await screen.findByRole('heading', { name: 'Verano rosa' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Editar campaña' })).toHaveAttribute('href', '/discounts/campaigns/12/edit');
+  });
+
+  it('redirects the legacy campaigns route to the documented route', async () => {
+    auth.state.request.mockResolvedValueOnce(new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     renderAppAt('/campaigns', 'authenticated', ['Admin']);
 
     expect(window.location.pathname).toBe('/discounts/campaigns');
-    expect(
-      screen.getByText('Esta sección estará disponible pronto'),
-    ).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Campañas' })).toBeVisible();
   });
 
   it('shows the explicit heading for the purchase order creation placeholder', () => {
