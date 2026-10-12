@@ -216,4 +216,46 @@ describe('protected application routes', () => {
     expect(screen.getByText('No tienes permiso para ver esta sección.')).toBeVisible();
     expect(auth.state.request).not.toHaveBeenCalledWith(expect.stringContaining('/api/v1/finances/'));
   });
+
+  it('renders the received loans list for Admin', async () => {
+    auth.state.request.mockImplementation((path: string) => {
+      const body = path === '/api/v1/loanowners' ? [] : { items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    renderAppAt('/finances/loans', 'authenticated', ['Admin']);
+
+    expect(await screen.findByRole('heading', { name: 'Préstamos recibidos' })).toBeVisible();
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/loans?page=1&pageSize=20&isActive=true');
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/loanowners');
+  });
+
+  it('renders a loan detail at the protected loan route', async () => {
+    auth.state.request.mockResolvedValueOnce(new Response(JSON.stringify({
+      id: 12,
+      loanDate: '2026-10-10T15:30:00Z',
+      createdAt: '2026-10-10T15:30:00Z',
+      loanOwnerId: 1,
+      loanOwnerName: 'María López',
+      initialAmount: 5000,
+      initialAmountUsd: 125,
+      balance: 5000,
+      interestPaidAmount: 0,
+      closedAt: null,
+      comments: 'Capital de trabajo',
+      exchangeRate: 40,
+      isActive: true,
+      payments: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    renderAppAt('/finances/loans/12', 'authenticated', ['Admin']);
+
+    expect(await screen.findByText('Capital de trabajo')).toBeVisible();
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/loans/12');
+  });
+
+  it('denies loan access to non-Admins without requesting loan data', () => {
+    renderAppAt('/finances/loans', 'authenticated', ['Employee']);
+
+    expect(screen.getByText('No tienes permiso para ver esta sección.')).toBeVisible();
+    expect(auth.state.request).not.toHaveBeenCalledWith(expect.stringContaining('/api/v1/loans'));
+  });
 });

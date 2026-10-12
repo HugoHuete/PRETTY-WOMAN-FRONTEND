@@ -93,6 +93,7 @@ describe("FinanceMovementsPage", () => {
     expect(await screen.findByText("Pago de proveedor")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Movimientos financieros" })).toBeVisible();
     expect(await within(screen.getByTestId("page-actions")).findByRole("button", { name: "Registrar movimiento" })).toBeVisible();
+    expect(within(screen.getByTestId("page-actions")).getByRole("link", { name: "Préstamos" })).toHaveAttribute("href", "/finances/loans");
     expect(auth.request).toHaveBeenCalledWith("/api/v1/finances/movement-types");
     expect(auth.request).toHaveBeenCalledWith("/api/v1/finances/movements?page=1&pageSize=20");
     expect(screen.getAllByText("Egreso").length).toBeGreaterThanOrEqual(2);

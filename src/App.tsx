@@ -22,6 +22,8 @@ import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issue
 import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
 import { CampaignsPage } from "./features/campaigns/campaigns-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
+import { LoansPage } from "./features/finances/loans-page";
+import { LoanDetailPage } from "./features/finances/loan-detail-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
@@ -222,6 +224,22 @@ function App() {
                 </RoleRoute>
               }
               path="finances"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <LoansPage />
+                </RoleRoute>
+              }
+              path="finances/loans"
+            />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <LoanDetailPage />
+                </RoleRoute>
+              }
+              path="finances/loans/:id"
             />
           </Route>
         </Route>

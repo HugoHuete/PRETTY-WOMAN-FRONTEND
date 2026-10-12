@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
 import { DataTable, type DataTableColumn } from "../../shared/ui/data-table";
@@ -78,7 +78,7 @@ export function FinanceMovementsPage() {
       setAction(null);
       return () => setAction(null);
     }
-    setAction(<button className="inline-flex min-h-11 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={() => { setEditingMovement(null); setIsCreateDialogOpen(true); }}>Registrar movimiento</button>);
+    setAction(<div className="flex flex-wrap items-center gap-2"><Link className="inline-flex min-h-11 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" to="/finances/loans">Préstamos</Link><button className="inline-flex min-h-11 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={() => { setEditingMovement(null); setIsCreateDialogOpen(true); }}>Registrar movimiento</button></div>);
     return () => setAction(null);
   }, [areTypesLoading, error, isListLoading, result, setAction]);
 
