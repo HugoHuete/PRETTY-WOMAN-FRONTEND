@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 export type ToastTone = 'success' | 'error' | 'info';
-export type Toast = { tone: ToastTone; title: string; detail?: string };
+export type Toast = { tone: ToastTone; title: string; detail?: string; durationMs?: number };
 export type ToastContextValue = { showToast: (toast: Toast) => void };
 
 export const ToastContext = createContext<ToastContextValue | null>(null);

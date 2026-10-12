@@ -195,4 +195,25 @@ describe('protected application routes', () => {
     expect(screen.getByText('Costura lateral descosida.')).toBeVisible();
     await waitFor(() => expect(auth.state.request).toHaveBeenCalledWith('/api/v1/product-inventory-issues/1042'));
   });
+
+  it('renders financial movements for Admin', async () => {
+    auth.state.request.mockImplementation((path: string) => {
+      if (path === '/api/v1/finances/movement-types') {
+        return Promise.resolve(new Response(JSON.stringify([{ id: 2, name: 'SupplierPayment' }]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    renderAppAt('/finances', 'authenticated', ['Admin']);
+
+    expect(await screen.findByRole('heading', { name: 'Movimientos financieros' })).toBeVisible();
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/finances/movement-types');
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/finances/movements?page=1&pageSize=20');
+  });
+
+  it('denies Finance access to non-Admins without requesting Finance data', () => {
+    renderAppAt('/finances', 'authenticated', ['Employee']);
+
+    expect(screen.getByText('No tienes permiso para ver esta sección.')).toBeVisible();
+    expect(auth.state.request).not.toHaveBeenCalledWith(expect.stringContaining('/api/v1/finances/'));
+  });
 });

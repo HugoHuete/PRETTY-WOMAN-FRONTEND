@@ -27,6 +27,7 @@ type SelectControlProps = {
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   "aria-label": string;
   disabled?: boolean;
+  required?: boolean;
   searchable?: boolean;
   searchPlaceholder?: string;
   portal?: boolean;
@@ -40,6 +41,7 @@ export function SelectControl({
   onChange,
   "aria-label": ariaLabel,
   disabled = false,
+  required = false,
   searchable = false,
   searchPlaceholder = "Buscar…",
   portal = false,
@@ -250,6 +252,7 @@ export function SelectControl({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
+        aria-required={required}
         disabled={disabled}
         onClick={(event) => {
           if (event.detail === 0) {

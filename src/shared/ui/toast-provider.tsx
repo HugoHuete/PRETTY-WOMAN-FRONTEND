@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type PropsWithChildren } from 'react';
+import { useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { ToastContext, type Toast } from './toast-context';
 
 export function ToastProvider({ children }: PropsWithChildren) {
@@ -6,6 +6,12 @@ export function ToastProvider({ children }: PropsWithChildren) {
   const showToast = useCallback((nextToast: Toast) => setToast(nextToast), []);
   const value = useMemo(() => ({ showToast }), [showToast]);
   const role = toast?.tone === 'error' ? 'alert' : 'status';
+
+  useEffect(() => {
+    if (toast?.durationMs === undefined) return;
+    const timeout = window.setTimeout(() => setToast(null), toast.durationMs);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   return (
     <ToastContext.Provider value={value}>

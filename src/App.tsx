@@ -21,6 +21,7 @@ import { ClientsPage } from "./features/clients/clients-page";
 import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
 import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
 import { CampaignsPage } from "./features/campaigns/campaigns-page";
+import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
 import { usePageActions } from "./shared/layout/page-actions-context";
@@ -217,10 +218,7 @@ function App() {
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>
-                  <UpcomingPage
-                    title="Finanzas"
-                    description="Consulta el estado financiero de la boutique."
-                  />
+                  <FinanceMovementsPage />
                 </RoleRoute>
               }
               path="finances"

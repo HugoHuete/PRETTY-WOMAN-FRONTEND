@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -54,6 +54,18 @@ function ToastHarness({ detail }: { detail: string }) {
       onClick={() => showToast({ tone: 'error', title: 'Error', detail })}
     >
       Mostrar error
+    </button>
+  );
+}
+
+function ExpiringToastHarness() {
+  const { showToast } = useToast();
+  return (
+    <button
+      type="button"
+      onClick={() => showToast({ tone: 'success', title: 'Guardado', durationMs: 2000 })}
+    >
+      Mostrar éxito
     </button>
   );
 }
@@ -142,5 +154,26 @@ describe('shared UI primitives', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'La venta ya fue cancelada.',
     );
+  });
+
+  it('dismisses a toast after its requested duration', () => {
+    vi.useFakeTimers();
+    const { unmount } = render(
+      <ToastProvider>
+        <ExpiringToastHarness />
+      </ToastProvider>,
+    );
+
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mostrar éxito' }));
+      expect(screen.getByRole('status')).toHaveTextContent('Guardado');
+
+      act(() => vi.advanceTimersByTime(2000));
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
   });
 });
