@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import {
   BrowserRouter,
+  Link,
   Navigate,
   Outlet,
   Route,
@@ -21,6 +22,8 @@ import { ClientsPage } from "./features/clients/clients-page";
 import { InventoryIssuesPage } from "./features/inventory-issues/inventory-issues-page";
 import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-issue-detail-page";
 import { CampaignsPage } from "./features/campaigns/campaigns-page";
+import { SalesListPage } from "./features/sales/sales-list-page";
+import { SaleCreatePage } from "./features/sales/sale-create-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
 import { LoansPage } from "./features/finances/loans-page";
 import { LoanDetailPage } from "./features/finances/loan-detail-page";
@@ -61,6 +64,23 @@ function RoleRoute({
   const { session } = useAuth();
   const hasRole = roles.some((role) => session?.user.roles.includes(role));
   return hasRole ? children : <PermissionDeniedState />;
+}
+
+function SalesRoleRoute({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  const hasRole = ["Admin", "Employee"].some((role) =>
+    session?.user.roles.includes(role),
+  );
+
+  return hasRole ? (
+    children
+  ) : (
+    <EmptyState
+      title="Acceso restringido"
+      description="No tienes permiso para ver las ventas."
+      action={<Link to="/">Volver al inicio</Link>}
+    />
+  );
 }
 
 function UpcomingPage({
@@ -107,12 +127,19 @@ function App() {
             <Route element={<ClientsPage />} path="clients" />
             <Route
               element={
-                <UpcomingPage
-                  title="Ventas"
-                  description="Consulta y registra las ventas de la boutique."
-                />
+                <SalesRoleRoute>
+                  <SalesListPage />
+                </SalesRoleRoute>
               }
               path="sales"
+            />
+            <Route
+              element={
+                <SalesRoleRoute>
+                  <SaleCreatePage />
+                </SalesRoleRoute>
+              }
+              path="sales/new"
             />
             <Route
               element={

@@ -31,6 +31,7 @@ type SelectControlProps = {
   searchable?: boolean;
   searchPlaceholder?: string;
   portal?: boolean;
+  portalContainer?: Element | null;
 };
 
 export function SelectControl({
@@ -45,6 +46,7 @@ export function SelectControl({
   searchable = false,
   searchPlaceholder = "Buscar…",
   portal = false,
+  portalContainer = null,
 }: SelectControlProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -267,7 +269,7 @@ export function SelectControl({
         <span className="pw-select-arrow" aria-hidden="true" />
       </button>
 
-      {portal && panel ? createPortal(panel, document.body) : panel}
+      {portal && panel ? createPortal(panel, portalContainer ?? document.body) : panel}
     </div>
   );
 }
