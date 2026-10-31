@@ -61,7 +61,7 @@ export function SaleCreatePage() {
   const { bankRate } = useExchangeRate();
   const navigate = useNavigate();
 
-  const [channel, setChannel] = useState("");
+  const [channel, setChannel] = useState("1");
   const [client, setClient] = useState<SaleClient | null>(null);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");

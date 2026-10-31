@@ -146,15 +146,24 @@ export function SaleProductPicker({
               {!loading && error ? <ErrorState title="No se pudo buscar el catálogo" description={error} onRetry={() => setRetry((value) => value + 1)} /> : null}
               {!loading && !error && catalog && options.length === 0 ? <p className="rounded-xl border border-dashed border-pw-line p-5 text-center text-sm text-pw-muted">No encontramos prendas disponibles con ese código.</p> : null}
               {!loading && !error && options.length > 0 ? (
-                <div className="grid gap-4">
+                <div className="grid gap-3">
                   {groups.map((group) => {
                     const first = group[0];
                     return (
                       <section key={`${first.product.id}:${first.presentationId}`} className="overflow-hidden rounded-xl border border-pw-line">
-                        <header className="px-4 pb-3 pt-4">
-                          <p className="text-sm font-extrabold text-pw-brand-deep">Código {first.product.code}</p>
-                          <h3 className="mt-1 text-base font-extrabold text-pw-ink">{first.presentationName}</h3>
-                          <p className="mt-0.5 text-sm text-pw-muted">{first.product.name}</p>
+                        <header className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+                          {first.imageUrl ? (
+                            <img
+                              src={first.imageUrl}
+                              alt={first.presentationName + ", " + first.product.name}
+                              className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover"
+                            />
+                          ) : null}
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p>
+                            <h3 className="text-sm font-extrabold text-pw-ink">{first.presentationName}</h3>
+                            <p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p>
+                          </div>
                         </header>
                         <div>
                           {group.map((option) => {
@@ -162,16 +171,17 @@ export function SaleProductPicker({
                             const price = option.variant.discountedSalePrice ?? option.variant.salePrice;
                             const size = option.variant.sizeName || "Talla única";
                             return (
-                              <div key={option.variant.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-pw-line px-4 py-3">
-                                <div className="min-w-0">
-                                  <p className="font-bold text-pw-ink">{size}</p>
-                                  <p className="mt-0.5 text-sm text-pw-muted">{money.format(price)} · {option.variant.availableQuantity} disponibles</p>
+                              <div key={option.variant.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-pw-line px-3 py-2 sm:px-4">
+                                <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                                  <p className="text-sm font-bold text-pw-ink">{size}</p>
+                                  <p className="text-xs text-pw-muted">{money.format(price)}</p>
+                                  <p className="text-xs text-pw-muted">{option.variant.availableQuantity} disponibles</p>
                                 </div>
                                 <button
                                   type="button"
                                   disabled={added}
                                   onClick={() => addVariant(option)}
-                                  className="min-h-11 shrink-0 rounded-lg border border-pw-brand px-3 text-sm font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft disabled:cursor-default disabled:border-pw-line disabled:text-pw-muted"
+                                  className="min-h-9 shrink-0 rounded-lg border border-pw-brand px-3 text-xs font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft disabled:cursor-default disabled:border-pw-line disabled:text-pw-muted"
                                 >
                                   {added ? "Agregada" : "Agregar"}
                                 </button>

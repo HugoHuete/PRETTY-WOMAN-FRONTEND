@@ -4,7 +4,7 @@ import { SelectControl } from "../../shared/ui/select-control";
 import { salePaymentMethods, type CreateSalePaymentPayload, type SaleCatalogOption } from "./sales-types";
 
 type PaymentDraft = { methodId: number; currency: "NIO" | "USD"; received: string; terminalId: string };
-type PaymentCalculation = { received: number; converted: number; applied: number; change: number; rate: number };
+type PaymentCalculation = { received: number; converted: number; applied: number; change: number; exceedsBalance: boolean; rate: number };
 const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
 const emptyPayment = (): PaymentDraft => ({ methodId: 1, currency: "NIO", received: "", terminalId: "" });
 function roundMoney(amount: number) { return Math.round((amount + Number.EPSILON) * 100) / 100; }
@@ -36,23 +36,21 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
     if (received <= 0 || (draft.currency === "USD" && rate <= 0)) return null;
     const converted = roundMoney(received * (draft.currency === "USD" ? rate : 1));
     const applied = roundMoney(Math.min(Math.max(0, balance), converted));
-    return { received, converted, applied, change: roundMoney(Math.max(0, converted - applied)), rate };
+    const exceedsBalance = draft.methodId === 3 && converted > Math.max(0, balance);
+    return {
+      received,
+      converted,
+      applied,
+      change: draft.methodId === 3 ? 0 : roundMoney(Math.max(0, converted - applied)),
+      exceedsBalance,
+      rate,
+    };
   }, [bankRate]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialogOpen && dialog && !dialog.open) dialog.showModal();
   }, [dialogOpen]);
-
-  const balanceBeforeDialogPayment = useMemo(() => {
-    const draftsBefore = editingIndex === null ? drafts : drafts.slice(0, editingIndex);
-    let remaining = Math.max(0, estimatedBalance);
-    for (const draft of draftsBefore) {
-      const calculation = calculate(draft, remaining);
-      if (calculation) remaining = roundMoney(Math.max(0, remaining - calculation.applied));
-    }
-    return remaining;
-  }, [calculate, drafts, editingIndex, estimatedBalance]);
 
   const payments = useMemo(() => {
     let remaining = Math.max(0, estimatedBalance);
@@ -192,7 +190,9 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
           estimatedBalance={estimatedBalance}
           calculate={calculate}
           currentRemainingBalance={remainingBalance}
-          availableBalance={balanceBeforeDialogPayment}
+          availableBalance={editingIndex === null
+            ? remainingBalance
+            : roundMoney(remainingBalance + (payments[editingIndex]?.productAmount ?? 0))}
           bankRate={bankRate}
           exchangeRateStatus={status}
           paymentOptions={paymentOptions}
@@ -235,11 +235,15 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
     return remaining;
   }, [calculate, draft, drafts, editingIndex, estimatedBalance]);
   const amount = Number(draft.received);
+  const exceedsAvailableBalance = Boolean(calculation?.exceedsBalance);
   const valid = Number.isFinite(amount)
     && amount > 0
     && (draft.currency === "NIO" || Boolean(bankRate))
+    && !exceedsAvailableBalance
     && (availableBalance <= 0 || Boolean(calculation?.applied));
-  const coversAvailableBalance = calculation ? calculation.converted >= availableBalance : false;
+  const coversAvailableBalance = calculation && draft.methodId !== 3
+    ? calculation.converted >= availableBalance
+    : false;
 
   useEffect(() => {
     setError("");
@@ -250,6 +254,8 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
     if (!valid) {
       setError(draft.currency === "USD" && !bankRate
         ? "No hay una tasa de cambio disponible para registrar pagos en dólares."
+        : exceedsAvailableBalance
+          ? "El monto no puede superar el saldo disponible para este pago."
         : amount > 0 && availableBalance > 0 && !calculation?.applied
           ? "El monto es demasiado pequeño para aplicarse al saldo."
           : "Ingresa un monto recibido mayor que cero.");
@@ -309,9 +315,11 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
               aria-label={draft.methodId === 2 ? "Monto transferido" : "Monto recibido"}
               type="number"
               min="0"
+              max={draft.methodId === 3 ? availableBalance : undefined}
               step="0.01"
               placeholder="0.00"
               inputMode="decimal"
+              aria-invalid={exceedsAvailableBalance}
               value={draft.received}
               onChange={(event) => { setDraft({ ...draft, received: event.target.value }); setError(""); }}
               className="h-10 min-w-0 flex-1 border-0 bg-transparent px-2 text-sm text-pw-ink outline-none"
@@ -332,21 +340,29 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
             <dd className="m-0 font-extrabold tabular-nums">{calculation ? money.format(calculation.applied) : money.format(0)}</dd>
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-pw-line pt-2">
-            <dt className="font-bold">{coversAvailableBalance ? "Cambio a entregar" : "Saldo pendiente"}</dt>
-            <dd className={`m-0 font-extrabold tabular-nums ${coversAvailableBalance ? "text-pw-brand-deep" : "text-pw-ink"}`}>
-              {calculation
-                ? money.format(coversAvailableBalance ? calculation.change : projectedRemainingBalance)
-                : money.format(projectedRemainingBalance)}
+            <dt className={`font-bold ${exceedsAvailableBalance ? "text-red-700" : ""}`}>
+              {exceedsAvailableBalance
+                ? "Excede el saldo disponible"
+                : coversAvailableBalance ? "Cambio a entregar" : "Saldo pendiente"}
+            </dt>
+            <dd className={`m-0 font-extrabold tabular-nums ${exceedsAvailableBalance ? "text-red-700" : coversAvailableBalance ? "text-pw-brand-deep" : "text-pw-ink"}`}>
+              {exceedsAvailableBalance && calculation
+                ? money.format(calculation.converted - availableBalance)
+                : calculation
+                  ? money.format(coversAvailableBalance ? calculation.change : projectedRemainingBalance)
+                  : money.format(projectedRemainingBalance)}
             </dd>
           </div>
         </dl>
 
-        {error ? <p role="alert" className="text-sm font-semibold text-red-700">{error}</p> : null}
+        {exceedsAvailableBalance
+          ? <p role="alert" className="text-sm font-semibold text-red-700">El monto de tarjeta no puede superar el saldo disponible para este pago.</p>
+          : error ? <p role="alert" className="text-sm font-semibold text-red-700">{error}</p> : null}
       </div>
 
       <footer className="flex justify-end gap-2 border-t border-pw-line px-5 py-4 sm:px-6">
         <button type="button" onClick={onCancel} className="min-h-10 rounded-lg border border-pw-line px-4 text-sm font-bold text-pw-ink hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand">Cancelar</button>
-        <button type="button" onClick={handleSave} className="min-h-10 rounded-lg bg-pw-brand px-4 text-sm font-bold text-white hover:bg-pw-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand">{editing ? "Guardar cambios" : "Agregar pago"}</button>
+        <button type="button" onClick={handleSave} disabled={!valid} className="min-h-10 rounded-lg bg-pw-brand px-4 text-sm font-bold text-white hover:bg-pw-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:cursor-not-allowed disabled:opacity-50">{editing ? "Guardar cambios" : "Agregar pago"}</button>
       </footer>
     </div>
   );
