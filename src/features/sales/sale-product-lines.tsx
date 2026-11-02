@@ -4,6 +4,7 @@ import { discountSourceIds } from "./sales-types";
 import { SelectControl, type SelectOption } from "../../shared/ui/select-control";
 import type { ProductVariantDTO } from "../products/product-types";
 import { SaleDiscountDialog } from "./sale-discount-dialog";
+import { SaleDiscountButton } from "./sale-discount-button";
 
 const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
 
@@ -13,11 +14,13 @@ function lineTotal(line: SaleDraftLine) {
 
 export function SaleProductLines({
   lines,
+  allowSelection,
   onChange,
   onChangeVariant,
   onRemove,
 }: {
   lines: SaleDraftLine[];
+  allowSelection: boolean;
   onChange: (lines: SaleDraftLine[]) => void;
   onChangeVariant: (currentVariantId: number, variant: ProductVariantDTO) => void;
   onRemove: (id: number) => void;
@@ -58,6 +61,20 @@ export function SaleProductLines({
     />
   );
 
+  const selectionControl = (line: SaleDraftLine, mobile = false) => (
+    <label className={`flex min-h-10 items-center gap-2 text-xs font-semibold text-pw-ink ${mobile ? "rounded-lg border border-pw-line px-3" : "justify-center"}`}>
+      <input
+        type="checkbox"
+        checked={line.forSelection}
+        disabled={!allowSelection && !line.forSelection}
+        onChange={(event) => update(line.productVariantId, { forSelection: event.target.checked })}
+        aria-label={`Marcar ${line.presentationName} para selección de la clienta`}
+        className="h-4 w-4 rounded border-pw-line accent-pw-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand"
+      />
+      {mobile ? "Para selección" : null}
+    </label>
+  );
+
   const applyDiscount = (
     variantId: number,
     discountAmount: number,
@@ -79,39 +96,7 @@ export function SaleProductLines({
   };
 
   const discountButton = (line: SaleDraftLine) => {
-    const isManual = line.discountSourceId === discountSourceIds.manual;
-    const isCampaign = line.discountSourceId === discountSourceIds.campaign;
-    const manualValue = line.manualDiscountValue ?? line.discountAmount;
-    const primaryText = isManual
-      ? line.manualDiscountType === "percent"
-        ? `${manualValue}%`
-        : line.manualDiscountType === "final"
-          ? money.format(line.unitPrice - line.discountAmount)
-          : `− ${money.format(line.discountAmount)}`
-      : isCampaign ? money.format(line.discountAmount) : "Agregar";
-    const secondaryText = isManual
-      ? line.manualDiscountType === "percent"
-        ? `− ${money.format(line.discountAmount)} c/u`
-        : line.manualDiscountType === "final" ? "precio final" : "por unidad"
-      : isCampaign ? "Campaña" : "Descuento";
-
-    return (
-      <button
-        type="button"
-        onClick={() => setDiscountLineId(line.productVariantId)}
-        aria-haspopup="dialog"
-        aria-label={`${isManual ? "Editar" : "Definir"} descuento de ${line.presentationName}`}
-        className={`flex min-h-10 w-full min-w-28 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand ${isManual ? "border-pw-brand/50 bg-pw-brand-soft/60 text-pw-brand-deep hover:bg-pw-brand-soft" : isCampaign ? "border-green-200 bg-green-50 text-green-800 hover:border-green-300" : "border-pw-line text-pw-muted hover:border-pw-brand/50 hover:bg-pw-brand-soft/40"}`}
-      >
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-bold tabular-nums">{primaryText}</span>
-          <span className="mt-0.5 block truncate text-[11px] font-medium">{secondaryText}</span>
-        </span>
-        <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m12.8 3.8 3.4 3.4M4 16l3.4-.7 8.5-8.5a2.4 2.4 0 0 0-3.4-3.4L4 11.9 4 16Z" />
-        </svg>
-      </button>
-    );
+    return <SaleDiscountButton line={line} onClick={() => setDiscountLineId(line.productVariantId)} />;
   };
 
   const sizeOptions = (line: SaleDraftLine): SelectOption[] => line.presentationVariants.map((variant) => {
@@ -143,12 +128,13 @@ export function SaleProductLines({
   return (
     <>
       <div className="hidden overflow-x-auto rounded-xl border border-pw-line lg:block">
-        <table className="w-full min-w-[840px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[920px] border-collapse text-left text-sm">
           <caption className="sr-only">Prendas agregadas a la venta</caption>
           <thead className="bg-pw-canvas text-xs font-bold text-pw-muted">
             <tr>
               <th scope="col" className="px-4 py-3">Presentación</th>
               <th scope="col" className="w-24 px-2 py-3">Talla</th>
+              <th scope="col" className="w-24 px-2 py-3 text-center">Selección</th>
               <th scope="col" className="px-3 py-3">Precio c/u</th>
               <th scope="col" className="px-3 py-3 text-center">Stock</th>
               <th scope="col" className="px-3 py-3 text-center">Cantidad</th>
@@ -188,15 +174,20 @@ export function SaleProductLines({
                     </label>
                   ) : <span className="text-sm font-bold text-pw-ink">{line.sizeName || "Talla única"}</span>}
                 </td>
+                <td className="px-2 py-4">{selectionControl(line)}</td>
                 <td className="whitespace-nowrap px-3 py-4 tabular-nums text-pw-muted">{money.format(line.unitPrice)}</td>
                 <td className="whitespace-nowrap px-3 py-4 text-center tabular-nums text-pw-muted">{line.availableQuantity}</td>
                 <td className="px-3 py-4 text-center">
                   {quantityControl(line, `sale-quantity-${line.productVariantId}`)}
                 </td>
                 <td className="px-3 py-4">
-                  {discountButton(line)}
+                  {line.forSelection
+                    ? <span className="text-xs text-pw-muted">Se define al elegir</span>
+                    : discountButton(line)}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-center font-extrabold tabular-nums text-pw-ink">{money.format(lineTotal(line))}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-center font-extrabold tabular-nums text-pw-ink">
+                  {line.forSelection ? <span className="text-xs font-medium text-pw-muted">Sin cobrar</span> : money.format(lineTotal(line))}
+                </td>
                 <td className="px-3 py-4 text-right">
                   {removeButton(line)}
                 </td>
@@ -224,6 +215,7 @@ export function SaleProductLines({
               </div>
               {removeButton(line)}
             </div>
+            {selectionControl(line, true)}
             {line.presentationVariants?.length ? (
               <label className="grid gap-1 text-xs font-extrabold text-pw-brand-deep">
                 Cambiar talla
@@ -243,12 +235,14 @@ export function SaleProductLines({
               </label>
               <div className="grid content-start gap-1 text-xs font-extrabold text-pw-muted">
                 <span>Descuento c/u</span>
-                {discountButton(line)}
+                {line.forSelection
+                  ? <span className="flex min-h-10 items-center text-xs font-medium text-pw-muted">Se define al elegir</span>
+                  : discountButton(line)}
               </div>
             </div>
             <div className="flex justify-between border-t border-pw-line pt-3 text-sm">
               <span className="font-bold text-pw-muted">Total de la prenda</span>
-              <strong className="tabular-nums text-pw-ink">{money.format(lineTotal(line))}</strong>
+              <strong className="tabular-nums text-pw-ink">{line.forSelection ? "Sin cobrar" : money.format(lineTotal(line))}</strong>
             </div>
           </li>
         ))}

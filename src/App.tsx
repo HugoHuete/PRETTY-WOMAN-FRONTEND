@@ -24,6 +24,7 @@ import { InventoryIssueDetailPage } from "./features/inventory-issues/inventory-
 import { CampaignsPage } from "./features/campaigns/campaigns-page";
 import { SalesListPage } from "./features/sales/sales-list-page";
 import { SaleCreatePage } from "./features/sales/sale-create-page";
+import { SaleDetailPage } from "./features/sales/sale-detail-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
 import { LoansPage } from "./features/finances/loans-page";
 import { LoanDetailPage } from "./features/finances/loan-detail-page";
@@ -140,6 +141,14 @@ function App() {
                 </SalesRoleRoute>
               }
               path="sales/new"
+            />
+            <Route
+              element={
+                <SalesRoleRoute>
+                  <SaleDetailPage />
+                </SalesRoleRoute>
+              }
+              path="sales/:id"
             />
             <Route
               element={

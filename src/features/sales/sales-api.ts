@@ -9,6 +9,21 @@ import type {
   SaleRecord,
   SalesFilters,
 } from "./sales-types";
+import type {
+  CreateSaleDeliveryPayload,
+  CreateSalePaymentMovementPayload,
+  CreateSaleSelectionProductPayload,
+  PatchSaleDeliveryPayload,
+  PatchSaleHeaderPayload,
+  RefundSalePaymentMovementPayload,
+  ReplaceSaleProductsPayload,
+  ResolveSelectionHoldPayload,
+  SaleDeliveryAction,
+  SaleDeliveryAgency,
+  SaleDetail,
+  SaleMunicipality,
+  UpdateSalePaymentMovementPayload,
+} from "./sales-types";
 
 export type AuthRequest = (path: string, init?: RequestInit) => Promise<Response>;
 
@@ -147,4 +162,92 @@ function normalizePage<T>(result: PaginatedResult<T> | PaginatedProducts): Pagin
     hasPreviousPage: result.hasPreviousPage ?? page > 1,
     hasNextPage: result.hasNextPage ?? page < totalPages,
   };
+}
+
+export async function getSale(request: AuthRequest, id: number) {
+  return requestJson<SaleDetail>(request, `/api/v1/sales/${id}`);
+}
+async function sendSaleCommand(request: AuthRequest, path: string, method: string, body?: unknown) {
+  return requestJson<void>(request, path, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+export function cancelSale(request: AuthRequest, id: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/cancel`, "POST");
+}
+export function patchSaleHeader(request: AuthRequest, id: number, payload: PatchSaleHeaderPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}`, "PATCH", payload);
+}
+export function replaceSaleProducts(request: AuthRequest, id: number, payload: ReplaceSaleProductsPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/products`, "PUT", payload);
+}
+export function addSalePayment(request: AuthRequest, id: number, payload: CreateSalePaymentMovementPayload) {
+  return requestJson<number>(request, `/api/v1/sales/${id}/payment-movements`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+export function updateSalePayment(request: AuthRequest, id: number, movementId: number, payload: UpdateSalePaymentMovementPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/payment-movements/${movementId}`, "PATCH", payload);
+}
+export function refundSalePayment(request: AuthRequest, id: number, movementId: number, payload: RefundSalePaymentMovementPayload) {
+  return requestJson<number>(request, `/api/v1/sales/${id}/payment-movements/${movementId}/refunds`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+export function createSaleDelivery(request: AuthRequest, id: number, payload: CreateSaleDeliveryPayload) {
+  return requestJson<number>(request, `/api/v1/sales/${id}/deliveries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+export async function getSaleMunicipalities(request: AuthRequest) {
+  return requestJson<SaleMunicipality[]>(request, "/api/v1/municipalities");
+}
+export async function getSaleDeliveryAgencies(request: AuthRequest) {
+  const agencies = await requestJson<SaleDeliveryAgency[]>(request, "/api/v1/deliveryagencies");
+  return agencies.filter((agency) => agency.enabled);
+}
+export function updateSaleDelivery(request: AuthRequest, id: number, deliveryId: number, payload: PatchSaleDeliveryPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/deliveries/${deliveryId}`, "PATCH", payload);
+}
+export function runSaleDeliveryAction(request: AuthRequest, id: number, deliveryId: number, action: SaleDeliveryAction) {
+  const paths: Record<SaleDeliveryAction, string> = {
+    send: "send",
+    "delivered-pending-selection": "delivered-pending-selection",
+    complete: "complete",
+    fail: "fail",
+    cancel: "cancel",
+  };
+  return sendSaleCommand(request, `/api/v1/sales/${id}/deliveries/${deliveryId}/${paths[action]}`, "POST");
+}
+export function addSaleSelectionHolds(request: AuthRequest, id: number, payload: CreateSaleSelectionProductPayload[]) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/selection-holds`, "POST", payload);
+}
+export function resolveSaleSelectionHold(request: AuthRequest, id: number, holdId: number, payload: ResolveSelectionHoldPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/selection-holds/${holdId}/resolve`, "POST", payload);
+}
+export function returnSaleSelectionHold(request: AuthRequest, id: number, holdId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/selection-holds/${holdId}/return`, "POST");
+}
+
+export function undoSaleSelectionHoldResolution(request: AuthRequest, id: number, holdId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/selection-holds/${holdId}/undo-resolution`, "POST");
+}
+export async function getSaleProductCatalog(request: AuthRequest) {
+  const pageSize = 100;
+  const firstQuery = new URLSearchParams({ page: "1", pageSize: String(pageSize) });
+  const first = normalizePage<ProductDTO>(await requestJson<PaginatedProducts>(request, `/api/v1/products?${firstQuery}`));
+  if (first.totalPages <= 1) return first.items;
+  const pages = await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
+    const query = new URLSearchParams({ page: String(index + 2), pageSize: String(pageSize) });
+    return requestJson<PaginatedProducts>(request, `/api/v1/products?${query}`).then((result) => normalizePage<ProductDTO>(result).items);
+  }));
+  return [...first.items, ...pages.flat()];
 }

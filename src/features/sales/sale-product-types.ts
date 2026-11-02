@@ -10,6 +10,7 @@ export type SaleDraftLine = {
   sizeName: string | null;
   availableQuantity: number;
   quantity: number;
+  forSelection: boolean;
   unitPrice: number;
   campaignDiscountAmount?: number;
   discountAmount: number;

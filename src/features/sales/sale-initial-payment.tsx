@@ -281,6 +281,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
             Método de pago
             <SelectControl
               id="sale-payment-method"
+              aria-label="Método de pago"
               value={draft.methodId === 3 ? `terminal:${draft.terminalId}` : String(draft.methodId)}
               options={paymentOptions}
               onChange={(event) => {
@@ -295,6 +296,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
             Moneda recibida
             <SelectControl
               id="sale-payment-currency"
+              aria-label="Moneda recibida"
               value={draft.currency}
               disabled={draft.methodId === 3}
               options={[

@@ -4,7 +4,6 @@ import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
 import { useToast } from "../../shared/ui/toast-context";
 import { LoadingButton } from "../../shared/ui/loading-button";
-import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { SelectControl } from "../../shared/ui/select-control";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
 import { SaleClientCreateDialog } from "./sale-client-create-dialog";
@@ -45,6 +44,7 @@ function lineFrom(option: SaleVariantOption): SaleDraftLine {
     sizeName: variant.sizeName,
     availableQuantity: variant.availableQuantity,
     quantity: 1,
+    forSelection: false,
     unitPrice: variant.salePrice,
     campaignDiscountAmount,
     discountAmount: campaignDiscountAmount,
@@ -80,34 +80,39 @@ export function SaleCreatePage() {
   }, [errorSection]);
 
   const itemCount = useMemo(
-    () => lines.reduce((count, line) => count + line.quantity, 0),
+    () => lines.filter((line) => !line.forSelection).reduce((count, line) => count + line.quantity, 0),
     [lines],
   );
-  const grossSubtotal = useMemo(
-    () => lines.reduce((total, line) => total + line.unitPrice * line.quantity, 0),
+  const selectionCount = useMemo(
+    () => lines.filter((line) => line.forSelection).reduce((count, line) => count + line.quantity, 0),
     [lines],
+  );
+  const saleLines = useMemo(() => lines.filter((line) => !line.forSelection), [lines]);
+  const grossSubtotal = useMemo(
+    () => saleLines.reduce((amount, line) => amount + line.unitPrice * line.quantity, 0),
+    [saleLines],
   );
   const campaignDiscount = useMemo(
-    () => lines.reduce(
+    () => saleLines.reduce(
       (total, line) => line.discountSourceId === discountSourceIds.campaign
         ? total + line.discountAmount * line.quantity
         : total,
       0,
     ),
-    [lines],
+    [saleLines],
   );
   const manualDiscount = useMemo(
-    () => lines.reduce(
+    () => saleLines.reduce(
       (total, line) => line.discountSourceId === discountSourceIds.manual
         ? total + line.discountAmount * line.quantity
         : total,
       0,
     ),
-    [lines],
+    [saleLines],
   );
   const total = useMemo(
-    () => Math.max(0, grossSubtotal - lines.reduce((amount, line) => amount + line.discountAmount * line.quantity, 0)),
-    [grossSubtotal, lines],
+    () => Math.max(0, grossSubtotal - saleLines.reduce((amount, line) => amount + line.discountAmount * line.quantity, 0)),
+    [grossSubtotal, saleLines],
   );
   const appliedPayment = useMemo(
     () => payments.reduce((amount, payment) => amount + payment.productAmount, 0),
@@ -221,6 +226,11 @@ export function SaleCreatePage() {
       setErrorSection("products");
       return;
     }
+    if (channel === "1" && selectionCount > 0) {
+      setError("La selección de prendas está disponible solo para ventas fuera de tienda física. Cambia el canal o desmarca las prendas para selección.");
+      setErrorSection("products");
+      return;
+    }
 
     const invalidLine = lines.find((line) =>
       line.quantity > line.availableQuantity ||
@@ -252,13 +262,21 @@ export function SaleCreatePage() {
       saleStatusId: 1 as const,
       ...(client ? { clientId: client.id } : {}),
       ...(comments.trim() ? { comments: comments.trim() } : {}),
-      productVariants: lines.map((line) => ({
+      productVariants: saleLines.map((line) => ({
         productId: line.productVariantId,
         quantity: line.quantity,
         discountAmount: line.discountAmount,
         discountSourceId: line.discountSourceId,
         ...(line.discountCampaignId ? { discountCampaignId: line.discountCampaignId } : {}),
       })),
+      ...(selectionCount > 0
+        ? {
+          selectionProducts: lines.filter((line) => line.forSelection).map((line) => ({
+            productId: line.productVariantId,
+            quantity: line.quantity,
+          })),
+        }
+        : {}),
       ...(hasPaymentAmount && payments.some((payment) => payment.productAmount > 0)
         ? { paymentMovements: payments.filter((payment) => payment.productAmount > 0) }
         : {}),
@@ -334,11 +352,15 @@ export function SaleCreatePage() {
           <section id="sale-products" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-products-heading">
             {error && errorSection === "products" ? <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
             <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 id="sale-products-heading" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2>
+              <div>
+                <h2 id="sale-products-heading" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2>
+                {channel === "1" ? <p className="mt-1 text-xs text-pw-muted">La selección de prendas está disponible para ventas con envío.</p> : null}
+              </div>
               <SaleProductPicker lines={lines} onAdd={addProduct} />
             </header>
             <SaleProductLines
               lines={lines}
+              allowSelection={channel !== "1"}
               onChange={setLines}
               onChangeVariant={changeProductVariant}
               onRemove={(id) => setLines((current) => current.filter((line) => line.productVariantId !== id))}
@@ -366,6 +388,11 @@ export function SaleCreatePage() {
               <div>
                 <h2 id="sale-summary-heading" className="text-base font-extrabold text-pw-ink">Resumen</h2>
                 <p className="mt-1 text-sm text-pw-muted">{itemCount} {itemCount === 1 ? "artículo" : "artículos"}</p>
+                {selectionCount > 0 ? (
+                  <p className="mt-1 text-xs text-pw-muted">
+                    {selectionCount} {selectionCount === 1 ? "prenda" : "prendas"} para selección · no se cobra ahora
+                  </p>
+                ) : null}
               </div>
               <span className="rounded-full bg-pw-brand-soft px-3 py-1 text-xs font-bold text-pw-brand-deep">
                 {saleChannels.find((option) => String(option.id) === channel)?.name ?? "Venta"}
