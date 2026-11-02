@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
 import { useToast } from "../../shared/ui/toast-context";
@@ -18,6 +18,7 @@ function errorMessage(caught: unknown, fallback: string) { return caught instanc
 
 export function SaleDetailPage() {
   const { id: routeId } = useParams();
+  const location = useLocation();
   const id = Number(routeId);
   const { request, session } = useAuth();
   const isAdmin = session?.user.roles.includes("Admin") ?? false;
@@ -38,6 +39,7 @@ export function SaleDetailPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(0);
+  const processedDeliveryAnchor = useRef<string | null>(null);
 
   const reload = useCallback(async () => {
     const result = await getSale(request, id);
@@ -70,6 +72,20 @@ export function SaleDetailPage() {
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id, request, retry]);
+
+  useEffect(() => {
+    if (!location.hash) {
+      processedDeliveryAnchor.current = null;
+      return;
+    }
+    if (!sale || sale.id !== id) return;
+    const anchorKey = `${location.key}:${location.hash}`;
+    if (processedDeliveryAnchor.current === anchorKey) return;
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (!target) return;
+    processedDeliveryAnchor.current = anchorKey;
+    target.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [id, location.hash, location.key, sale]);
 
   const variantIds = sale ? [...sale.productVariants.map((line) => line.productId), ...sale.selectionHolds.map((hold) => hold.productId)].join(",") : "";
   useEffect(() => {

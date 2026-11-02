@@ -1,6 +1,12 @@
 import { ApiRequestError, type AuthRequest } from "../sales/sales-api";
 import type { PaginatedResult, SaleDeliveryAgency } from "../sales/sales-types";
-import type { Shipment, ShipmentFilters } from "./shipments-types";
+import type {
+  CreateShipmentReconciliationPayload,
+  PendingReconciliationDelivery,
+  PendingReconciliationReturn,
+  Shipment,
+  ShipmentFilters,
+} from "./shipments-types";
 
 async function responseError(response: Response) {
   try {
@@ -43,4 +49,28 @@ export async function getShipmentAgencies(request: AuthRequest) {
   const response = await request("/api/v1/deliveryagencies");
   if (!response.ok) throw new ApiRequestError(await responseError(response), response.status);
   return (await response.json() as SaleDeliveryAgency[]).filter((agency) => agency.enabled);
+}
+
+export async function getPendingReconciliationDeliveries(request: AuthRequest, deliveryAgencyId: number) {
+  const query = new URLSearchParams({ deliveryAgencyId: String(deliveryAgencyId) });
+  const response = await request(`/api/v1/deliveryagencyreconciliations/pending-deliveries?${query}`);
+  if (!response.ok) throw new ApiRequestError(await responseError(response), response.status);
+  return await response.json() as PendingReconciliationDelivery[];
+}
+
+export async function getPendingReconciliationReturns(request: AuthRequest, deliveryAgencyId: number) {
+  const query = new URLSearchParams({ deliveryAgencyId: String(deliveryAgencyId) });
+  const response = await request(`/api/v1/deliveryagencyreconciliations/pending-returns?${query}`);
+  if (!response.ok) throw new ApiRequestError(await responseError(response), response.status);
+  return await response.json() as PendingReconciliationReturn[];
+}
+
+export async function createShipmentReconciliation(request: AuthRequest, payload: CreateShipmentReconciliationPayload) {
+  const response = await request("/api/v1/deliveryagencyreconciliations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new ApiRequestError(await responseError(response), response.status);
+  return await response.json() as number;
 }

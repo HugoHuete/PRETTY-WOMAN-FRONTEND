@@ -20,6 +20,7 @@ type ExchangeRateStatus = "idle" | "loading" | "ready" | "error";
 
 type ExchangeRateContextValue = {
   rate: CurrentExchangeRate | null;
+  storeRate: number | null;
   bankRate: number | null;
   startDate: string | null;
   status: ExchangeRateStatus;
@@ -61,8 +62,9 @@ export function ExchangeRateProvider({ children }: PropsWithChildren) {
           bankRate: Number(body.bankRate),
           startDate: String(body.startDate ?? ""),
         };
-        if (!Number.isFinite(nextRate.bankRate) || nextRate.bankRate <= 0) {
-          throw new Error("La tasa de cambio recibida no es válida.");
+        if (!Number.isFinite(nextRate.storeRate) || nextRate.storeRate <= 0
+          || !Number.isFinite(nextRate.bankRate) || nextRate.bankRate <= 0) {
+          throw new Error("Las tasas de cambio recibidas no son válidas.");
         }
 
         if (version === requestVersion.current) {
@@ -96,6 +98,7 @@ export function ExchangeRateProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<ExchangeRateContextValue>(() => ({
     rate,
+    storeRate: rate?.storeRate ?? null,
     bankRate: rate?.bankRate ?? null,
     startDate: rate?.startDate ?? null,
     status,

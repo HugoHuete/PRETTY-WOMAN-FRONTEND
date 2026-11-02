@@ -23,8 +23,8 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
   onRetryTerminals: () => void;
   onChange: (movements: CreateSalePaymentPayload[]) => void;
 }) {
-  const { bankRate: contextRate, status } = useExchangeRate();
-  const bankRate = contextRate ?? fallbackRate;
+  const { storeRate: contextRate, status } = useExchangeRate();
+  const storeRate = contextRate ?? fallbackRate;
   const [drafts, setDrafts] = useState<PaymentDraft[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -32,7 +32,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
 
   const calculate = useCallback((draft: PaymentDraft, balance: number): PaymentCalculation | null => {
     const received = roundMoney(Math.max(0, Number(draft.received) || 0));
-    const rate = bankRate ? Math.round(bankRate * 10000) / 10000 : 0;
+    const rate = storeRate ? Math.round(storeRate * 10000) / 10000 : 0;
     if (received <= 0 || (draft.currency === "USD" && rate <= 0)) return null;
     const converted = roundMoney(received * (draft.currency === "USD" ? rate : 1));
     const applied = roundMoney(Math.min(Math.max(0, balance), converted));
@@ -45,7 +45,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
       exceedsBalance,
       rate,
     };
-  }, [bankRate]);
+  }, [storeRate]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -193,7 +193,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
           availableBalance={editingIndex === null
             ? remainingBalance
             : roundMoney(remainingBalance + (payments[editingIndex]?.productAmount ?? 0))}
-          bankRate={bankRate}
+          storeRate={storeRate}
           exchangeRateStatus={status}
           paymentOptions={paymentOptions}
           onCancel={closePaymentDialog}
@@ -204,7 +204,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
   );
 }
 
-function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, estimatedBalance, calculate, currentRemainingBalance, availableBalance, bankRate, exchangeRateStatus, paymentOptions, onCancel, onSave }: {
+function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, estimatedBalance, calculate, currentRemainingBalance, availableBalance, storeRate, exchangeRateStatus, paymentOptions, onCancel, onSave }: {
   editing: boolean;
   initialDraft: PaymentDraft;
   drafts: PaymentDraft[];
@@ -213,7 +213,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
   calculate: (draft: PaymentDraft, balance: number) => PaymentCalculation | null;
   currentRemainingBalance: number;
   availableBalance: number;
-  bankRate: number | null;
+  storeRate: number | null;
   exchangeRateStatus: string;
   paymentOptions: { value: string; label: string }[];
   onCancel: () => void;
@@ -238,7 +238,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
   const exceedsAvailableBalance = Boolean(calculation?.exceedsBalance);
   const valid = Number.isFinite(amount)
     && amount > 0
-    && (draft.currency === "NIO" || Boolean(bankRate))
+    && (draft.currency === "NIO" || Boolean(storeRate))
     && !exceedsAvailableBalance
     && (availableBalance <= 0 || Boolean(calculation?.applied));
   const coversAvailableBalance = calculation && draft.methodId !== 3
@@ -252,7 +252,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
 
   const handleSave = () => {
     if (!valid) {
-      setError(draft.currency === "USD" && !bankRate
+      setError(draft.currency === "USD" && !storeRate
         ? "No hay una tasa de cambio disponible para registrar pagos en dólares."
         : exceedsAvailableBalance
           ? "El monto no puede superar el saldo disponible para este pago."
@@ -301,7 +301,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
               disabled={draft.methodId === 3}
               options={[
                 { value: "NIO", label: "Córdobas (C$)" },
-                { value: "USD", label: "Dólares (USD)", disabled: !bankRate },
+                { value: "USD", label: "Dólares (USD)", disabled: !storeRate },
               ]}
               onChange={(event) => { setDraft({ ...draft, currency: event.target.value as PaymentDraft["currency"] }); setError(""); }}
             />
@@ -329,8 +329,8 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
           </span>
         </label>
 
-        {draft.currency === "USD" && bankRate ? <p className="-mt-2 text-xs text-pw-muted">Tasa disponible: {money.format(bankRate)} por dólar.</p> : null}
-        {draft.currency === "USD" && !bankRate && exchangeRateStatus === "error" ? <p role="alert" className="text-xs text-amber-800">No se pudo cargar la tasa; el pago en dólares no está disponible.</p> : null}
+        {draft.currency === "USD" && storeRate ? <p className="-mt-2 text-xs text-pw-muted">Tasa disponible: {money.format(storeRate)} por dólar.</p> : null}
+        {draft.currency === "USD" && !storeRate && exchangeRateStatus === "error" ? <p role="alert" className="text-xs text-amber-800">No se pudo cargar la tasa; el pago en dólares no está disponible.</p> : null}
 
         <dl aria-live="polite" className="grid gap-2 rounded-xl bg-pw-canvas p-4 text-sm">
           <div className="flex items-center justify-between gap-3">

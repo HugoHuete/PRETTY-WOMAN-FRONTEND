@@ -14,7 +14,7 @@ const applied = (movement: SalePaymentMovement, value: number) => movement.movem
 
 function AddPaymentDialog({ sale, terminals, busy, onClose, onSave }: { sale: SaleDetail; terminals: SaleCatalogOption[]; busy: boolean; onClose: () => void; onSave: (payload: CreateSalePaymentMovementPayload) => Promise<boolean> }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const { bankRate } = useExchangeRate();
+  const { storeRate } = useExchangeRate();
   const [method, setMethod] = useState("1");
   const [currency, setCurrency] = useState<"NIO" | "USD">("NIO");
   const [terminal, setTerminal] = useState("");
@@ -30,7 +30,7 @@ function AddPaymentDialog({ sale, terminals, busy, onClose, onSave }: { sale: Sa
     return { products: Math.max(0, round(sale.total - productPaid)), shipping: Math.max(0, round((delivery?.shippingChargedToClient ?? 0) - shippingPaid)) };
   }, [delivery, sale.paymentMovements, sale.total]);
   const methodId = Number(method.startsWith("terminal:") ? 3 : method);
-  const converted = round((Number(received) || 0) * (currency === "USD" ? (bankRate ?? 0) : 1));
+  const converted = round((Number(received) || 0) * (currency === "USD" ? (storeRate ?? 0) : 1));
   const remaining = round(balances.products + balances.shipping);
   const card = methodId === 3;
   const exceeds = card && converted > remaining;
@@ -41,9 +41,9 @@ function AddPaymentDialog({ sale, terminals, busy, onClose, onSave }: { sale: Sa
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (converted <= 0) { setError("Ingresa un monto recibido mayor que cero."); return; }
-    if (currency === "USD" && !bankRate) { setError("No hay una tasa de cambio disponible para registrar dólares."); return; }
+    if (currency === "USD" && !storeRate) { setError("No hay una tasa de cambio disponible para registrar dólares."); return; }
     if (card && (!terminal || exceeds)) { setError(exceeds ? "El pago con tarjeta no puede superar el saldo pendiente." : "Selecciona la terminal de la tarjeta."); return; }
-    const saved = await onSave({ paymentMethodId: methodId, ...(card ? { paymentTerminalId: Number(terminal || method.slice("terminal:".length)) } : {}), productAmount, shippingAmount, ...(shippingAmount > 0 && delivery ? { saleDeliveryId: delivery.id } : {}), amountReceivedNio: currency === "NIO" ? Number(received) : 0, amountReceivedUsd: currency === "USD" ? Number(received) : 0, changeGivenNio: change, ...(currency === "USD" && bankRate ? { exchangeRate: bankRate } : {}) });
+    const saved = await onSave({ paymentMethodId: methodId, ...(card ? { paymentTerminalId: Number(terminal || method.slice("terminal:".length)) } : {}), productAmount, shippingAmount, ...(shippingAmount > 0 && delivery ? { saleDeliveryId: delivery.id } : {}), amountReceivedNio: currency === "NIO" ? Number(received) : 0, amountReceivedUsd: currency === "USD" ? Number(received) : 0, changeGivenNio: change, ...(currency === "USD" && storeRate ? { exchangeRate: storeRate } : {}) });
     if (saved) onClose();
   };
   const paymentOptions = [...salePaymentMethods.filter((entry) => entry.id !== 3).map((entry) => ({ value: String(entry.id), label: entry.name })), ...terminals.map((entry) => ({ value: `terminal:${entry.id}`, label: entry.name }))];

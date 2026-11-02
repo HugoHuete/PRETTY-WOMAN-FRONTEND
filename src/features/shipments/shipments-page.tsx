@@ -100,9 +100,19 @@ export function ShipmentsPage() {
 
   useEffect(() => {
     setHeading({ title: "Envíos", breadcrumbs: null });
-    setAction(null);
-    return () => setHeading(null);
-  }, [setAction, setHeading]);
+    setAction(isAdmin ? <Link
+      aria-label="Conciliar agencia"
+      className="pw-topbar-create-action inline-flex min-h-10 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-pw-brand-deep"
+      to="/shipments/reconciliation"
+    >
+      <span aria-hidden="true" className="mr-1 text-lg leading-none">↔</span>
+      Conciliar agencia
+    </Link> : null);
+    return () => {
+      setHeading(null);
+      setAction(null);
+    };
+  }, [isAdmin, setAction, setHeading]);
 
   useEffect(() => {
     setSearchInput(filters.clientSearch);

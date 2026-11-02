@@ -26,6 +26,7 @@ import { SalesListPage } from "./features/sales/sales-list-page";
 import { SaleCreatePage } from "./features/sales/sale-create-page";
 import { SaleDetailPage } from "./features/sales/sale-detail-page";
 import { ShipmentsPage } from "./features/shipments/shipments-page";
+import { ShipmentReconciliationPage } from "./features/shipments/shipment-reconciliation-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
 import { LoansPage } from "./features/finances/loans-page";
 import { LoanDetailPage } from "./features/finances/loan-detail-page";
@@ -117,6 +118,14 @@ function App() {
           <Route element={<AppShell />}>
             <Route element={<DashboardPage />} index />
             <Route element={<ShipmentsPage />} path="shipments" />
+            <Route
+              element={
+                <RoleRoute roles={["Admin"]}>
+                  <ShipmentReconciliationPage />
+                </RoleRoute>
+              }
+              path="shipments/reconciliation"
+            />
             <Route element={<ProductsPage />} path="products" />
             <Route element={<ClientsPage />} path="clients" />
             <Route

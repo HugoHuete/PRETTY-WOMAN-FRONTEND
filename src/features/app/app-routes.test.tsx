@@ -210,6 +210,27 @@ describe('protected application routes', () => {
     expect(auth.state.request).toHaveBeenCalledWith('/api/v1/finances/movements?page=1&pageSize=20');
   });
 
+  it('renders shipment reconciliation for Admin and loads its agency list', async () => {
+    auth.state.request.mockImplementation((path: string) => {
+      const body = path === '/api/v1/exchange-rates/current'
+        ? { bankRate: 36.5, storeRate: 36.5, startDate: '2026-11-01' }
+        : [];
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    });
+    renderAppAt('/shipments/reconciliation', 'authenticated', ['Admin']);
+
+    expect(await screen.findByText('Mostraremos los envíos y las devoluciones que aún puedes incluir en su liquidación.')).toBeVisible();
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/deliveryagencies');
+    expect(auth.state.request).toHaveBeenCalledWith('/api/v1/exchange-rates/current');
+  });
+
+  it('denies shipment reconciliation to employees without requesting reconciliation data', () => {
+    renderAppAt('/shipments/reconciliation', 'authenticated', ['Employee']);
+
+    expect(screen.getByText('No tienes permiso para ver esta sección.')).toBeVisible();
+    expect(auth.state.request).not.toHaveBeenCalledWith(expect.stringContaining('/api/v1/deliveryagencyreconciliations'));
+  });
+
   it('denies Finance access to non-Admins without requesting Finance data', () => {
     renderAppAt('/finances', 'authenticated', ['Employee']);
 

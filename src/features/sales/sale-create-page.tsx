@@ -58,7 +58,7 @@ export function SaleCreatePage() {
   const { request } = useAuth();
   const { setHeading } = usePageActions();
   const { showToast } = useToast();
-  const { bankRate } = useExchangeRate();
+  const { storeRate } = useExchangeRate();
   const navigate = useNavigate();
 
   const [channel, setChannel] = useState("1");
@@ -456,7 +456,7 @@ export function SaleCreatePage() {
             </div>
             <SaleInitialPayment
               estimatedBalance={total}
-              exchangeRate={bankRate}
+              exchangeRate={storeRate}
               terminals={terminals}
               terminalLoading={terminalLoading}
               terminalError={terminalError}
