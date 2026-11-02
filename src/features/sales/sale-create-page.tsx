@@ -62,6 +62,7 @@ export function SaleCreatePage() {
   const navigate = useNavigate();
 
   const [channel, setChannel] = useState("1");
+  const [saleStatusId, setSaleStatusId] = useState<1 | 2>(1);
   const [client, setClient] = useState<SaleClient | null>(null);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");
@@ -231,6 +232,10 @@ export function SaleCreatePage() {
       setErrorSection("products");
       return;
     }
+    if (saleStatusId === 2 && channel === "1" && appliedPayment >= total) {
+      setError("Una venta de tienda física se completa al pagar el total. Para dejar un pedido totalmente pagado pendiente de retiro, usa el canal donde se confirmó la compra.");
+      return;
+    }
 
     const invalidLine = lines.find((line) =>
       line.quantity > line.availableQuantity ||
@@ -259,7 +264,7 @@ export function SaleCreatePage() {
 
     const payload = {
       saleChannelId: Number(channel),
-      saleStatusId: 1 as const,
+      saleStatusId,
       ...(client ? { clientId: client.id } : {}),
       ...(comments.trim() ? { comments: comments.trim() } : {}),
       productVariants: saleLines.map((line) => ({
@@ -285,7 +290,13 @@ export function SaleCreatePage() {
     setSubmitting(true);
     try {
       await createSale(request, payload);
-      showToast({ tone: "success", title: "Venta registrada", detail: "La venta quedó guardada correctamente." });
+      showToast({
+        tone: "success",
+        title: saleStatusId === 2 ? "Reserva creada" : "Venta registrada",
+        detail: saleStatusId === 2
+          ? "Las prendas quedaron apartadas en inventario."
+          : "La venta quedó guardada correctamente.",
+      });
       navigate("/sales", { replace: true });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "No se pudo registrar la venta.";
@@ -323,7 +334,21 @@ export function SaleCreatePage() {
             <div className="mb-4">
               <h2 id="sale-channel-heading" className="text-base font-extrabold text-pw-ink">Datos de la venta</h2>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 sm:items-start">
+              <label htmlFor="sale-status-select" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
+                Tipo de registro
+                <SelectControl
+                  id="sale-status-select"
+                  aria-label="Tipo de registro"
+                  value={String(saleStatusId)}
+                  onChange={(event) => setSaleStatusId(Number(event.target.value) as 1 | 2)}
+                  options={[
+                    { value: "1", label: "Venta pendiente" },
+                    { value: "2", label: "Reserva" },
+                  ]}
+                />
+                {saleStatusId === 2 ? <span className="font-medium">Aparta el inventario mientras se coordina el retiro o envío.</span> : null}
+              </label>
               <label htmlFor="sale-channel-select" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
                 Canal de venta
                 <SelectControl
@@ -339,7 +364,7 @@ export function SaleCreatePage() {
                 />
               </label>
               <div>
-                <h3 className="mb-2 text-xs font-extrabold text-pw-muted">Clienta <span className="font-medium">(opcional)</span></h3>
+                <h3 className="mb-1.5 text-xs font-extrabold text-pw-muted">Clienta <span className="font-medium">(opcional)</span></h3>
                 <SaleClientPicker
                   selectedClient={client}
                   onSelect={setClient}
@@ -388,6 +413,7 @@ export function SaleCreatePage() {
               <div>
                 <h2 id="sale-summary-heading" className="text-base font-extrabold text-pw-ink">Resumen</h2>
                 <p className="mt-1 text-sm text-pw-muted">{itemCount} {itemCount === 1 ? "artículo" : "artículos"}</p>
+                {saleStatusId === 2 ? <p className="mt-1 text-xs font-bold text-pw-brand-deep">Reserva · inventario apartado</p> : null}
                 {selectionCount > 0 ? (
                   <p className="mt-1 text-xs text-pw-muted">
                     {selectionCount} {selectionCount === 1 ? "prenda" : "prendas"} para selección · no se cobra ahora
@@ -441,7 +467,7 @@ export function SaleCreatePage() {
 
           <div className="space-y-3">
             <LoadingButton type="submit" isLoading={submitting} className="w-full justify-center">
-              {submitting ? "Guardando venta…" : "Registrar venta"}
+              {submitting ? saleStatusId === 2 ? "Guardando reserva…" : "Guardando venta…" : saleStatusId === 2 ? "Crear reserva" : "Registrar venta"}
             </LoadingButton>
           </div>
         </aside>

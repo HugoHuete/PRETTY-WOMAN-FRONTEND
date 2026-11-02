@@ -62,7 +62,7 @@ export function SalePaymentRefundButton({ movement, refundedProductAmount, refun
     if (saved) setPartialRefundOpen(false);
   };
   return <>
-    <button type="button" disabled={busy} onClick={() => canRefundPartially ? openPartialRefund() : void refund()} className="min-h-8 rounded-lg px-2 text-xs font-bold text-red-700 hover:bg-red-50">Reembolsar</button>
+    <button type="button" disabled={busy} onClick={() => canRefundPartially ? openPartialRefund() : void refund()} className="min-h-9 rounded-lg border border-red-200 bg-red-50 px-2 text-xs font-bold text-red-700 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50">Reembolsar</button>
     {partialRefundOpen ? <dialog ref={dialog} aria-labelledby={`sale-refund-title-${movement.id}`} onCancel={(event) => { event.preventDefault(); setPartialRefundOpen(false); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/50">
       <form onSubmit={(event) => void submitPartialRefund(event)} className="space-y-4 p-5">
         <header className="flex items-start justify-between gap-3"><div><h2 id={`sale-refund-title-${movement.id}`} className="text-lg font-extrabold">Reembolsar pago</h2><p className="mt-1 text-sm text-pw-muted">Indica cuánto devolver de cada concepto.</p></div><button type="button" disabled={busy} onClick={() => setPartialRefundOpen(false)} aria-label="Cerrar" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button></header>

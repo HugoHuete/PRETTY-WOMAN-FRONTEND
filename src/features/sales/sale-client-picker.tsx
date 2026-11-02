@@ -20,10 +20,12 @@ export function SaleClientPicker({
   selectedClient,
   onSelect,
   onCreateClient,
+  showSelectedClientSummary = true,
 }: {
   selectedClient: SaleClient | null;
   onSelect: (client: SaleClient | null) => void;
   onCreateClient: () => void;
+  showSelectedClientSummary?: boolean;
 }) {
   const { request } = useAuth();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -103,19 +105,13 @@ export function SaleClientPicker({
     setOpen(true);
   };
   const chooseClient = (client: ClientRecord) => {
-    onSelect({
-      id: client.id,
-      name: client.name,
-      phone: client.phone,
-      instagram: client.instagram,
-      messenger: client.messenger,
-    });
+    onSelect(client);
     close();
   };
 
   return (
     <>
-      {selectedClient ? (
+      {selectedClient && showSelectedClientSummary ? (
         <div className="rounded-xl border border-pw-brand/35 bg-pw-brand-soft px-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <div className="min-w-0">
@@ -131,6 +127,11 @@ export function SaleClientPicker({
             {selectedClient.instagram ? <span>Instagram: {selectedClient.instagram}</span> : null}
             {selectedClient.messenger ? <span>Messenger: {selectedClient.messenger}</span> : null}
           </div>
+        </div>
+      ) : selectedClient ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" aria-label="Cambiar clienta" onClick={openSearch} className="min-h-9 rounded-lg border border-pw-line bg-white px-3 text-xs font-bold">Cambiar</button>
+          <button type="button" aria-label="Quitar clienta" onClick={() => onSelect(null)} className="min-h-9 rounded-lg border border-pw-line bg-white px-3 text-xs font-bold">Quitar</button>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-3">

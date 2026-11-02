@@ -75,7 +75,7 @@ export type CreateSalePaymentPayload = {
 
 export type CreateSalePayload = {
   saleChannelId: number;
-  saleStatusId: 1;
+  saleStatusId: 1 | 2;
   clientId?: number;
   comments?: string;
   productVariants: CreateSaleProductPayload[];
@@ -134,7 +134,19 @@ export const discountSourceIds = {
   employee: 4,
 } as const;
 
-export type SaleClient = Pick<ClientRecord, "id" | "name" | "phone" | "instagram" | "messenger">;
+export type SaleClient = Pick<ClientRecord,
+  | "id"
+  | "name"
+  | "phone"
+  | "instagram"
+  | "messenger"
+  | "address"
+  | "comments"
+  | "isFriend"
+  | "isBlocked"
+  | "blockedReason"
+  | "createdAt"
+>;
 
 export type SaleProductLine = {
   id: number;

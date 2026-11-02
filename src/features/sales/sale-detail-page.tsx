@@ -102,7 +102,7 @@ export function SaleDetailPage() {
     if (!sale?.clientId) { setClient(null); return undefined; }
     let active = true;
     void getSaleClient(request, sale.clientId).then((result) => {
-      if (active) setClient({ id: result.id, name: result.name, phone: result.phone, instagram: result.instagram, messenger: result.messenger });
+      if (active) setClient(result);
     }).catch(() => { if (active) setClient({ id: sale.clientId!, name: sale.clientName ?? "Clienta", phone: null, instagram: null, messenger: null }); });
     return () => { active = false; };
   }, [request, sale?.clientId, sale?.clientName]);
@@ -128,7 +128,19 @@ export function SaleDetailPage() {
   const saveHeader = (payload: PatchSaleHeaderPayload) => runMutation(() => patchSaleHeader(request, id, payload), "Información de la venta actualizada.");
   const cancelCurrentSale = () => runMutation(() => cancelSale(request, id), "Venta cancelada.");
   const saveProducts = (payload: ReplaceSaleProductsPayload) => runMutation(() => replaceSaleProducts(request, id, payload), "Prendas de la venta actualizadas.");
-  const saveClient = (selected: SaleClient | null) => saveHeader({ clientId: selected?.id ?? null }).then((saved) => { if (saved) setClient(selected); });
+  const saveClient = async (selected: SaleClient | null) => {
+    const saved = await saveHeader({ clientId: selected?.id ?? null });
+    if (!saved) return;
+    if (!selected) {
+      setClient(null);
+      return;
+    }
+    try {
+      setClient(await getSaleClient(request, selected.id));
+    } catch {
+      setClient(selected);
+    }
+  };
   const addPayment = (payload: CreateSalePaymentMovementPayload) => runMutation(() => addSalePayment(request, id, payload), "Pago registrado.");
   const updatePayment = (movementId: number, payload: UpdateSalePaymentMovementPayload) => runMutation(() => updateSalePayment(request, id, movementId, payload), "Pago corregido.");
   const refundPayment = (movementId: number, payload: RefundSalePaymentMovementPayload) => runMutation(() => refundSalePayment(request, id, movementId, payload), "Reembolso registrado.");

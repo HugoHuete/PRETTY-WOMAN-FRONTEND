@@ -24,6 +24,16 @@
     font-synthesis: none;
     text-rendering: optimizeLegibility;
   }
+
+  input[type="number"].pw-number-input {
+    appearance: textfield;
+  }
+
+  input[type="number"].pw-number-input::-webkit-inner-spin-button,
+  input[type="number"].pw-number-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
 }
 
 /* Shared application shell: this mirrors the prototype's 236 / 76 / mobile layout. */

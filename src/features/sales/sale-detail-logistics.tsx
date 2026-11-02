@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { LoadingButton } from "../../shared/ui/loading-button";
 import { Pagination } from "../../shared/ui/pagination";
@@ -117,6 +117,68 @@ function AddHoldDialog({ existingProductIds, busy, onClose, onSave }: {
     </div>
   </dialog>, document.body);
 }
+function getDeliveryRefundInfo(sale: SaleDetail, delivery: SaleDelivery) {
+  const refunds = new Map<number, { product: number; shipping: number }>();
+  sale.paymentMovements.forEach((movement) => {
+    if (movement.movementDirectionId !== 2 || movement.reversedSalePaymentMovementId === null) return;
+    const previous = refunds.get(movement.reversedSalePaymentMovementId) ?? { product: 0, shipping: 0 };
+    refunds.set(movement.reversedSalePaymentMovementId, {
+      product: previous.product + movement.productAmount,
+      shipping: previous.shipping + movement.shippingAmount,
+    });
+  });
+
+  const refundablePayments = sale.paymentMovements
+    .filter((movement) => movement.movementDirectionId === 1 && movement.saleDeliveryId === delivery.id)
+    .map((movement) => {
+      const refunded = refunds.get(movement.id) ?? { product: 0, shipping: 0 };
+      return {
+        movement,
+        remainingProduct: Math.max(0, movement.productAmount - refunded.product),
+        remainingShipping: Math.max(0, movement.shippingAmount - refunded.shipping),
+      };
+    })
+    .filter((payment) => payment.remainingShipping > 0);
+
+  return {
+    amount: paidAmount(refundablePayments.map((payment) => payment.remainingShipping)),
+    blocked: refundablePayments.some((payment) =>
+      payment.remainingProduct > 0 &&
+      (payment.movement.paymentMethodId === 3 || payment.movement.amountReceivedUsd > 0),
+    ),
+  };
+}
+
+function CancelDeliveryDialog({ delivery, refundAmount, busy, onClose, onConfirm }: {
+  delivery: SaleDelivery;
+  refundAmount: number;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<boolean>;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [refundReturned, setRefundReturned] = useState(false);
+  useEffect(() => {
+    if (dialog.current && !dialog.current.open) dialog.current.showModal();
+    return () => dialog.current?.close();
+  }, []);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (refundAmount > 0 && !refundReturned) return;
+    if (await onConfirm()) onClose();
+  };
+  return createPortal(<dialog ref={dialog} aria-labelledby={`cancel-delivery-title-${delivery.id}`} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/50">
+    <form onSubmit={(event) => void submit(event)} className="space-y-4 p-5">
+      <header className="flex items-start justify-between gap-3"><div><h2 id={`cancel-delivery-title-${delivery.id}`} className="text-lg font-extrabold">Cancelar envío {delivery.code}</h2><p className="mt-1 text-sm text-pw-muted">Esta acción no se puede deshacer.</p></div><button type="button" disabled={busy} onClick={onClose} aria-label="Cerrar" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button></header>
+      {refundAmount > 0 ? <>
+        <p className="rounded-xl bg-pw-canvas p-3 text-sm">Devuelve <strong className="tabular-nums">{money.format(refundAmount)}</strong> a la clienta antes de confirmar. Al cancelar, el sistema registrará ese reembolso y dejará el envío en C$0.</p>
+        <label className="flex items-start gap-2 text-sm"><input type="checkbox" required checked={refundReturned} onChange={(event) => setRefundReturned(event.target.checked)} className="mt-0.5 accent-pw-brand" /><span>Confirmo que ya devolví {money.format(refundAmount)} a la clienta.</span></label>
+      </> : <p className="rounded-xl bg-pw-canvas p-3 text-sm">No hay pagos de envío pendientes de reembolso. Al confirmar, el envío se cancelará.</p>}
+      <footer className="flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Volver</button><LoadingButton type="submit" isLoading={busy} disabled={refundAmount > 0 && !refundReturned} className="min-h-10 bg-red-700 text-sm hover:bg-red-800">Confirmar cancelación</LoadingButton></footer>
+    </form>
+  </dialog>, document.body);
+}
+
 function DeliveryCard({ sale, delivery, isAdmin, busy, onAction, onEdit }: { sale: SaleDetail; delivery: SaleDelivery; isAdmin: boolean; busy: boolean; onAction: (deliveryId: number, action: SaleDeliveryAction) => Promise<boolean>; onEdit: (deliveryId: number, payload: PatchSaleDeliveryPayload) => Promise<boolean> }) {
   const productPaid = paidAmount(sale.paymentMovements.map((movement) => signedPaymentAmount(movement.movementDirectionId, movement.productAmount)));
   const deliveryShippingPaid = paidAmount(sale.paymentMovements
@@ -126,12 +188,17 @@ function DeliveryCard({ sale, delivery, isAdmin, busy, onAction, onEdit }: { sal
     || (productPaid >= sale.total && deliveryShippingPaid >= delivery.shippingChargedToClient);
   const canSend = delivery.deliveryStatusId === 1 && paymentRequirementsMet;
   const [editing, setEditing] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const hasPendingSelection = sale.selectionHolds.some((hold) => hold.productHoldStatusId === 1);
   const openHolds = sale.selectionHolds.some((hold) => hold.productHoldStatusId === 1 || hold.productHoldStatusId === 4);
-  return <article className="rounded-xl border border-pw-line p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">Envío {delivery.code}</h3><p className="mt-1 text-xs text-pw-muted">Creado {date(delivery.createdAt)}</p></div><span className="rounded-full bg-pw-brand-soft px-2.5 py-1 text-xs font-bold text-pw-brand-deep">{delivery.deliveryStatusName ?? statuses[delivery.deliveryStatusId] ?? "Estado desconocido"}</span></div>
-    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="text-xs text-pw-muted">Agencia</dt><dd className="font-bold">{delivery.deliveryAgencyName ?? "—"}</dd></div><div><dt className="text-xs text-pw-muted">Municipio</dt><dd className="font-bold">{delivery.municipalityName ?? "—"}</dd></div><div><dt className="text-xs text-pw-muted">Dirección</dt><dd className="font-bold">{delivery.deliveryAddress || "Dirección registrada en la clienta"}</dd></div><div><dt className="text-xs text-pw-muted">Costo de envío</dt><dd className="font-bold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div>{delivery.comments ? <div className="sm:col-span-2"><dt className="text-xs text-pw-muted">Comentario</dt><dd className="font-bold">{delivery.comments}</dd></div> : null}</dl>
-    <div className="mt-4 flex flex-wrap gap-2">{isAdmin && delivery.deliveryStatusId === 1 ? <button type="button" disabled={busy} onClick={() => setEditing(true)} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Editar envío</button> : null}{canSend ? <button type="button" disabled={busy} onClick={() => void onAction(delivery.id, "send")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white">Marcar despachada</button> : null}{isAdmin && delivery.deliveryStatusId === 4 ? <><button type="button" disabled={busy} onClick={() => void onAction(delivery.id, hasPendingSelection ? "delivered-pending-selection" : "complete")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white">Confirmar entrega</button><button type="button" disabled={busy} onClick={() => void onAction(delivery.id, "fail")} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Registrar falla</button></> : null}{isAdmin && delivery.deliveryStatusId === 6 ? <button type="button" disabled={busy || openHolds} title={openHolds ? "Resuelve primero los apartados pendientes." : undefined} onClick={() => void onAction(delivery.id, "complete")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white disabled:opacity-50">Finalizar entrega</button> : null}{isAdmin && delivery.deliveryStatusId === 1 ? <button type="button" disabled={busy} onClick={() => void onAction(delivery.id, "cancel")} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold text-red-700">Cancelar envío</button> : null}</div>
+  const refundInfo = getDeliveryRefundInfo(sale, delivery);
+  return <article className="rounded-xl border border-pw-line p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">Envío {delivery.code}</h3><p className="mt-1 text-xs text-pw-muted">Creado {date(delivery.createdAt)}</p></div><span className="rounded-full bg-pw-brand-soft px-2.5 py-1 text-xs font-bold text-pw-brand-deep">{delivery.deliveryStatusName ?? statuses[delivery.deliveryStatusId] ?? "Estado desconocido"}</span></div>
+    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-xs text-pw-muted">Agencia</dt><dd className="font-bold">{delivery.deliveryAgencyName ?? "—"}</dd></div><div><dt className="text-xs text-pw-muted">Municipio</dt><dd className="font-bold">{delivery.municipalityName ?? "—"}</dd></div><div><dt className="text-xs text-pw-muted">Costo de envío</dt><dd className="font-bold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div><div className="min-w-0 sm:col-span-3"><dt className="text-xs text-pw-muted">Dirección</dt><dd className="break-words font-bold">{delivery.deliveryAddress || "Dirección registrada en la clienta"}</dd></div>{delivery.comments ? <div className="sm:col-span-3"><dt className="text-xs text-pw-muted">Comentario</dt><dd className="font-bold">{delivery.comments}</dd></div> : null}</dl>
+    <div className="mt-4 flex flex-wrap gap-2">{isAdmin && delivery.deliveryStatusId === 1 ? <button type="button" disabled={busy} onClick={() => setEditing(true)} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Editar envío</button> : null}{canSend ? <button type="button" disabled={busy} onClick={() => void onAction(delivery.id, "send")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white">Marcar despachada</button> : null}{isAdmin && delivery.deliveryStatusId === 4 ? <><button type="button" disabled={busy} onClick={() => void onAction(delivery.id, hasPendingSelection ? "delivered-pending-selection" : "complete")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white">Confirmar entrega</button><button type="button" disabled={busy} onClick={() => void onAction(delivery.id, "fail")} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Registrar falla</button></> : null}{isAdmin && delivery.deliveryStatusId === 6 ? <button type="button" disabled={busy || openHolds} title={openHolds ? "Resuelve primero los apartados pendientes." : undefined} onClick={() => void onAction(delivery.id, "complete")} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white disabled:opacity-50">Finalizar entrega</button> : null}{isAdmin && delivery.deliveryStatusId === 1 && !refundInfo.blocked ? <button type="button" disabled={busy} onClick={() => setCanceling(true)} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold text-red-700">Cancelar envío</button> : null}</div>
+    {isAdmin && delivery.deliveryStatusId === 1 && refundInfo.blocked ? <p className="mt-2 text-xs text-pw-muted">No se puede reembolsar solo el envío porque un pago en tarjeta o dólares también cubre productos. Reembolsa ese pago completo primero.</p> : null}
     {editing ? <SaleDeliveryEditDialog delivery={delivery} busy={busy} onClose={() => setEditing(false)} onSave={(payload) => onEdit(delivery.id, payload)} /> : null}
+    {canceling ? <CancelDeliveryDialog delivery={delivery} refundAmount={refundInfo.amount} busy={busy} onClose={() => setCanceling(false)} onConfirm={() => onAction(delivery.id, "cancel")} /> : null}
     {delivery.deliveryStatusId === 1 && !canSend ? <p className="mt-2 text-xs text-pw-muted">Para despachar con esta agencia, los productos y el costo de envío deben estar pagados.</p> : null}
   </article>;
 }
@@ -150,12 +217,16 @@ export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliv
 }) {
   const local = sale.saleChannelId === 1;
   const [addingDelivery, setAddingDelivery] = useState(false);
+  const orderedDeliveries = [...sale.deliveries].sort((first, second) => {
+    const byCreatedDate = Date.parse(second.createdAt) - Date.parse(first.createdAt);
+    return Number.isNaN(byCreatedDate) || byCreatedDate === 0 ? second.id - first.id : byCreatedDate;
+  });
   const hasActiveDelivery = sale.deliveries.some((delivery) => [1, 4, 6].includes(delivery.deliveryStatusId));
   const canCreateDelivery = !local && [1, 2, 3].includes(sale.saleStatusId) && !hasActiveDelivery;
   return <>
     <section className="rounded-2xl border border-pw-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sale-delivery-title">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-title" className="text-base font-extrabold">Entrega</h2></div>{canCreateDelivery ? <button type="button" disabled={busy} onClick={() => setAddingDelivery(true)} className="min-h-9 rounded-lg border border-pw-brand px-3 text-xs font-bold text-pw-brand-deep">Crear envío</button> : null}</header>
-      {local ? <p className="rounded-xl bg-pw-canvas p-4 text-sm text-pw-muted">Esta venta se retira en la tienda y no requiere envío.</p> : sale.deliveries.length ? <div className="space-y-3">{sale.deliveries.map((delivery) => <DeliveryCard key={delivery.id} sale={sale} delivery={delivery} isAdmin={isAdmin} busy={busy} onAction={onDeliveryAction} onEdit={onEditDelivery} />)}</div> : <p className="rounded-xl border border-dashed border-pw-line py-7 text-center text-sm text-pw-muted">Todavía no se ha creado una entrega.</p>}
+      {local ? <p className="rounded-xl bg-pw-canvas p-4 text-sm text-pw-muted">Esta venta se retira en la tienda y no requiere envío.</p> : orderedDeliveries.length ? <div className="space-y-3">{orderedDeliveries.map((delivery) => <DeliveryCard key={delivery.id} sale={sale} delivery={delivery} isAdmin={isAdmin} busy={busy} onAction={onDeliveryAction} onEdit={onEditDelivery} />)}</div> : <p className="rounded-xl border border-dashed border-pw-line py-7 text-center text-sm text-pw-muted">Todavía no se ha creado una entrega.</p>}
     </section>
     {addingDelivery && canCreateDelivery ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={deliveryAgencies} loading={deliveryCatalogLoading} error={deliveryCatalogError} busy={busy} saleIsPaid={sale.salePaymentStatusId === 3} clientId={sale.clientId} onRetryCatalogs={onRetryDeliveryCatalogs} onClose={() => setAddingDelivery(false)} onSave={onCreateDelivery} /> : null}
   </>;
