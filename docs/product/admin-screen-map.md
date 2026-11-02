@@ -69,6 +69,7 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Ventas | Crear venta — `/sales/new` | Admin, Vendedor | Seleccionar productos y añadir descuentos; tanto el cliente como el pago inicial son opcionales. Permitir crear rápidamente un cliente sin abandonar la venta y seleccionarlo al guardar | `POST /api/v1/sales`, `POST /api/v1/clients` |
 | Ventas | Pagos — panel de `/sales/:id` | Admin, Vendedor | Registrar abono o pago; mostrar importes devueltos por API | `POST /api/v1/sales/{id}/payment-movements` |
 | Ventas | Entrega/envío — panel de `/sales/:id` | Admin, Vendedor | Crear envío y despacharlo. Admin puede completar, fallar o cancelar después | `POST /api/v1/sales/{id}/deliveries`, `POST /api/v1/sales/{id}/deliveries/{deliveryId}/send` |
+| Envíos | Listado y seguimiento — `/shipments` | Admin, Vendedor | Listar envíos paginados, filtrar por estado y agencia, buscar por datos de la clienta y consultar destino y comentarios | `GET /api/v1/sales/deliveries` |
 | Reservas | Crear/listar/detalle — `/reservations`, `/reservations/new`, `/reservations/:id` | Admin, Vendedor | Una reserva confirmada es una venta creada con `saleStatusId: 2` (`Reserved`); no implementar un flujo separado de `ProductHold` | `GET /api/v1/sales`, `GET /api/v1/sales/{id}`, `POST /api/v1/sales` |
 | Inventario | Incidencias — `/inventory/issues`, `/inventory/issues/:id` | Admin, Vendedor | Consultar incidencias, sus estados y disponibilidad relacionada | `GET /api/v1/product-inventory-issues`, `GET /api/v1/product-inventory-issues/{id}` |
 
@@ -99,6 +100,8 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Despachar (`Sent`) | Admin, Vendedor | Validar condiciones de pago; mostrar el motivo si está bloqueado · `POST /api/v1/sales/{id}/deliveries/{deliveryId}/send` |
 | Completar, fallar o cancelar | Admin | `.../complete`, `.../fail`, `.../cancel` |
 | Conciliar cobro contra entrega | Admin | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `POST /api/v1/deliveryagencyreconciliations` |
+
+El listado general de envíos (`GET /api/v1/sales/deliveries`) pagina sobre entregas individuales. Acepta `page`, `pageSize`, `date` (`YYYY-MM-DD`, día local de Managua), `deliveryStatusId`, `deliveryAgencyId` y `clientSearch`; `date` filtra el día local completo y `clientSearch` busca por nombre, teléfono, Instagram o Messenger de la clienta. La pantalla muestra por defecto la fecha actual y no presenta conteos por estado.
 
 ## Pantallas de soporte
 

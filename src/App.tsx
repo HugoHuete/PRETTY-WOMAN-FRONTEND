@@ -25,6 +25,7 @@ import { CampaignsPage } from "./features/campaigns/campaigns-page";
 import { SalesListPage } from "./features/sales/sales-list-page";
 import { SaleCreatePage } from "./features/sales/sale-create-page";
 import { SaleDetailPage } from "./features/sales/sale-detail-page";
+import { ShipmentsPage } from "./features/shipments/shipments-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
 import { LoansPage } from "./features/finances/loans-page";
 import { LoanDetailPage } from "./features/finances/loan-detail-page";
@@ -115,15 +116,7 @@ function App() {
         <Route element={<ProtectedRoutes />}>
           <Route element={<AppShell />}>
             <Route element={<DashboardPage />} index />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Envíos"
-                  description="Da seguimiento a los pedidos y entregas de la boutique."
-                />
-              }
-              path="shipments"
-            />
+            <Route element={<ShipmentsPage />} path="shipments" />
             <Route element={<ProductsPage />} path="products" />
             <Route element={<ClientsPage />} path="clients" />
             <Route
