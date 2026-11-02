@@ -16,7 +16,6 @@ export type NavigationIcon =
   | 'alert'
   | 'clipboard'
   | 'wallet'
-  | 'calendar'
   | 'campaign';
 
 export type NavigationGroup = {
@@ -35,7 +34,6 @@ export const appNavigation: readonly NavigationGroup[] = [
       { label: 'Ventas', to: '/sales', roles: allStaff, icon: 'receipt' },
       { label: 'Envíos', to: '/shipments', roles: allStaff, icon: 'truck' },
       { label: 'Clientes', to: '/clients', roles: allStaff, icon: 'users' },
-      { label: 'Reservas', to: '/reservations', roles: allStaff, icon: 'calendar' },
     ],
   },
   {

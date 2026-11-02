@@ -17,7 +17,7 @@ La fuente de verdad de integración es `../Pretty-Woman_Backend/docs/frontend-ha
 
 | Prioridad | Objetivo | Módulos |
 |---|---|---|
-| MVP 1 | Operar ventas y consultar el catálogo | Autenticación, Dashboard, Productos, Clientes, Ventas, Reservas, Inventario consultivo |
+| MVP 1 | Operar ventas y consultar el catálogo | Autenticación, Dashboard, Productos, Clientes, Ventas (incluye reservas), Inventario consultivo |
 | MVP 2 | Abastecer y recibir inventario | Catálogos, Proveedores, Compras, Tracking, Recepciones |
 | MVP 3 | Administración comercial | Descuentos, Usuarios, Configuración operativa |
 | Post-MVP | Control financiero y análisis | Finanzas, Préstamos, Reportes avanzados |
@@ -39,7 +39,7 @@ Los datos de estas rutas son demostrativos. Los pagos de ventas y los eventos de
 |---|---|---|
 | Dashboard y catálogo | Acceso completo | Consulta de dashboard, productos, categorías, subcategorías y tallas |
 | Clientes | Crear, editar, bloquear y desbloquear | Crear y editar; no bloquear ni desbloquear |
-| Ventas y reservas | Crear, cobrar, entregar, corregir, cancelar y realizar transiciones sensibles | Crear, consultar, cobrar, crear envíos y despacharlos; sin correcciones, cancelaciones, devoluciones ni transiciones posteriores a `Sent` |
+| Ventas (incluye reservas) | Crear, cobrar, entregar, corregir, cancelar y realizar transiciones sensibles | Crear, consultar, cobrar, crear envíos y despacharlos; sin correcciones, cancelaciones, devoluciones ni transiciones posteriores a `Sent` |
 | Inventario | Consulta y gestión de incidencias | Consulta de disponibilidad e incidencias; no puede abrir ni resolver incidencias |
 | Catálogos, compras y configuración | Gestionar | Sin acceso de escritura |
 | Finanzas | Gestionar | Sin acceso |
@@ -65,13 +65,12 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Productos | Detalle — `/products/:productDetailId` | Admin, Vendedor | Información completa, variantes o detalle y disponibilidad | `GET /api/v1/product-details/{productDetailId}` |
 | Clientes | Lista y formulario — `/clients` | Admin, Vendedor | Buscar, crear y editar clientes | `GET/POST /api/v1/clients`, `PUT /api/v1/clients/{id}` |
 | Clientes | Estado — diálogo desde cliente | Admin | Bloquear o desbloquear, con motivo y confirmación | `PATCH /api/v1/clients/{id}/block`, `PATCH /api/v1/clients/{id}/unblock` |
-| Ventas | Lista y detalle — `/sales`, `/sales/:id` | Admin, Vendedor | Consultar ventas con fecha de hoy como filtro inicial; el detalle incluye productos, pagos, prendas en selección y `deliveries` | `GET /api/v1/sales`, `GET /api/v1/sales/{id}` |
-| Ventas | Crear venta — `/sales/new` | Admin, Vendedor | Seleccionar productos y añadir descuentos; tanto el cliente como el pago inicial son opcionales. Permitir crear rápidamente un cliente sin abandonar la venta y seleccionarlo al guardar | `POST /api/v1/sales`, `POST /api/v1/clients` |
+| Ventas | Lista y detalle — `/sales`, `/sales/:id` | Admin, Vendedor | Consultar ventas por estado (incluidas las reservas) con fecha de hoy como filtro inicial; el detalle incluye productos, pagos, prendas en selección y `deliveries` | `GET /api/v1/sales`, `GET /api/v1/sales/{id}` |
+| Ventas | Crear venta o reserva — `/sales/new` | Admin, Vendedor | Seleccionar productos y añadir descuentos; tanto el cliente como el pago inicial son opcionales. Una reserva se crea como una venta con estado `Reserved`. Permitir crear rápidamente un cliente sin abandonar la venta y seleccionarlo al guardar | `POST /api/v1/sales`, `POST /api/v1/clients` |
 | Ventas | Pagos — panel de `/sales/:id` | Admin, Vendedor | Registrar abono o pago; mostrar importes devueltos por API | `POST /api/v1/sales/{id}/payment-movements` |
 | Ventas | Entrega/envío — panel de `/sales/:id` | Admin, Vendedor | Crear envío y despacharlo. Admin puede completar, fallar o cancelar después | `POST /api/v1/sales/{id}/deliveries`, `POST /api/v1/sales/{id}/deliveries/{deliveryId}/send` |
 | Envíos | Listado y seguimiento — `/shipments` | Admin, Vendedor | Listar envíos paginados, filtrar por estado y agencia, buscar por datos de la clienta y consultar destino y comentarios | `GET /api/v1/sales/deliveries` |
 | Envíos | Conciliación por agencia — `/shipments/reconciliation` | Admin | Seleccionar envíos y devoluciones pendientes de una agencia, registrar cobros, vuelto y pago de flete, y guardar una sola liquidación | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `GET /api/v1/deliveryagencyreconciliations/pending-returns`, `POST /api/v1/deliveryagencyreconciliations` |
-| Reservas | Crear/listar/detalle — `/reservations`, `/reservations/new`, `/reservations/:id` | Admin, Vendedor | Una reserva confirmada es una venta creada con `saleStatusId: 2` (`Reserved`); no implementar un flujo separado de `ProductHold` | `GET /api/v1/sales`, `GET /api/v1/sales/{id}`, `POST /api/v1/sales` |
 | Inventario | Incidencias — `/inventory/issues`, `/inventory/issues/:id` | Admin, Vendedor | Consultar incidencias, sus estados y disponibilidad relacionada | `GET /api/v1/product-inventory-issues`, `GET /api/v1/product-inventory-issues/{id}` |
 
 ## Reglas para ventas, pagos, envíos y reservas
@@ -141,7 +140,7 @@ Toda pantalla de datos debe contemplar carga inicial, error de carga, estado vac
 
 ## Diseño a priorizar
 
-Crear wireframes para layout base, login, dashboard, lista y detalle de productos, crear/detalle de venta, reservas, órdenes de compra, recepción e inventario. Los CRUD simples y los diálogos de confirmación deben partir de patrones reutilizables.
+Crear wireframes para layout base, login, dashboard, lista y detalle de productos, crear/detalle de venta (incluye reservas), órdenes de compra, recepción e inventario. Los CRUD simples y los diálogos de confirmación deben partir de patrones reutilizables.
 
 ## Orden de implementación
 

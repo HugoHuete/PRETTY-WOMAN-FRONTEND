@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   BrowserRouter,
   Link,
@@ -32,7 +32,6 @@ import { LoansPage } from "./features/finances/loans-page";
 import { LoanDetailPage } from "./features/finances/loan-detail-page";
 import { ExchangeRateProvider } from "./shared/finance/exchange-rate-provider";
 import { AppShell } from "./shared/layout/app-shell";
-import { usePageActions } from "./shared/layout/page-actions-context";
 import { EmptyState, PermissionDeniedState } from "./shared/ui/screen-state";
 
 function SessionLoading() {
@@ -86,28 +85,6 @@ function SalesRoleRoute({ children }: { children: ReactNode }) {
   );
 }
 
-function UpcomingPage({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  const { setHeading } = usePageActions();
-
-  useEffect(() => {
-    setHeading({ title, breadcrumbs: null });
-    return () => setHeading(null);
-  }, [title, setHeading]);
-
-  return (
-    <EmptyState
-      title="Esta sección estará disponible pronto"
-      description={`${description} La estructura de navegación ya está lista para integrar este módulo.`}
-    />
-  );
-}
-
 function App() {
   return (
     <ExchangeRateProvider>
@@ -151,15 +128,6 @@ function App() {
                 </SalesRoleRoute>
               }
               path="sales/:id"
-            />
-            <Route
-              element={
-                <UpcomingPage
-                  title="Reservas"
-                  description="Da seguimiento a las prendas reservadas."
-                />
-              }
-              path="reservations"
             />
             <Route
               element={

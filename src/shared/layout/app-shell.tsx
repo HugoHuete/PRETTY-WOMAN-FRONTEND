@@ -66,12 +66,6 @@ const iconPaths: Record<NavigationIcon, ReactNode> = {
       <path d="M16 13h3" />
     </>
   ),
-  calendar: (
-    <>
-      <path d="M4 6h16v15H4Z" />
-      <path d="M8 3v6M16 3v6M4 11h16M8 15h3M14 15h2" />
-    </>
-  ),
   campaign: (
     <>
       <path d="M4 7h16v12H4Z" />

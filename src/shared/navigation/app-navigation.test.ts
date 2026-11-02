@@ -12,11 +12,11 @@ describe('getVisibleNavigation', () => {
         'Clientes',
         'Ventas',
         'Envíos',
-        'Reservas',
         'Productos',
         'Incidencias',
       ]),
     );
+    expect(labels).not.toContain('Reservas');
     expect(labels).not.toEqual(
       expect.arrayContaining(['Usuarios', 'Finanzas', 'Compras', 'Campañas']),
     );
@@ -34,7 +34,6 @@ describe('getVisibleNavigation', () => {
     expect(labels).toEqual(
       expect.arrayContaining([
         'Envíos',
-        'Reservas',
         'Compras',
         'Campañas',
         'Finanzas',
