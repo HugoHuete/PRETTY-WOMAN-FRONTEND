@@ -8,6 +8,7 @@ import { SelectControl } from "../../shared/ui/select-control";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
 import { SaleClientCreateDialog } from "./sale-client-create-dialog";
 import { SaleClientPicker } from "./sale-client-picker";
+import { SaleGlobalDiscountDialog } from "./sale-global-discount-dialog";
 import { SaleInitialPayment } from "./sale-initial-payment";
 import { SaleProductLines } from "./sale-product-lines";
 import { SaleProductPicker } from "./sale-product-picker";
@@ -20,7 +21,12 @@ import {
   type SaleCatalogOption,
   type SaleClient,
 } from "./sales-types";
-import { calculateManualDiscountAmount, type SaleDraftLine, type SaleVariantOption } from "./sale-product-types";
+import {
+  calculateManualDiscountAmount,
+  type SaleDraftLine,
+  type SaleManualDiscountType,
+  type SaleVariantOption,
+} from "./sale-product-types";
 
 const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
 
@@ -72,6 +78,7 @@ export function SaleCreatePage() {
   const [terminalLoading, setTerminalLoading] = useState(true);
   const [terminalRetry, setTerminalRetry] = useState(0);
   const [createClientOpen, setCreateClientOpen] = useState(false);
+  const [globalDiscountOpen, setGlobalDiscountOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorSection, setErrorSection] = useState<"products" | "payment" | "form">("form");
@@ -158,6 +165,51 @@ export function SaleCreatePage() {
     setLines((current) => current.some((line) => line.productVariantId === option.variant.id)
       ? current
       : [...current, lineFrom(option)]);
+    setError(null);
+  };
+
+  const applyGlobalDiscount = (
+    type: SaleManualDiscountType,
+    value: number,
+    discounts: Map<number, number>,
+  ) => {
+    setLines((current) => current.map((line) => {
+      if (line.forSelection || !discounts.has(line.productVariantId)) return line;
+
+      const discountAmount = discounts.get(line.productVariantId) ?? 0;
+      const manualDiscountValue = type === "percent"
+        ? value
+        : type === "amount" ? discountAmount : line.unitPrice - discountAmount;
+      return {
+        ...line,
+        discountAmount,
+        discountSourceId: discountAmount > 0 ? discountSourceIds.manual : discountSourceIds.none,
+        discountCampaignId: null,
+        campaignId: null,
+        campaignDiscountAmount: 0,
+        manualDiscountType: discountAmount > 0 ? type : null,
+        manualDiscountValue: discountAmount > 0 ? manualDiscountValue : null,
+      };
+    }));
+    setGlobalDiscountOpen(false);
+    setError(null);
+  };
+
+  const clearCurrentDiscounts = () => {
+    setLines((current) => current.map((line) => {
+      if (line.forSelection) return line;
+      return {
+        ...line,
+        discountAmount: 0,
+        discountSourceId: discountSourceIds.none,
+        discountCampaignId: null,
+        campaignId: null,
+        campaignDiscountAmount: 0,
+        manualDiscountType: null,
+        manualDiscountValue: null,
+      };
+    }));
+    setGlobalDiscountOpen(false);
     setError(null);
   };
 
@@ -381,7 +433,17 @@ export function SaleCreatePage() {
                 <h2 id="sale-products-heading" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2>
                 {channel === "1" ? <p className="mt-1 text-xs text-pw-muted">La selección de prendas está disponible para ventas con envío.</p> : null}
               </div>
-              <SaleProductPicker lines={lines} onAdd={addProduct} />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGlobalDiscountOpen(true)}
+                  disabled={!saleLines.length}
+                  className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Descuento global
+                </button>
+                <SaleProductPicker lines={lines} onAdd={addProduct} />
+              </div>
             </header>
             <SaleProductLines
               lines={lines}
@@ -480,6 +542,13 @@ export function SaleCreatePage() {
           setClient(next);
           setCreateClientOpen(false);
         }}
+      />
+      <SaleGlobalDiscountDialog
+        open={globalDiscountOpen}
+        lines={saleLines}
+        onClose={() => setGlobalDiscountOpen(false)}
+        onApply={applyGlobalDiscount}
+        onClear={clearCurrentDiscounts}
       />
     </form>
   );
