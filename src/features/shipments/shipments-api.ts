@@ -3,7 +3,7 @@ import type { PaginatedResult, SaleDeliveryAgency } from "../sales/sales-types";
 import type {
   CreateShipmentReconciliationPayload,
   PendingReconciliationDelivery,
-  PendingReconciliationReturn,
+  PendingPostSaleDelivery,
   Shipment,
   ShipmentFilters,
 } from "./shipments-types";
@@ -58,11 +58,11 @@ export async function getPendingReconciliationDeliveries(request: AuthRequest, d
   return await response.json() as PendingReconciliationDelivery[];
 }
 
-export async function getPendingReconciliationReturns(request: AuthRequest, deliveryAgencyId: number) {
+export async function getPendingPostSaleDeliveries(request: AuthRequest, deliveryAgencyId: number) {
   const query = new URLSearchParams({ deliveryAgencyId: String(deliveryAgencyId) });
-  const response = await request(`/api/v1/deliveryagencyreconciliations/pending-returns?${query}`);
+  const response = await request(`/api/v1/deliveryagencyreconciliations/pending-post-sale-deliveries?${query}`);
   if (!response.ok) throw new ApiRequestError(await responseError(response), response.status);
-  return await response.json() as PendingReconciliationReturn[];
+  return await response.json() as PendingPostSaleDelivery[];
 }
 
 export async function createShipmentReconciliation(request: AuthRequest, payload: CreateShipmentReconciliationPayload) {

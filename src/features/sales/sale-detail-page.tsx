@@ -10,6 +10,7 @@ import { SaleDetailOverview } from "./sale-detail-overview";
 import { SaleDetailProducts } from "./sale-detail-products";
 import { SaleDetailSummary } from "./sale-detail-summary";
 import { SaleDetailPayments } from "./sale-detail-payments";
+import { SaleDetailPostSale } from "./sale-detail-post-sale";
 import { SaleDetailLogistics, SaleDetailSelectionHolds } from "./sale-detail-logistics";
 import type { CreateSalePaymentMovementPayload, CreateSaleDeliveryPayload, SaleDeliveryAgency, SaleMunicipality, PatchSaleHeaderPayload, PatchSaleDeliveryPayload, CreateSaleSelectionProductPayload, RefundSalePaymentMovementPayload, ReplaceSaleProductsPayload, SaleClient, SaleDetail as SaleDetailModel, UpdateSalePaymentMovementPayload } from "./sales-types";
 import type { ProductDTO } from "../products/product-types";
@@ -182,6 +183,7 @@ export function SaleDetailPage() {
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
           <SaleDetailLogistics sale={sale} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} />
+          <SaleDetailPostSale key={sale.id} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
         <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onCreateClient={(created) => saveClient(created)} /></aside>
       </div>

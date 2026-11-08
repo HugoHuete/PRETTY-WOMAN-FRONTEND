@@ -3,7 +3,7 @@ import type { AuthRequest } from "../sales/sales-api";
 import {
   createShipmentReconciliation,
   getPendingReconciliationDeliveries,
-  getPendingReconciliationReturns,
+  getPendingPostSaleDeliveries,
 } from "./shipments-api";
 
 describe("shipment reconciliation API", () => {
@@ -15,20 +15,20 @@ describe("shipment reconciliation API", () => {
     expect(request).toHaveBeenCalledWith("/api/v1/deliveryagencyreconciliations/pending-deliveries?deliveryAgencyId=4");
   });
 
-  it("loads pending returns filtered by agency", async () => {
+  it("loads pending post-sale deliveries filtered by agency", async () => {
     const request = vi.fn<AuthRequest>().mockResolvedValue(new Response("[]", { status: 200 }));
 
-    await getPendingReconciliationReturns(request, 4);
+    await getPendingPostSaleDeliveries(request, 4);
 
-    expect(request).toHaveBeenCalledWith("/api/v1/deliveryagencyreconciliations/pending-returns?deliveryAgencyId=4");
+    expect(request).toHaveBeenCalledWith("/api/v1/deliveryagencyreconciliations/pending-post-sale-deliveries?deliveryAgencyId=4");
   });
 
-  it("posts the selected deliveries and returns and reads the reconciliation id", async () => {
+  it("posts the selected deliveries and post-sale deliveries and reads the reconciliation id", async () => {
     const payload = {
       deliveryAgencyId: 4,
       settlementExchangeRate: 36.5,
       deliveries: [{ saleDeliveryId: 21, amountCollectedNio: 100, amountCollectedUsd: 0, changeGivenNio: 0, shippingPaidToAgency: 25 }],
-      returns: [{ saleReturnId: 31 }],
+      postSaleDeliveries: [{ postSaleDeliveryId: 31, amountCollectedNio: 0, amountCollectedUsd: 0, changeGivenNio: 0, shippingPaidToAgency: 10 }],
     };
     const request = vi.fn<AuthRequest>().mockResolvedValue(new Response("19", { status: 200 }));
 

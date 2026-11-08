@@ -3,7 +3,10 @@ import type { ClientRecord } from "../clients/clients-page";
 import type {
   ClientSearch,
   CreateSaleClientPayload,
+  CreateSaleExchangePayload,
+  CreateSaleExchangeSettlementPayload,
   CreateSalePayload,
+  CreateSaleReturnPayload,
   PaginatedResult,
   ProductSearch,
   SaleRecord,
@@ -21,7 +24,12 @@ import type {
   SaleDeliveryAction,
   SaleDeliveryAgency,
   SaleDetail,
+  SaleExchange,
+  SaleExchangeSettlement,
   SaleMunicipality,
+  SaleReturn,
+  ProcessSaleReturnPayload,
+  ReceiveSaleReturnPayload,
   UpdateSalePaymentMovementPayload,
 } from "./sales-types";
 
@@ -240,6 +248,41 @@ export function returnSaleSelectionHold(request: AuthRequest, id: number, holdId
 export function undoSaleSelectionHoldResolution(request: AuthRequest, id: number, holdId: number) {
   return sendSaleCommand(request, `/api/v1/sales/${id}/selection-holds/${holdId}/undo-resolution`, "POST");
 }
+
+export function getSaleExchanges(request: AuthRequest, id: number) {
+  return requestJson<SaleExchange[]>(request, `/api/v1/sales/${id}/exchanges`);
+}
+export function createSaleExchange(request: AuthRequest, id: number, payload: CreateSaleExchangePayload) {
+  return requestJson<number>(request, `/api/v1/sales/${id}/exchanges`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+}
+export function settleSaleExchange(request: AuthRequest, id: number, exchangeId: number, payload: CreateSaleExchangeSettlementPayload) {
+  return requestJson<SaleExchangeSettlement>(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/settlement`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+}
+export function completeSaleExchangeHandover(request: AuthRequest, id: number, exchangeId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/handover`, "POST");
+}
+export function receiveSaleExchangeReturnItem(request: AuthRequest, id: number, exchangeId: number, returnItemId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/return-items/${returnItemId}/received`, "POST");
+}
+export function cancelSaleExchange(request: AuthRequest, id: number, exchangeId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/cancel`, "POST");
+}
+export function getSaleReturns(request: AuthRequest, id: number) {
+  return requestJson<SaleReturn[]>(request, `/api/v1/sales/${id}/returns`);
+}
+export function createSaleReturn(request: AuthRequest, id: number, payload: CreateSaleReturnPayload) {
+  return requestJson<number>(request, `/api/v1/sales/${id}/returns`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+}
+export function registerSaleReturnPickup(request: AuthRequest, id: number, returnId: number, payload: ProcessSaleReturnPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/returns/${returnId}/pickup`, "POST", payload);
+}
+export function receiveSaleReturn(request: AuthRequest, id: number, returnId: number, payload: ReceiveSaleReturnPayload) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/returns/${returnId}/receive`, "POST", payload);
+}
+export function cancelSaleReturn(request: AuthRequest, id: number, returnId: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/returns/${returnId}/cancel`, "POST");
+}
+
 export async function getSaleProductCatalog(request: AuthRequest) {
   const pageSize = 100;
   const firstQuery = new URLSearchParams({ page: "1", pageSize: String(pageSize) });

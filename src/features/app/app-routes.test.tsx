@@ -219,7 +219,7 @@ describe('protected application routes', () => {
     });
     renderAppAt('/shipments/reconciliation', 'authenticated', ['Admin']);
 
-    expect(await screen.findByText('Mostraremos los envíos y las devoluciones que aún puedes incluir en su liquidación.')).toBeVisible();
+    expect(await screen.findByText('Mostraremos los envíos normales y postventa que aún puedes incluir en su liquidación.')).toBeVisible();
     expect(auth.state.request).toHaveBeenCalledWith('/api/v1/deliveryagencies');
     expect(auth.state.request).toHaveBeenCalledWith('/api/v1/exchange-rates/current');
   });

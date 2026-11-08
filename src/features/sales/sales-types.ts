@@ -236,6 +236,123 @@ export type SaleDetail = SaleRecord & {
   deliveries: SaleDelivery[];
 };
 
+export type SaleExchangeSettlementTender = {
+  id: number;
+  paymentMethodId: number;
+  paymentMethodName: string | null;
+  paymentTerminalId: number | null;
+  paymentTerminalName: string | null;
+  amount: number;
+  commissionAmount: number;
+  incomeTaxAmount: number;
+  financialMovementId: number | null;
+};
+
+export type SaleExchangeSettlement = {
+  id: number;
+  movementDirectionId: number;
+  movementDirectionName: string;
+  amount: number;
+  movementDate: string;
+  comments: string | null;
+  tenders: SaleExchangeSettlementTender[];
+};
+
+export type PostSaleDelivery = {
+  id: number;
+  saleReturnId: number | null;
+  saleExchangeId: number | null;
+  deliveryAgencyId: number;
+  deliveryAgencyName: string | null;
+  statusId: number;
+  statusName: string;
+  code: string | null;
+  address: string | null;
+  shippingChargedToClient: number;
+  shippingPaidToAgency: number;
+  amountToCollect: number;
+  amountCollectedNio: number;
+  amountCollectedUsd: number;
+  changeGivenNio: number;
+  collectionExchangeRate: number | null;
+  pickedUpAt: string | null;
+  receivedAt: string | null;
+};
+
+export type SaleExchange = {
+  id: number;
+  originalSaleId: number;
+  statusId: number;
+  statusName: string;
+  recognizedReturnTotal: number;
+  outboundItemsTotal: number;
+  balanceToCollect: number;
+  netGrossProfit: number;
+  comments: string | null;
+  postSaleDelivery: PostSaleDelivery | null;
+  settlement: SaleExchangeSettlement | null;
+  returnItems: Array<{ id: number; originalSaleProductId: number; productId: number; quantity: number; recognizedUnitAmount: number; statusId: number; statusName: string }>;
+  outboundItems: Array<{ id: number; productId: number; quantity: number; itemTypeId: number; unitPrice: number; unitCost: number; lineTotal: number; totalCost: number; delivered: boolean }>;
+};
+
+export type SaleReturn = {
+  id: number;
+  originalSaleId: number;
+  reasonId: number;
+  reasonName: string | null;
+  methodId: number;
+  methodName: string | null;
+  statusId: number;
+  statusName: string | null;
+  deliveryAgencyId: number | null;
+  returnCode: string | null;
+  productRefundTotal: number;
+  returnShippingChargedToClient: number;
+  returnShippingPaidToAgency: number;
+  originalShippingRefund: number;
+  refundTotal: number;
+  refundPaymentMethodId: number | null;
+  pickedUpAt: string | null;
+  receivedAt: string | null;
+  postSaleDelivery: PostSaleDelivery | null;
+  comments: string | null;
+  items: Array<{ id: number; originalSaleProductId: number; productId: number; quantity: number; recognizedUnitAmount: number; originalUnitCost: number; productInventoryIssueId: number | null; receivedAt: string | null; comments: string | null }>;
+};
+
+export type CreateSaleExchangePayload = {
+  deliveryAgencyId?: number;
+  deliveryCode?: string;
+  deliveryAddress?: string;
+  shippingChargedToClient: number;
+  comments?: string;
+  returnItems: Array<{ originalSaleProductId: number; quantity: number; recognizedUnitAmount: number }>;
+  outboundItems: Array<{ productId: number; quantity: number; itemTypeId: number }>;
+};
+
+export type CreateSaleExchangeSettlementPayload = {
+  comments?: string;
+  tenders: Array<{ paymentMethodId: number; paymentTerminalId?: number; amount: number }>;
+};
+
+export type CreateSaleReturnPayload = {
+  reasonId: number;
+  methodId: number;
+  deliveryAgencyId?: number;
+  returnCode?: string;
+  deliveryAddress?: string;
+  returnShippingChargedToClient: number;
+  comments?: string;
+  items: Array<{ originalSaleProductId: number; quantity: number; recognizedUnitAmount: number }>;
+};
+
+export type ReceiveSaleReturnPayload = {
+  paymentMethodId?: number;
+  comments?: string;
+  items: Array<{ saleReturnItemId: number; isDamaged: boolean }>;
+};
+
+export type ProcessSaleReturnPayload = { paymentMethodId: number; comments?: string };
+
 export type PatchSaleHeaderPayload = {
   saleDate?: string;
   saleChannelId?: number;

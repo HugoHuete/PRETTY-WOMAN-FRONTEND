@@ -51,24 +51,21 @@ export type PendingReconciliationDelivery = {
   shippingChargedToClient: number;
 };
 
-export type PendingReconciliationReturn = {
-  saleReturnId: number;
-  originalSaleId: number;
-  statusId: number;
-  statusName: string | null;
+export type PendingPostSaleDelivery = {
+  id: number;
+  saleReturnId: number | null;
+  saleExchangeId: number | null;
+  saleId: number;
   deliveryAgencyId: number;
   deliveryAgencyName: string | null;
-  returnCode: string | null;
+  statusId: number;
+  statusName: string;
+  code: string | null;
   clientName: string | null;
-  productRefundTotal: number;
-  returnShippingChargedToClient: number;
-  returnShippingPaidToAgency: number;
-  originalShippingRefund: number;
-  refundTotal: number;
+  shippingChargedToClient: number;
+  shippingPaidToAgency: number;
+  amountToCollect: number;
   createdAt: string;
-  pickedUpAt: string | null;
-  receivedAt: string | null;
-  comments: string | null;
 };
 
 export type CreateShipmentReconciliationPayload = {
@@ -84,5 +81,12 @@ export type CreateShipmentReconciliationPayload = {
     collectionExchangeRate?: number;
     shippingPaidToAgency: number;
   }[];
-  returns: { saleReturnId: number }[];
+  postSaleDeliveries: {
+    postSaleDeliveryId: number;
+    amountCollectedNio: number;
+    amountCollectedUsd: number;
+    changeGivenNio: number;
+    shippingPaidToAgency: number;
+    collectionExchangeRate?: number;
+  }[];
 };

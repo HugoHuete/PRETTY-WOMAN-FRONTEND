@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe("shipment reconciliation page", () => {
-  it("loads pending deliveries and returns and submits only the selected rows", async () => {
+  it("loads pending deliveries and post-sale deliveries and submits their reconciliation amounts", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
       if (path === "/api/v1/deliveryagencies") return jsonResponse([{ id: 1, name: "Agencia COD", enabled: true, canCollectCashOnDelivery: true }]);
@@ -65,24 +65,36 @@ describe("shipment reconciliation page", () => {
         amountToCollect: 400,
         shippingChargedToClient: 50,
       }]);
-      if (path.endsWith("/pending-returns?deliveryAgencyId=1")) return jsonResponse([{
+      if (path.endsWith("/pending-post-sale-deliveries?deliveryAgencyId=1")) return jsonResponse([{
+        id: 9,
         saleReturnId: 9,
-        originalSaleId: 20,
+        saleExchangeId: null,
+        saleId: 20,
         statusId: 2,
-        statusName: "PickedUpAndRefunded",
+        statusName: "InTransit",
         deliveryAgencyId: 1,
         deliveryAgencyName: "Agencia COD",
-        returnCode: "RET-09",
+        code: "RET-09",
         clientName: "Ana Pérez",
-        productRefundTotal: 350,
-        returnShippingChargedToClient: 0,
-        returnShippingPaidToAgency: 35,
-        originalShippingRefund: 0,
-        refundTotal: 350,
+        shippingChargedToClient: 0,
+        shippingPaidToAgency: 35,
+        amountToCollect: 0,
         createdAt: "2026-11-01T15:00:00Z",
-        pickedUpAt: "2026-11-01T16:00:00Z",
-        receivedAt: null,
-        comments: null,
+      }, {
+        id: 10,
+        saleReturnId: null,
+        saleExchangeId: 14,
+        saleId: 20,
+        statusId: 2,
+        statusName: "InTransit",
+        deliveryAgencyId: 1,
+        deliveryAgencyName: "Agencia COD",
+        code: "EX-10",
+        clientName: "Ana Pérez",
+        shippingChargedToClient: 25,
+        shippingPaidToAgency: 25,
+        amountToCollect: 200,
+        createdAt: "2026-11-01T16:00:00Z",
       }]);
       if (path === "/api/v1/deliveryagencyreconciliations") return jsonResponse(12);
       throw new Error(`Unexpected request: ${path}`);
@@ -94,9 +106,11 @@ describe("shipment reconciliation page", () => {
     await user.click(within(screen.getByRole("listbox")).getByRole("option", { name: "Agencia COD" }));
     expect(await screen.findByText("COD-07")).toBeVisible();
     expect(await screen.findByText("RET-09")).toBeVisible();
+    expect(await screen.findByText("EX-10")).toBeVisible();
 
     expect(screen.getByRole("checkbox", { name: "Incluir envío COD-07" })).toBeChecked();
-    await user.click(screen.getByRole("checkbox", { name: "Incluir devolución RET-09" }));
+    expect(screen.getByRole("checkbox", { name: "Incluir envío postventa RET-09" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Incluir envío postventa EX-10" })).toBeChecked();
     expect(screen.getByLabelText("Recibido en C$")).toHaveValue(400);
     await user.click(screen.getByRole("button", { name: "Registrar conciliación" }));
 
@@ -105,11 +119,14 @@ describe("shipment reconciliation page", () => {
     const payload = JSON.parse(postRequest?.[1]?.body as string) as {
       deliveryAgencyId: number;
       deliveries: { saleDeliveryId: number; amountCollectedNio: number }[];
-      returns: { saleReturnId: number }[];
+      postSaleDeliveries: { postSaleDeliveryId: number; amountCollectedNio: number; shippingPaidToAgency: number }[];
     };
     expect(payload.deliveryAgencyId).toBe(1);
     expect(payload.deliveries).toEqual([expect.objectContaining({ saleDeliveryId: 7, amountCollectedNio: 400 })]);
-    expect(payload.returns).toEqual([{ saleReturnId: 9 }]);
+    expect(payload.postSaleDeliveries).toEqual([
+      expect.objectContaining({ postSaleDeliveryId: 9, amountCollectedNio: 0, shippingPaidToAgency: 35 }),
+      expect.objectContaining({ postSaleDeliveryId: 10, amountCollectedNio: 200, shippingPaidToAgency: 25 }),
+    ]);
     expect(auth.showToast).toHaveBeenCalledWith(expect.objectContaining({ tone: "success" }));
   });
 });
