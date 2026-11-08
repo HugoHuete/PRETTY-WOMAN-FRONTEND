@@ -31,7 +31,7 @@ La fuente de verdad de integración es `../Pretty-Woman_Backend/docs/frontend-ha
 | `docs/prototypes/loans.html` | Consulta y priorización de préstamos por estado | Admin |
 | `docs/prototypes/loan-detail.html?id=<loanId>` | Calendario, historial y registro de pagos o desembolsos | Admin |
 
-Los datos de estas rutas son demostrativos. Los pagos de ventas y los eventos de préstamos se representan como registros automáticos; el prototipo no define endpoints ni persistencia de backend.
+Los archivos de prototipo son demostrativos y no definen endpoints ni persistencia. Las pantallas funcionales de movimientos y préstamos están en las rutas de aplicación `/finances`, `/finances/loans` y `/finances/loans/:id` descritas en el inventario.
 
 ## Permisos principales
 
@@ -44,6 +44,8 @@ Los datos de estas rutas son demostrativos. Los pagos de ventas y los eventos de
 | Catálogos, compras y configuración | Gestionar | Sin acceso de escritura |
 | Finanzas | Gestionar | Sin acceso |
 
+Esta tabla define los permisos objetivo del producto. El inventario de rutas más abajo indica cuáles de esas áreas ya tienen pantalla en el frontend.
+
 ## Layout y patrones base
 
 | Área | Contenido |
@@ -55,23 +57,31 @@ Los datos de estas rutas son demostrativos. Los pagos de ventas y los eventos de
 
 Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `EmptyState`, `StatusBadge`, `ConfirmDialog`, `LoadingButton` y notificaciones.
 
-## Pantallas MVP
+## Inventario de pantallas implementadas
 
-| Módulo | Pantalla y ruta | Roles | Acciones y datos | Endpoint confirmado |
-|---|---|---|---|---|
-| Autenticación | Login — `/login` | Admin, Vendedor | Iniciar sesión; mostrar errores de credenciales o sesión expirada | `POST /api/v1/auth/login` |
-| Dashboard | Resumen — `/` | Admin, Vendedor | KPIs de ventas, cobros, reservas, entregas e incidencias; filtros de fecha inclusivos. Admin ve adicionalmente `financial`; Vendedor no debe depender de él | `GET /api/v1/dashboard/summary?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD` |
-| Productos | Lista — `/products` | Admin, Vendedor | Buscar, filtrar y paginar; alternar entre tabla por variante/talla y cuadrícula visual por producto con su imagen principal. Al abrir una tarjeta, mostrar existencias desglosadas por variante y talla | `GET /api/v1/product-details` |
-| Productos | Detalle — `/products/:productDetailId` | Admin, Vendedor | Información completa, variantes o detalle y disponibilidad | `GET /api/v1/product-details/{productDetailId}` |
-| Clientes | Lista y formulario — `/clients` | Admin, Vendedor | Buscar, crear y editar clientes | `GET/POST /api/v1/clients`, `PUT /api/v1/clients/{id}` |
-| Clientes | Estado — diálogo desde cliente | Admin | Bloquear o desbloquear, con motivo y confirmación | `PATCH /api/v1/clients/{id}/block`, `PATCH /api/v1/clients/{id}/unblock` |
-| Ventas | Lista y detalle — `/sales`, `/sales/:id` | Admin, Vendedor | Consultar ventas por estado (incluidas las reservas) con fecha de hoy como filtro inicial; el detalle incluye productos, pagos, prendas en selección y `deliveries` | `GET /api/v1/sales`, `GET /api/v1/sales/{id}` |
-| Ventas | Crear venta o reserva — `/sales/new` | Admin, Vendedor | Seleccionar productos y añadir descuentos; tanto el cliente como el pago inicial son opcionales. Una reserva se crea como una venta con estado `Reserved`. Permitir crear rápidamente un cliente sin abandonar la venta y seleccionarlo al guardar | `POST /api/v1/sales`, `POST /api/v1/clients` |
-| Ventas | Pagos — panel de `/sales/:id` | Admin, Vendedor | Registrar abono o pago; mostrar importes devueltos por API | `POST /api/v1/sales/{id}/payment-movements` |
-| Ventas | Entrega/envío — panel de `/sales/:id` | Admin, Vendedor | Crear envío y despacharlo. Admin puede completar, fallar o cancelar después | `POST /api/v1/sales/{id}/deliveries`, `POST /api/v1/sales/{id}/deliveries/{deliveryId}/send` |
-| Envíos | Listado y seguimiento — `/shipments` | Admin, Vendedor | Listar envíos paginados, filtrar por estado y agencia, buscar por datos de la clienta y consultar destino y comentarios | `GET /api/v1/sales/deliveries` |
-| Envíos | Conciliación por agencia — `/shipments/reconciliation` | Admin | Seleccionar envíos y devoluciones pendientes de una agencia, registrar cobros, vuelto y pago de flete, y guardar una sola liquidación | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `GET /api/v1/deliveryagencyreconciliations/pending-returns`, `POST /api/v1/deliveryagencyreconciliations` |
-| Inventario | Incidencias — `/inventory/issues`, `/inventory/issues/:id` | Admin, Vendedor | Consultar incidencias, sus estados y disponibilidad relacionada | `GET /api/v1/product-inventory-issues`, `GET /api/v1/product-inventory-issues/{id}` |
+La siguiente tabla refleja las rutas que existen actualmente en `src/App.tsx` y los flujos que viven dentro de sus páginas. “Implementada” indica que hay pantalla integrada en el frontend; la cobertura de pruebas automatizadas o de extremo a extremo se registra aparte.
+
+| Módulo | Pantalla y ruta | Roles | Acciones principales | Endpoints principales | Estado |
+|---|---|---|---|---|---|
+| Autenticación | Inicio de sesión — `/login` | Admin, Vendedor | Iniciar sesión, restaurar sesión, renovar y cerrar sesión | `/api/v1/auth/login`, `/refresh`, `/logout`, `/csrf` | Implementada |
+| Dashboard | Resumen — `/` | Admin, Vendedor | Consultar indicadores disponibles según el rol y filtrar por período | `GET /api/v1/dashboard/summary` | Implementada |
+| Productos | Catálogo — `/products` | Admin, Vendedor | Buscar y filtrar; ver productos, imágenes, variantes, tallas, precios, existencias y movimientos desde la lista | `GET /api/v1/product-details` y endpoints de catálogo/inventario usados por la página | Implementada |
+| Clientes | Lista — `/clients` | Admin, Vendedor | Buscar, crear y editar; bloquear/desbloquear con motivo (solo Admin). La creación rápida también está disponible desde ventas | `/api/v1/clients` | Implementada |
+| Ventas | Lista — `/sales` | Admin, Vendedor | Buscar y filtrar ventas, incluidas reservas; abrir el detalle | `GET /api/v1/sales` | Implementada |
+| Ventas | Crear venta o reserva — `/sales/new` | Admin, Vendedor | Seleccionar productos, aplicar descuentos individuales y globales, asociar cliente y registrar pago inicial opcional | `POST /api/v1/sales`, `POST /api/v1/clients` | Implementada |
+| Ventas | Detalle y operación — `/sales/:id` | Admin, Vendedor | Consultar y editar información, productos, pagos y entregas según permisos; solicitar cambios y devoluciones. Incluye diálogos para pagos, reembolsos y acciones postventa | `/api/v1/sales/{id}`, `/payment-movements`, `/deliveries`, `/exchanges`, `/returns` | Implementada |
+| Envíos | Listado y seguimiento — `/shipments` | Admin, Vendedor | Filtrar por fecha, estado, agencia y búsqueda de clienta; consultar envíos y abrir la venta; actualizar estados permitidos | `GET /api/v1/sales/deliveries` y comandos de entrega | Implementada |
+| Envíos | Conciliación por agencia — `/shipments/reconciliation` | Admin | Seleccionar envíos normales y postventa; registrar cobros, vuelto y pago de flete en una liquidación | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `GET /api/v1/deliveryagencyreconciliations/pending-post-sale-deliveries`, `POST /api/v1/deliveryagencyreconciliations` | Implementada |
+| Inventario | Incidencias — `/inventory/issues`, `/inventory/issues/:id` | Admin, Vendedor | Consultar incidencias; Admin puede abrir, resolver o cancelar las permitidas | `/api/v1/product-inventory-issues` | Implementada |
+| Compras | Órdenes — `/purchases/orders`, `/purchases/orders/new`, `/purchases/orders/:id`, `/purchases/orders/:id/edit` | Admin | Listar, crear, consultar y editar órdenes; cerrar faltantes y registrar reembolso o renuncia a reembolso del proveedor | `/api/v1/orders`, `/shortages/close`, `/supplier-refund` | Implementada |
+| Compras | Recepción — `/purchases/orders/:id/receive` y panel de orden | Admin | Registrar y corregir recepciones, cantidades, precios y costos logísticos | `/api/v1/orders/{id}/receipts` | Implementada |
+| Compras | Tracking global y por orden — `/purchases/tracking-numbers`, panel de orden | Admin | Consultar, registrar, editar y eliminar números de tracking | `/api/v1/tracking-numbers`, `/api/v1/orders/{id}/tracking-numbers` | Implementada |
+| Descuentos | Campañas — `/discounts/campaigns`, `/discounts/campaigns/new`, `/discounts/campaigns/:id`, `/discounts/campaigns/:id/edit` | Admin | Consultar, crear, editar, deshabilitar y reactivar campañas | `/api/v1/discountcampaigns` | Implementada |
+| Usuarios | Administración — `/users` | Admin | Buscar y filtrar; crear, editar, desbloquear, habilitar y deshabilitar cuentas | `/api/v1/auth/users` y sus acciones | Implementada |
+| Finanzas | Movimientos — `/finances` | Admin | Consultar, crear, editar y eliminar movimientos financieros | `/api/v1/finances/movements` | Implementada |
+| Finanzas | Préstamos — `/finances/loans`, `/finances/loans/:id` | Admin | Consultar y administrar préstamos; registrar y corregir pagos | `/api/v1/loans` | Implementada |
+
+La lista de productos ofrece una vista expandible por producto, pero no existe una ruta de detalle `/products/:productDetailId`. Los detalles de clientes, órdenes, préstamos, devoluciones y cambios se muestran en la página, panel o diálogo asociado; no todos tienen una pantalla independiente.
 
 ## Reglas para ventas, pagos, envíos y reservas
 
@@ -99,28 +109,27 @@ Implementar y reutilizar `PageHeader`, `FilterBar`, `DataTable`, `Pagination`, `
 | Crear envío (`ReadyForDelivery`) | Admin, Vendedor | Puede hacerse con saldo pendiente · `POST /api/v1/sales/{id}/deliveries` |
 | Despachar (`Sent`) | Admin, Vendedor | Validar condiciones de pago; mostrar el motivo si está bloqueado · `POST /api/v1/sales/{id}/deliveries/{deliveryId}/send` |
 | Completar, fallar o cancelar | Admin | `.../complete`, `.../fail`, `.../cancel` |
-| Conciliar cobro contra entrega | Admin | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `POST /api/v1/deliveryagencyreconciliations` |
+| Conciliar envíos normales y postventa | Admin | `GET /api/v1/deliveryagencyreconciliations/pending-deliveries`, `GET /api/v1/deliveryagencyreconciliations/pending-post-sale-deliveries`, `POST /api/v1/deliveryagencyreconciliations` |
+
+La pantalla de conciliación carga los envíos de ventas con `pending-deliveries` y los envíos generados por cambios y devoluciones con `pending-post-sale-deliveries`; ambos GET reciben `deliveryAgencyId`. El POST de conciliación agrupa los registros en `deliveries` y `postSaleDeliveries`. Cada elemento postventa identifica su entrega con `postSaleDeliveryId` y envía `amountCollectedNio`, `amountCollectedUsd`, `changeGivenNio` y `shippingPaidToAgency`; si se recibe dinero en dólares, también envía `collectionExchangeRate`. Los envíos normales usan los mismos montos y tasa, identificándose con `saleDeliveryId`.
 
 El listado general de envíos (`GET /api/v1/sales/deliveries`) pagina sobre entregas individuales. Acepta `page`, `pageSize`, `date` (`YYYY-MM-DD`, día local de Managua), `deliveryStatusId`, `deliveryAgencyId` y `clientSearch`; `date` filtra el día local completo y `clientSearch` busca por nombre, teléfono, Instagram o Messenger de la clienta. La pantalla muestra por defecto la fecha actual y no presenta conteos por estado.
 
-## Pantallas de soporte
+## Pantallas planificadas sin ruta propia en el frontend
 
-| Módulo | Ruta sugerida | Roles | Endpoints |
-|---|---|---|---|
-| Categorías | `/catalog/categories` | Admin | `GET/POST /api/v1/categories`, `PUT /api/v1/categories/{id}` |
-| Subcategorías | `/catalog/subcategories` | Admin | `GET /api/v1/subcategories`, `GET /api/v1/categories/{id}/subcategories`, `POST /api/v1/subcategories`, `PUT /api/v1/subcategories/{id}` |
-| Tallas | `/catalog/sizes` | Admin | `GET/POST /api/v1/sizes`, `PUT /api/v1/sizes/{id}` |
-| Proveedores | `/suppliers` | Admin | `GET/POST /api/v1/suppliers`, `PUT /api/v1/suppliers/{id}` |
-| Órdenes de compra | `/purchases/orders` | Admin | `GET /api/v1/orders`, `GET /api/v1/orders/statuses`, `GET /api/v1/suppliers`, `POST /api/v1/orders`, `PUT /api/v1/orders/{id}` |
-| Tracking de orden | panel de `/purchases/orders/:id` | Admin | `GET/POST /api/v1/orders/{id}/tracking-numbers`, `PUT/DELETE /api/v1/orders/{id}/tracking-numbers/{trackingId}` |
-| Números de tracking | `/purchases/tracking-numbers` | Admin | `GET /api/v1/tracking-numbers` (listado paginado y filtros), `PUT/DELETE /api/v1/orders/{orderId}/tracking-numbers/{trackingId}` |
-| Recepciones de orden | panel de `/purchases/orders/:id` | Admin | `GET /api/v1/orders/{orderId}/receipts`, `GET /api/v1/orders/{orderId}/receipts/{receiptId}`, `POST /api/v1/orders/{orderId}/receipts`, `PATCH /api/v1/orders/{orderId}/receipts/{receiptId}` |
-| Campañas | `/discounts/campaigns` | Admin | `GET/POST /api/v1/discountcampaigns`, `PUT /api/v1/discountcampaigns/{id}`, `PATCH /api/v1/discountcampaigns/{id}/disable` |
-| Usuarios | Lista, detalle y formulario — `/users`. Incluye listar, filtrar, consultar el detalle por id, crear usuarios, actualizar sus datos y credenciales; administrar su estado | Admin | `GET /api/v1/auth/users?user=&role=&enabled=`, `GET /api/v1/auth/users/{id}`, `POST /api/v1/auth/users`, `PUT /api/v1/auth/users/{id}` |
-| Usuarios | Estado — acciones desde usuario: desbloquear, deshabilitar o habilitar | Admin | `POST /api/v1/auth/users/{id}/unlock`, `POST /api/v1/auth/users/{id}/disable`, `POST /api/v1/auth/users/{id}/enable` |
-| Agencias de envío | `/settings/delivery-agencies` | Admin | `GET/POST /api/v1/deliveryagencies`, `PUT /api/v1/deliveryagencies/{id}` |
-| Terminales de pago | `/settings/payment-terminals` | Admin | `GET/POST /api/v1/paymentterminals`, `PUT /api/v1/paymentterminals/{id}` |
-| Categorías de gasto | `/settings/expense-categories` | Admin | `GET/POST /api/v1/expensecategories`, `PUT /api/v1/expensecategories/{id}` |
+Estas capacidades aparecen en el alcance de producto o tienen endpoints identificados, pero no cuentan actualmente con una pantalla/ruta propia en `src/App.tsx`. Parte de los datos necesarios puede administrarse fuera del frontend o cargarse en el backend para probar los flujos ya implementados.
+
+| Módulo | Pantalla/ruta propuesta | Roles | Endpoints conocidos | Dependencia o nota |
+|---|---|---|---|---|
+| Productos | Detalle — `/products/:productDetailId` | Admin, Vendedor | `GET /api/v1/product-details/{productDetailId}` | El catálogo actual muestra variantes y existencias de forma expandible; no tiene detalle como ruta aparte. |
+| Catálogos | Categorías — `/catalog/categories` | Admin | `GET/POST /api/v1/categories`, `PUT /api/v1/categories/{id}` | Necesaria para administrar el catálogo sin preparar datos directamente en backend. |
+| Catálogos | Subcategorías — `/catalog/subcategories` | Admin | `GET /api/v1/subcategories`, `GET /api/v1/categories/{id}/subcategories`, `POST /api/v1/subcategories`, `PUT /api/v1/subcategories/{id}` | Requiere categorías. |
+| Catálogos | Tallas — `/catalog/sizes` | Admin | `GET/POST /api/v1/sizes`, `PUT /api/v1/sizes/{id}` | — |
+| Proveedores | Lista y formulario — `/suppliers` | Admin | `GET/POST /api/v1/suppliers`, `PUT /api/v1/suppliers/{id}` | Las órdenes de compra requieren proveedores existentes. |
+| Configuración | Agencias de envío — `/settings/delivery-agencies` | Admin | `GET/POST /api/v1/deliveryagencies`, `PUT /api/v1/deliveryagencies/{id}` | La operación actual consume agencias existentes. |
+| Configuración | Terminales de pago — `/settings/payment-terminals` | Admin | `GET/POST /api/v1/paymentterminals`, `PUT /api/v1/paymentterminals/{id}` | Requerida para pagos con tarjeta/POS. |
+| Configuración | Categorías de gasto — `/settings/expense-categories` | Admin | `GET/POST /api/v1/expensecategories`, `PUT /api/v1/expensecategories/{id}` | Requerida para clasificar movimientos de gasto. |
+| Finanzas | Resumen financiero y reportes | Admin | Sin ruta de aplicación confirmada | Solo existen prototipos demostrativos en `docs/prototypes/`; no forman parte de las rutas activas. |
 
 El listado de usuarios acepta filtros opcionales combinables: `user` busca parcialmente, sin distinguir mayúsculas, en usuario, nombre, apellido o correo; `role` admite `Admin` o `Employee`; `enabled` filtra por estado (`true` o `false`). Ejemplos: `GET /api/v1/auth/users?user=maria` y `GET /api/v1/auth/users?role=Employee&enabled=true`.
 
