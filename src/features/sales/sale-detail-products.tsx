@@ -5,7 +5,7 @@ import { Pagination } from "../../shared/ui/pagination";
 import { SelectControl } from "../../shared/ui/select-control";
 import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { useAuth } from "../auth/auth-provider";
-import { getSaleProducts } from "./sales-api";
+import { getSaleProducts, getSaleProductsByCodes } from "./sales-api";
 import { saleVariants, type SaleDraftLine, type SaleManualDiscountType, type SaleVariantOption } from "./sale-product-types";
 import { SaleDiscountButton } from "./sale-discount-button";
 import { SaleDiscountDialog } from "./sale-discount-dialog";
@@ -139,18 +139,35 @@ function ProductAddDialog({ selectedProductIds, busy, onClose, onSelect }: {
 export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
   sale: SaleDetail; products: ProductDTO[]; isAdmin: boolean; busy: boolean; onSave: (payload: ReplaceSaleProductsPayload) => Promise<boolean>;
 }) {
+  const { request } = useAuth();
   const [adding, setAdding] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => draftLinesFromSale(sale));
   const [discountLineIndex, setDiscountLineIndex] = useState<number | null>(null);
   const [additionalChoices, setAdditionalChoices] = useState<ProductChoice[]>([]);
+  const [siblingProducts, setSiblingProducts] = useState<ProductDTO[]>([]);
+  const requestedProductCodes = useRef(new Set<number>());
+  const loadingProductCodes = useRef(false);
   const [error, setError] = useState("");
   const choices = useMemo(() => {
-    const allChoices = [...choicesFrom(products), ...additionalChoices];
+    const allChoices = [...choicesFrom(products), ...choicesFrom(siblingProducts), ...additionalChoices];
     return Array.from(new Map(allChoices.map((choice) => [choice.variant.id, choice])).values());
-  }, [products, additionalChoices]);
+  }, [products, siblingProducts, additionalChoices]);
   const canEdit = isAdmin && ![4, 5, 6].includes(sale.saleStatusId);
   const savedLines = useMemo(() => draftLinesFromSale(sale), [sale.productVariants]);
   const dirty = JSON.stringify(draftLines) !== JSON.stringify(savedLines);
+
+  const loadSiblingVariants = () => {
+    if (loadingProductCodes.current) return;
+    const codes = [...new Set(products.map((product) => product.code))]
+      .filter((code) => code > 0 && !requestedProductCodes.current.has(code));
+    if (!codes.length) return;
+    codes.forEach((code) => requestedProductCodes.current.add(code));
+    loadingProductCodes.current = true;
+    void getSaleProductsByCodes(request, codes)
+      .then((items) => setSiblingProducts((current) => [...current.filter((product) => !codes.includes(product.code)), ...items]))
+      .catch(() => { codes.forEach((code) => requestedProductCodes.current.delete(code)); })
+      .finally(() => { loadingProductCodes.current = false; });
+  };
 
   useEffect(() => {
     setDraftLines(draftLinesFromSale(sale));
@@ -299,7 +316,7 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
         <button type="button" disabled={busy} onClick={() => { setDraftLines((current) => current.filter((_item, row) => row !== index)); setError(""); }} aria-label={"Eliminar prenda " + (index + 1)} title="Eliminar prenda" className="grid h-9 w-8 place-items-center justify-self-center rounded-lg text-red-600 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M10 11v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3" /></svg></button>
         <div className="col-span-2 flex min-w-0 items-center gap-2 2xl:col-span-1 2xl:gap-3"><ProductThumb choice={choice} /><div className="min-w-0"><strong className="block truncate text-sm font-extrabold text-pw-ink">{choice?.presentationName ?? "Presentación"}</strong><span className="block truncate text-xs text-pw-muted">{choice ? "Código " + choice.product.code + " · " + (choice.product.subcategoryName || choice.product.name || "Sin subcategoría") : "Producto #" + line.productId}</span></div></div>
         <span className="hidden min-w-0 text-sm text-pw-muted 2xl:block">{choice?.product.categoryName || "—"}</span>
-        <label className="min-w-0 text-xs font-bold text-pw-muted 2xl:text-center"><span className="mb-1 block text-[0.65rem] text-pw-muted 2xl:hidden">Talla</span><SelectControl id={"sale-detail-size-" + index} aria-label={"Talla de prenda " + (index + 1)} value={line.productId} options={sizeOptions.map((item) => ({ value: String(item.variant.id), label: item.variant.sizeName || "Única" }))} onChange={(event) => changeVariant(index, event.target.value)} /></label>
+        <label onFocusCapture={loadSiblingVariants} className="min-w-0 text-xs font-bold text-pw-muted 2xl:text-center"><span className="mb-1 block text-[0.65rem] text-pw-muted 2xl:hidden">Talla</span><SelectControl id={"sale-detail-size-" + index} aria-label={"Talla de prenda " + (index + 1)} value={line.productId} options={sizeOptions.map((item) => ({ value: String(item.variant.id), label: item.variant.sizeName || "Única" }))} onChange={(event) => changeVariant(index, event.target.value)} /></label>
         <label className="text-xs font-bold text-pw-muted 2xl:text-center"><span className="mb-1 block text-[0.65rem] 2xl:hidden">Cantidad</span><input aria-label={"Cantidad de prenda " + (index + 1)} type="number" min="1" max={maxQuantityForLine(index, line.productId)} step="1" value={line.quantity} onChange={(event) => { const value = event.target.value; const maximum = maxQuantityForLine(index, line.productId); updateLine(index, { quantity: value && Number(value) > maximum ? String(maximum) : value }); }} className="pw-number-input min-h-9 w-16 rounded-lg border border-pw-line px-2 text-center text-sm text-pw-ink 2xl:w-full" /></label>
         <span className="hidden text-center text-sm tabular-nums text-pw-muted 2xl:block">{maxQuantityForLine(index, line.productId)}</span>
         <span className="text-center text-sm tabular-nums text-pw-muted"><span className="mr-1 text-[0.65rem] 2xl:hidden">Precio:</span>{money.format(price)}<span className="ml-2 text-xs text-pw-muted 2xl:hidden">· {maxQuantityForLine(index, line.productId)} disponibles</span></span>

@@ -15,7 +15,6 @@ const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO
 const statuses: Record<number, string> = { 1: "Pendiente", 2: "Completada", 3: "Cancelada", 4: "Despachada", 5: "Entrega fallida", 6: "Entregada · selección pendiente" };
 function date(value: string) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short" }).format(parsed); }
 function paidAmount(amounts: number[]) { return Math.round((amounts.reduce((total, amount) => total + amount, 0) + Number.EPSILON) * 100) / 100; }
-function signedPaymentAmount(directionId: number, amount: number) { return directionId === 2 ? -amount : amount; }
 function variantName(hold: SaleSelectionHold, products: ProductDTO[]) {
   for (const product of products) for (const presentation of product.presentations) for (const variant of presentation.sizes) if (variant.id === hold.productId) return { product, presentation, variant };
   return null;
@@ -180,12 +179,7 @@ function CancelDeliveryDialog({ delivery, refundAmount, busy, onClose, onConfirm
 }
 
 function DeliveryCard({ sale, delivery, isAdmin, busy, onAction, onEdit }: { sale: SaleDetail; delivery: SaleDelivery; isAdmin: boolean; busy: boolean; onAction: (deliveryId: number, action: SaleDeliveryAction) => Promise<boolean>; onEdit: (deliveryId: number, payload: PatchSaleDeliveryPayload) => Promise<boolean> }) {
-  const productPaid = paidAmount(sale.paymentMovements.map((movement) => signedPaymentAmount(movement.movementDirectionId, movement.productAmount)));
-  const deliveryShippingPaid = paidAmount(sale.paymentMovements
-    .filter((movement) => movement.saleDeliveryId === delivery.id)
-    .map((movement) => signedPaymentAmount(movement.movementDirectionId, movement.shippingAmount)));
-  const paymentRequirementsMet = delivery.deliveryAgencyCanCollectCashOnDelivery
-    || (productPaid >= sale.total && deliveryShippingPaid >= delivery.shippingChargedToClient);
+  const paymentRequirementsMet = delivery.deliveryAgencyCanCollectCashOnDelivery || sale.salePaymentStatusId === 3;
   const canSend = delivery.deliveryStatusId === 1 && paymentRequirementsMet;
   const [editing, setEditing] = useState(false);
   const [canceling, setCanceling] = useState(false);
@@ -199,7 +193,7 @@ function DeliveryCard({ sale, delivery, isAdmin, busy, onAction, onEdit }: { sal
     {isAdmin && delivery.deliveryStatusId === 1 && refundInfo.blocked ? <p className="mt-2 text-xs text-pw-muted">No se puede reembolsar solo el envío porque un pago en tarjeta o dólares también cubre productos. Reembolsa ese pago completo primero.</p> : null}
     {editing ? <SaleDeliveryEditDialog delivery={delivery} busy={busy} onClose={() => setEditing(false)} onSave={(payload) => onEdit(delivery.id, payload)} /> : null}
     {canceling ? <CancelDeliveryDialog delivery={delivery} refundAmount={refundInfo.amount} busy={busy} onClose={() => setCanceling(false)} onConfirm={() => onAction(delivery.id, "cancel")} /> : null}
-    {delivery.deliveryStatusId === 1 && !canSend ? <p className="mt-2 text-xs text-pw-muted">Para despachar con esta agencia, los productos y el costo de envío deben estar pagados.</p> : null}
+    {delivery.deliveryStatusId === 1 && !canSend ? <p className="mt-2 text-xs text-pw-muted">Para despachar, los productos y el costo de envío deben estar pagados.</p> : null}
   </article>;
 }
 export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliveryAgencies, deliveryCatalogLoading, deliveryCatalogError, onRetryDeliveryCatalogs, onDeliveryAction, onEditDelivery, onCreateDelivery }: {
@@ -228,7 +222,7 @@ export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliv
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-title" className="text-base font-extrabold">Entrega</h2></div>{canCreateDelivery ? <button type="button" disabled={busy} onClick={() => setAddingDelivery(true)} className="min-h-9 rounded-lg border border-pw-brand px-3 text-xs font-bold text-pw-brand-deep">Crear envío</button> : null}</header>
       {local ? <p className="rounded-xl bg-pw-canvas p-4 text-sm text-pw-muted">Esta venta se retira en la tienda y no requiere envío.</p> : orderedDeliveries.length ? <div className="space-y-3">{orderedDeliveries.map((delivery) => <DeliveryCard key={delivery.id} sale={sale} delivery={delivery} isAdmin={isAdmin} busy={busy} onAction={onDeliveryAction} onEdit={onEditDelivery} />)}</div> : <p className="rounded-xl border border-dashed border-pw-line py-7 text-center text-sm text-pw-muted">Todavía no se ha creado una entrega.</p>}
     </section>
-    {addingDelivery && canCreateDelivery ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={deliveryAgencies} loading={deliveryCatalogLoading} error={deliveryCatalogError} busy={busy} saleIsPaid={sale.salePaymentStatusId === 3} clientId={sale.clientId} onRetryCatalogs={onRetryDeliveryCatalogs} onClose={() => setAddingDelivery(false)} onSave={onCreateDelivery} /> : null}
+    {addingDelivery && canCreateDelivery ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={deliveryAgencies} loading={deliveryCatalogLoading} error={deliveryCatalogError} busy={busy} clientId={sale.clientId} onRetryCatalogs={onRetryDeliveryCatalogs} onClose={() => setAddingDelivery(false)} onSave={onCreateDelivery} /> : null}
   </>;
 }
 

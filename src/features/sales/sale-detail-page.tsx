@@ -88,14 +88,15 @@ export function SaleDetailPage() {
     target.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [id, location.hash, location.key, sale]);
 
-  const variantIds = sale ? [...sale.productVariants.map((line) => line.productId), ...sale.selectionHolds.map((hold) => hold.productId)].join(",") : "";
+  const variantIds = sale ? [...new Set([...sale.productVariants.map((line) => line.productId), ...sale.selectionHolds.map((hold) => hold.productId)])] : [];
+  const variantIdsKey = variantIds.join(",");
   useEffect(() => {
-    if (!sale || !variantIds) { setProducts([]); setCatalogLoading(false); return undefined; }
+    if (!sale || !variantIdsKey) { setProducts([]); setCatalogLoading(false); return undefined; }
     let active = true;
     setCatalogLoading(true);
-    void getSaleProductCatalog(request).then((catalog) => { if (active) setProducts(catalog); }).catch(() => { if (active) setProducts([]); }).finally(() => { if (active) setCatalogLoading(false); });
+    void getSaleProductCatalog(request, variantIdsKey.split(",").map(Number)).then((catalog) => { if (active) setProducts(catalog); }).catch(() => { if (active) setProducts([]); }).finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, [request, sale?.id, variantIds]);
+  }, [request, sale?.id, variantIdsKey]);
 
   useEffect(() => {
     let active = true;

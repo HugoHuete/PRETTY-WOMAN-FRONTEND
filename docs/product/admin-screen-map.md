@@ -94,7 +94,7 @@ La lista de productos ofrece una vista expandible por producto, pero no existe u
 - Nunca recalcular el total o el `grossAmount`: mostrar los importes de la respuesta del backend.
 - Después de un `POST`, `PATCH` o transición, recargar `GET /api/v1/sales/{id}` o actualizar con la respuesta recibida.
 - No mostrar la cancelación de una línea individual: no existe esa ruta. La corrección o cancelación completa es exclusiva de Admin.
-- Una venta remota puede tener un envío creado aunque conserve saldo pendiente. Para despacharlo (`Sent`) debe cumplir las condiciones de pago definidas por el backend; cuando se exige pago completo, la UI mantiene deshabilitada la acción y muestra el saldo faltante. Un envío contra entrega solo se completa cuando la agencia recauda el saldo total.
+- Una venta remota puede tener un envío creado aunque conserve saldo pendiente, incluso si la agencia no acepta contra entrega. Para despacharlo (`Sent`), una agencia que no acepta contra entrega requiere que el estado de pago de la venta sea `Pagada` según el backend; si acepta contra entrega, se puede despachar con saldo pendiente para que la agencia lo recaude. La UI respeta el margen de conversión de moneda del backend.
 - Las ventas cuyo canal es local o tienda física no pueden crear envíos ni registrar cargos de envío; en la UI, entrega se muestra como `No aplica`.
 - El cliente es opcional al crear la venta y puede asociarse posteriormente. Para crear una entrega, la venta sí debe tener un cliente.
 - La creación rápida de cliente desde la venta solicita nombre y teléfono; dirección, usuario de Instagram y usuario de Messenger son opcionales. Valida teléfonos duplicados y selecciona automáticamente el cliente creado sin perder el estado de la venta.

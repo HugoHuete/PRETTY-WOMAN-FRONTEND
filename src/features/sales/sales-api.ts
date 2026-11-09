@@ -283,14 +283,22 @@ export function cancelSaleReturn(request: AuthRequest, id: number, returnId: num
   return sendSaleCommand(request, `/api/v1/sales/${id}/returns/${returnId}/cancel`, "POST");
 }
 
-export async function getSaleProductCatalog(request: AuthRequest) {
-  const pageSize = 100;
-  const firstQuery = new URLSearchParams({ page: "1", pageSize: String(pageSize) });
-  const first = normalizePage<ProductDTO>(await requestJson<PaginatedProducts>(request, `/api/v1/products?${firstQuery}`));
-  if (first.totalPages <= 1) return first.items;
-  const pages = await Promise.all(Array.from({ length: first.totalPages - 1 }, (_, index) => {
-    const query = new URLSearchParams({ page: String(index + 2), pageSize: String(pageSize) });
-    return requestJson<PaginatedProducts>(request, `/api/v1/products?${query}`).then((result) => normalizePage<ProductDTO>(result).items);
-  }));
-  return [...first.items, ...pages.flat()];
+export async function getSaleProductCatalog(request: AuthRequest, productVariantIds: number[]) {
+  const variantIds = [...new Set(productVariantIds.filter((id) => Number.isInteger(id) && id > 0))];
+  if (!variantIds.length) return [];
+
+  const query = new URLSearchParams({ page: "1", pageSize: "100" });
+  variantIds.forEach((id) => query.append("productVariantIds", String(id)));
+  const result = await requestJson<PaginatedProducts>(request, `/api/v1/products?${query}`);
+  return normalizePage<ProductDTO>(result).items;
+}
+
+export async function getSaleProductsByCodes(request: AuthRequest, codes: number[]) {
+  const productCodes = [...new Set(codes.filter((code) => Number.isInteger(code) && code > 0))];
+  if (!productCodes.length) return [];
+
+  const query = new URLSearchParams({ page: "1", pageSize: "100" });
+  productCodes.forEach((code) => query.append("code", String(code)));
+  const result = await requestJson<PaginatedProducts>(request, `/api/v1/products?${query}`);
+  return normalizePage<ProductDTO>(result).items;
 }

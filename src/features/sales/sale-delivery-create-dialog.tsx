@@ -10,7 +10,6 @@ export function SaleDeliveryCreateDialog({
   loading,
   error,
   busy,
-  saleIsPaid,
   clientId,
   onRetryCatalogs,
   onClose,
@@ -21,7 +20,6 @@ export function SaleDeliveryCreateDialog({
   loading: boolean;
   error: string | null;
   busy: boolean;
-  saleIsPaid: boolean;
   clientId: number | null;
   onRetryCatalogs: () => void;
   onClose: () => void;
@@ -46,8 +44,7 @@ export function SaleDeliveryCreateDialog({
     defaultMunicipalitySelected.current = true;
   }, [municipalities]);
 
-  const selectedAgency = agencies.find((agency) => String(agency.id) === agencyId);
-  const canSubmit = !loading && !error && agencies.length > 0 && municipalities.length > 0 && Number(agencyId) > 0 && Number(municipalityId) > 0 && code.trim().length > 0 && Number(shippingAmount) >= 0 && (saleIsPaid || selectedAgency?.canCollectCashOnDelivery === true);
+  const canSubmit = !loading && !error && agencies.length > 0 && municipalities.length > 0 && Number(agencyId) > 0 && Number(municipalityId) > 0 && code.trim().length > 0 && Number(shippingAmount) >= 0;
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
@@ -77,7 +74,6 @@ export function SaleDeliveryCreateDialog({
         <label className="grid gap-1 text-xs font-bold text-pw-muted sm:col-span-2">Dirección de entrega (opcional)<textarea rows={2} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Si se deja vacía, se usa la dirección de la clienta." className="rounded-lg border border-pw-line px-3 py-2 text-sm text-pw-ink" /></label>
         <label className="grid gap-1 text-xs font-bold text-pw-muted sm:col-span-2">Comentario (opcional)<textarea rows={2} maxLength={500} value={comments} onChange={(event) => setComments(event.target.value)} className="rounded-lg border border-pw-line px-3 py-2 text-sm text-pw-ink" /></label>
       </div>
-      {selectedAgency && !saleIsPaid && !selectedAgency.canCollectCashOnDelivery ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Esta agencia no recauda contra entrega; la venta debe estar pagada para poder crear el envío.</p> : null}
       <footer className="flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Cancelar</button><LoadingButton type="submit" isLoading={busy} disabled={!canSubmit} className="min-h-10 text-sm">Crear envío</LoadingButton></footer>
     </form>
   </dialog>, document.body);
