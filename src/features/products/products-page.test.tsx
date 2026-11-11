@@ -84,7 +84,7 @@ function paginated(items = [product()]) {
   return {
     items,
     page: 1,
-    pageSize: 20,
+    pageSize: 40,
     totalCount: items.length,
     totalPages: 1,
     hasPreviousPage: false,
@@ -130,7 +130,7 @@ describe("buildProductsPath", () => {
 describe("ProductsPage", () => {
   it("renders a product with presentation count and stock totals", async () => {
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([{ id: 2, name: "Vestidos" }]);
       if (path === "/api/v1/sizes") return jsonResponse([{ id: 3, name: "M" }]);
       if (path === "/api/v1/subcategories") return jsonResponse([{ id: 8, categoryId: 2, name: "Vestidos de noche" }]);
@@ -147,7 +147,7 @@ describe("ProductsPage", () => {
 
   it("defaults availability filter to available", async () => {
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -158,13 +158,13 @@ describe("ProductsPage", () => {
 
     await screen.findByText("Vestido satinado");
     expect(screen.getByRole("button", { name: "Disponibilidad" })).toHaveTextContent("Disponible");
-    expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=20&availability=1");
+    expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40&availability=1");
   });
 
   it("keeps the unfiltered availability option after choosing Todos", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -179,13 +179,13 @@ describe("ProductsPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Disponibilidad" })).toHaveTextContent("Todos");
     });
-    expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=20");
+    expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40");
   });
 
   it("shows movement dates as calendar dates", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -216,7 +216,7 @@ describe("ProductsPage", () => {
 
   it("shows supplier code under the product and separates category columns", async () => {
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -246,7 +246,7 @@ describe("ProductsPage", () => {
 
   it("renders the view switch as a segmented control with the table selected", async () => {
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -264,7 +264,7 @@ describe("ProductsPage", () => {
   it("expands product details inline with presentation, size, cost, and stock", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -294,7 +294,7 @@ describe("ProductsPage", () => {
   it("loads inventory movements for a selected variant", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -336,7 +336,7 @@ describe("ProductsPage", () => {
   it("muestra el error del backend al cargar movimientos", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -357,7 +357,7 @@ describe("ProductsPage", () => {
   it("keeps successful category and size options when subcategories fail", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([{ id: 2, name: "Vestidos" }]);
       if (path === "/api/v1/sizes") return jsonResponse([{ id: 3, name: "M" }]);
       if (path === "/api/v1/subcategories") return Promise.reject(new Error("Subcategorías no disponibles"));
@@ -378,7 +378,7 @@ describe("ProductsPage", () => {
   it("presenta la cuadrícula como un catálogo visual compacto", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) {
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) {
         return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
       }
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
@@ -397,7 +397,7 @@ describe("ProductsPage", () => {
     const user = userEvent.setup();
     const longName = "Pañuelo cuadrado pequeño de satén de seda para la cabeza y accesorios";
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) {
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) {
         return jsonResponse(paginated([product({ name: longName, primaryImageUrl: "/images/panuelo.jpg" })]));
       }
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
@@ -418,7 +418,7 @@ describe("ProductsPage", () => {
   it("espera a que termine de escribirse el código antes de buscar", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
@@ -429,14 +429,14 @@ describe("ProductsPage", () => {
 
     expect(auth.request.mock.calls.filter(([path]) => String(path).includes("&code=")).length).toBe(0);
     await waitFor(() => {
-      expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=20&availability=1&code=1042");
+      expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40&availability=1&code=1042");
     }, { timeout: 1200 });
   });
 
   it("expande el detalle visual usando el ancho disponible", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
@@ -479,7 +479,7 @@ describe("ProductsPage", () => {
       ],
     };
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated([product({ presentations: [product().presentations[0], secondPresentation] })]));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ presentations: [product().presentations[0], secondPresentation] })]));
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -512,7 +512,7 @@ describe("ProductsPage", () => {
   it("switches between table and grid while keeping expanded details inline", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -550,7 +550,7 @@ describe("ProductsPage", () => {
 
     await waitFor(() => {
       expect(auth.request).toHaveBeenCalledWith(
-        "/api/v1/products?page=1&pageSize=20&availability=2",
+        "/api/v1/products?page=1&pageSize=40&availability=2",
       );
     });
   });
@@ -558,7 +558,7 @@ describe("ProductsPage", () => {
   it("opens product movements without a variant id from the actions menu", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/inventory-movements") return jsonResponse([{
         id: 501,
@@ -600,7 +600,7 @@ describe("ProductsPage", () => {
       product({ id: 45, name: "Producto final dos" }),
     ];
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated(items));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated(items));
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
@@ -618,7 +618,7 @@ describe("ProductsPage", () => {
   it("shows the currency prefix and product thumbnail in the price dialog", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
@@ -636,7 +636,7 @@ describe("ProductsPage", () => {
   it("updates the price of every product variant from the product action menu", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string, init?: RequestInit) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/price" && init?.method === "PATCH") return Promise.resolve(new Response(null, { status: 204 }));
       throw new Error("Unexpected request: " + path);
@@ -664,7 +664,7 @@ describe("ProductsPage", () => {
   it("updates only the selected presentation price when grouped by presentation", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string, init?: RequestInit) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/presentations/7/price" && init?.method === "PATCH") return Promise.resolve(new Response(null, { status: 204 }));
       throw new Error("Unexpected request: " + path);
@@ -691,7 +691,7 @@ describe("ProductsPage", () => {
   it("filters subcategories by the selected category", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([{ id: 2, name: "Vestidos" }, { id: 3, name: "Tops" }]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([
@@ -716,7 +716,7 @@ describe("ProductsPage", () => {
   it("abre las imágenes en un modal desde el menú de acciones del producto", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([presentationPrimaryImage()]);
       throw new Error("Unexpected request: " + path);
@@ -734,7 +734,7 @@ describe("ProductsPage", () => {
   it("mantiene la galería disponible al cambiar de tabla a cuadrícula", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([presentationPrimaryImage()]);
       throw new Error("Unexpected request: " + path);
@@ -758,7 +758,7 @@ describe("ProductsPage", () => {
   it("actualiza la miniatura de la presentación cuando cambia la principal", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string, init?: RequestInit) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=20")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([presentationPrimaryImage(), presentationSecondaryImage()]);
       if (path === "/api/v1/products/42/images" && init?.method === "PUT") {

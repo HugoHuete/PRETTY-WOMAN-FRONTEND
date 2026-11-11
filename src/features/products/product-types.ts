@@ -89,7 +89,7 @@ export type ProductAvailability = "available" | "reserved" | "unavailable";
 
 export const defaultProductFilters: ProductFilters = {
   page: 1,
-  pageSize: 20,
+  pageSize: 40,
   availability: "1",
   code: "",
   categoryId: "",

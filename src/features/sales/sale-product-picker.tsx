@@ -151,27 +151,28 @@ export function SaleProductPicker({
                     const first = group[0];
                     return (
                       <section key={`${first.product.id}:${first.presentationId}`} className="overflow-hidden rounded-xl border border-pw-line">
-                        <header className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
-                          {first.imageUrl ? (
-                            <img
-                              src={first.imageUrl}
-                              alt={first.presentationName + ", " + first.product.name}
-                              className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover"
-                            />
-                          ) : null}
+                        <header className="flex min-h-11 items-center gap-3 px-3 py-2.5 sm:px-4">
                           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                             <p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p>
                             <h3 className="text-sm font-extrabold text-pw-ink">{first.presentationName}</h3>
                             <p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p>
                           </div>
                         </header>
-                        <div>
-                          {group.map((option) => {
+                        <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-stretch gap-2 border-t border-pw-line p-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4">
+                          {first.imageUrl ? (
+                            <img
+                              src={first.imageUrl}
+                              alt={first.presentationName + ", " + first.product.name}
+                              className="h-24 w-[4.5rem] self-center rounded-lg bg-pw-canvas object-cover sm:h-28 sm:w-[5.5rem]"
+                            />
+                          ) : <span aria-hidden="true" className="grid h-24 w-[4.5rem] self-center place-items-center rounded-lg bg-pw-brand-soft text-xs font-bold text-pw-brand-deep sm:h-28 sm:w-[5.5rem]">{first.product.code}</span>}
+                          <div className="min-w-0 divide-y divide-pw-line">
+                            {group.map((option) => {
                             const added = lines.some((line) => line.productVariantId === option.variant.id);
                             const price = option.variant.discountedSalePrice ?? option.variant.salePrice;
                             const size = option.variant.sizeName || "Talla única";
                             return (
-                              <div key={option.variant.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-pw-line px-3 py-2 sm:px-4">
+                              <div key={option.variant.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2 first:pt-0 last:pb-0 sm:gap-3">
                                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
                                   <p className="text-sm font-bold text-pw-ink">{size}</p>
                                   <p className="text-xs text-pw-muted">{money.format(price)}</p>
@@ -187,7 +188,8 @@ export function SaleProductPicker({
                                 </button>
                               </div>
                             );
-                          })}
+                            })}
+                          </div>
                         </div>
                       </section>
                     );
