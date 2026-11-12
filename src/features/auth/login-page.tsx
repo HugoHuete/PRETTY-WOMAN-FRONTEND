@@ -168,16 +168,8 @@ export function LoginPage() {
                 </p>
               ) : null}
 
-              <label className="my-2 flex items-center gap-2 text-[13px] font-semibold text-pw-muted">
-                <input
-                  className="size-4 accent-pw-brand"
-                  type="checkbox"
-                  name="remember"
-                />
-                <span>Recordarme en este equipo</span>
-              </label>
               <button
-                className="min-h-12 rounded-lg bg-pw-brand text-sm font-extrabold text-white transition-colors hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-3 disabled:cursor-wait disabled:opacity-70"
+                className="mt-4 min-h-12 rounded-lg bg-pw-brand text-sm font-extrabold text-white transition-colors hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-3 disabled:cursor-wait disabled:opacity-70"
                 type="submit"
               >
                 {isSubmitting ? "Ingresando…" : "Ingresar"}
