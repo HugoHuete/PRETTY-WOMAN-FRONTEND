@@ -75,6 +75,7 @@ describe('protected application routes', () => {
   });
 
   it('renders dashboard content inside protected shell', () => {
+    auth.state.request.mockImplementation((path: string) => Promise.resolve(new Response(JSON.stringify(path.endsWith('current-balance') ? { balanceNio: 0 } : { years: [] }), { status: 200 })));
     renderAppAt('/', 'authenticated', ['Admin']);
 
     expect(
