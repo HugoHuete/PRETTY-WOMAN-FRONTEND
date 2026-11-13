@@ -47,7 +47,7 @@ function searchParamsFromFilters(filters: InventoryIssueFilters) {
 function formatDate(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function issueColumns(currentSearch: string): DataTableColumn<InventoryIssue>[] {

@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -90,7 +91,7 @@ function formatPurchaseDate(value: string) {
     ? value
     : new Intl.DateTimeFormat("es-NI", {
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
       }).format(date);
 }
@@ -106,6 +107,7 @@ export function PurchaseOrdersPage() {
   const { request } = useAuth();
   const { setAction, setHeading } = usePageActions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [dateResetKey, setDateResetKey] = useState(0);
   const filters = useMemo(
     () => filtersFromSearchParams(searchParams),
     [searchParams],
@@ -272,7 +274,7 @@ export function PurchaseOrdersPage() {
       updateFilters({ ...filters, [key]: event.target.value, page: 1 });
     };
 
-  const clearFilters = () => updateFilters(defaultFilters);
+  const clearFilters = () => { setDateResetKey((key) => key + 1); updateFilters(defaultFilters); };
   const hasActiveFilters = Boolean(
     filters.purchaseDateFrom ||
     filters.purchaseDateTo ||
@@ -403,26 +405,14 @@ export function PurchaseOrdersPage() {
           htmlFor="purchase-order-date-from"
         >
           Fecha inicial
-          <input
-            className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30"
-            id="purchase-order-date-from"
-            type="date"
-            value={filters.purchaseDateFrom}
-            onChange={changeFilter("purchaseDateFrom")}
-          />
+          <DateFilter resetKey={dateResetKey} id="purchase-order-date-from" value={filters.purchaseDateFrom} onChange={(value) => updateFilters({ ...filters, purchaseDateFrom: value, page: 1 })} />
         </label>
         <label
           className="grid gap-1.5 text-xs font-extrabold text-pw-muted"
           htmlFor="purchase-order-date-to"
         >
           Fecha final
-          <input
-            className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30"
-            id="purchase-order-date-to"
-            type="date"
-            value={filters.purchaseDateTo}
-            onChange={changeFilter("purchaseDateTo")}
-          />
+          <DateFilter resetKey={dateResetKey} id="purchase-order-date-to" value={filters.purchaseDateTo} onChange={(value) => updateFilters({ ...filters, purchaseDateTo: value, page: 1 })} />
         </label>
         {hasActiveFilters &&
         !(orders?.totalCount === 0 && !isLoading && !error) ? (

@@ -45,7 +45,7 @@ export function SaleDetailOverview({ sale, isAdmin, busy, onSave, onCancelSale, 
   const confirmCancel = async () => {
     if (await onCancelSale()) setConfirmingCancel(false);
   };
-  const formattedDate = useMemo(() => new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short" }).format(new Date(sale.saleDate)), [sale.saleDate]);
+  const formattedDate = useMemo(() => new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(sale.saleDate)), [sale.saleDate]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const dateChanged = saleDate !== dateValue(sale.saleDate);

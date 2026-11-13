@@ -13,7 +13,7 @@ import { SaleDeliveryCreateDialog } from "./sale-delivery-create-dialog";
 
 const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
 const statuses: Record<number, string> = { 1: "Pendiente", 2: "Completada", 3: "Cancelada", 4: "Despachada", 5: "Entrega fallida", 6: "Entregada · selección pendiente" };
-function date(value: string) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short" }).format(parsed); }
+function date(value: string) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(parsed); }
 function paidAmount(amounts: number[]) { return Math.round((amounts.reduce((total, amount) => total + amount, 0) + Number.EPSILON) * 100) / 100; }
 function variantName(hold: SaleSelectionHold, products: ProductDTO[]) {
   for (const product of products) for (const presentation of product.presentations) for (const variant of presentation.sizes) if (variant.id === hold.productId) return { product, presentation, variant };

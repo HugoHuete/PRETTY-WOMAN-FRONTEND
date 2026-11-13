@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -24,7 +25,7 @@ import {
 function formatDate(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function formatAmount(value: number) {
@@ -48,6 +49,7 @@ export function FinanceMovementsPage() {
   const { setAction, setHeading } = usePageActions();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [dateResetKey, setDateResetKey] = useState(0);
   const filters = useMemo(() => financeMovementFiltersFromSearchParams(searchParams), [searchParams]);
   const [listState, setListState] = useState<{ key: string; result?: PaginatedFinanceMovements; error?: FinanceApiError | Error } | null>(null);
   const [typeState, setTypeState] = useState<{ key: string; options?: FinancialMovementType[]; error?: FinanceApiError | Error } | null>(null);
@@ -111,6 +113,7 @@ export function FinanceMovementsPage() {
     setSearchParams(searchParamsFromFinanceMovementFilters(next));
   };
   const clearFilters = () => {
+    setDateResetKey((key) => key + 1);
     setSelectedMovementId(null);
     setSearchParams(searchParamsFromFinanceMovementFilters(defaultFinanceMovementFilters));
   };
@@ -160,7 +163,7 @@ export function FinanceMovementsPage() {
       }}
     />
     <FilterBar aria-label="Filtros de movimientos financieros" onSubmit={(event) => event.preventDefault()}>
-      <FilterFields filters={filters} typeOptions={(typeOptions ?? []).map((type) => ({ value: String(type.id), label: type.label }))} directionOptions={directionOptions} onChange={handleInput} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
+      <FilterFields filters={filters} typeOptions={(typeOptions ?? []).map((type) => ({ value: String(type.id), label: type.label }))} directionOptions={directionOptions} onChange={handleInput} onDateChange={updateFilter} dateResetKey={dateResetKey} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
     </FilterBar>
     {result.totalCount === 0 ? <section className="grid min-h-48 place-items-center rounded-xl border border-dashed border-pw-line bg-white p-8 text-center" role="status">
       <div>
@@ -190,6 +193,8 @@ function FilterFields({
   typeOptions,
   directionOptions,
   onChange,
+  onDateChange,
+  dateResetKey,
   onClear,
   hasActiveFilters,
 }: {
@@ -197,12 +202,14 @@ function FilterFields({
   typeOptions: SelectOption[];
   directionOptions: SelectOption[];
   onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  dateResetKey: number;
+  onDateChange: (key: "fromDate" | "toDate", value: string) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
 }) {
   return <>
-    <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-from-date">Desde<input className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30" id="finance-from-date" name="fromDate" type="date" value={filters.fromDate} onChange={onChange} /></label>
-    <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-to-date">Hasta<input className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30" id="finance-to-date" name="toDate" type="date" value={filters.toDate} onChange={onChange} /></label>
+    <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-from-date">Desde<DateFilter resetKey={dateResetKey} id="finance-from-date" value={filters.fromDate} onChange={(value) => onDateChange("fromDate", value)} /></label>
+    <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-to-date">Hasta<DateFilter resetKey={dateResetKey} id="finance-to-date" value={filters.toDate} onChange={(value) => onDateChange("toDate", value)} /></label>
     <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-movement-type">Tipo<SelectControl aria-label="Tipo de movimiento" id="finance-movement-type" name="financialMovementTypeId" value={filters.financialMovementTypeId === null ? "" : String(filters.financialMovementTypeId)} options={[{ value: "", label: "Todos los tipos" }, ...typeOptions]} onChange={onChange} /></label>
     <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="finance-movement-direction">Dirección<SelectControl aria-label="Dirección" id="finance-movement-direction" name="movementDirectionId" value={filters.movementDirectionId === null ? "" : String(filters.movementDirectionId)} options={directionOptions} onChange={onChange} /></label>
     {hasActiveFilters ? <button className="min-h-11 rounded-lg border border-pw-line px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-canvas focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2" type="button" onClick={onClear}>Limpiar filtros</button> : null}

@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -44,7 +45,7 @@ function date(value: string) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime())
     ? value
-    : new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Managua" }).format(parsed);
+    : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Managua" }).format(parsed);
 }
 
 function deliveryStatusName(shipment: Shipment) {
@@ -76,6 +77,7 @@ export function ShipmentsPage() {
   const { setAction, setHeading } = usePageActions();
   const { showToast } = useToast();
   const [params, setParams] = useSearchParams();
+  const [dateResetKey, setDateResetKey] = useState(0);
   const filters = useMemo(() => readShipmentFilters(params), [params]);
   const hasActiveFilters = Boolean(
     filters.clientSearch
@@ -183,6 +185,7 @@ export function ShipmentsPage() {
     setParams(buildShipmentSearchParams({ ...filters, ...patch, page: patch.page ?? 1 }));
   };
   const clearFilters = () => {
+    setDateResetKey((key) => key + 1);
     setSearchInput("");
     setParams(buildShipmentSearchParams({ ...filters, page: 1, clientSearch: "", date: defaultShipmentFilters().date, deliveryAgencyId: "", deliveryStatusId: "" }));
   };
@@ -212,13 +215,7 @@ export function ShipmentsPage() {
 
   const dateInput = (id: string, label: string, value: string, onChange: (value: string) => void) => <label htmlFor={id} className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted">
     {label}
-    <input
-      id={id}
-      type="date"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand"
-    />
+    <DateFilter resetKey={dateResetKey} id={id} value={value} onChange={onChange} />
   </label>;
 
   const confirmAction = async () => {

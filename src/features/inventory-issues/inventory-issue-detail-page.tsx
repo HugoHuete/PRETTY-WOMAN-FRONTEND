@@ -12,7 +12,7 @@ import { inventoryIssueResolutionOptions, inventoryIssueStatusTone, type Invento
 function formatDate(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function DetailField({ label, children, className = "min-w-0" }: { label: string; children: React.ReactNode; className?: string }) { return <div className={className}><dt className="text-xs font-extrabold uppercase tracking-[0.04em] text-pw-muted">{label}</dt><dd className="mt-1 text-sm font-bold text-pw-ink">{children}</dd></div>; }

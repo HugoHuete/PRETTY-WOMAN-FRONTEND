@@ -35,7 +35,7 @@ const postSaleDeliveryStatuses: Record<number, string> = { 1: "Pendiente", 2: "E
 function date(value: string | null) {
   if (!value) return "—";
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short" }).format(parsed);
+  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(parsed);
 }
 
 function variantLabel(productId: number, products: ProductDTO[]) {

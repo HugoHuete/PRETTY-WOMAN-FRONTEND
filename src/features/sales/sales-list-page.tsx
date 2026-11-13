@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -15,12 +16,13 @@ const currency = new Intl.NumberFormat("es-NI", { style: "currency", currency: "
 const saleTone = (id: number) => ({ 1: "warning", 2: "info", 3: "info", 4: "info", 5: "success", 6: "danger" }[id] ?? "neutral") as "success" | "warning" | "danger" | "info" | "neutral";
 const paymentTone = (id: number) => ({ 1: "danger", 2: "warning", 3: "success", 4: "neutral" }[id] ?? "neutral") as "success" | "warning" | "danger" | "info" | "neutral";
 function catalogName(id: number, fallback: string | null, options: readonly { id: number; name: string }[]) { return options.find((option) => option.id === id)?.name ?? fallback ?? "—"; }
-function saleDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "numeric", minute: "2-digit" }).format(date); }
+function saleDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(date); }
 
 export function SalesListPage() {
   const { request } = useAuth();
   const { setAction, setHeading } = usePageActions();
   const [params, setParams] = useSearchParams();
+  const [dateResetKey, setDateResetKey] = useState(0);
   const filters = useMemo(() => readSalesFilters(params), [params]);
   const [result, setResult] = useState<Awaited<ReturnType<typeof getSales>> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +42,15 @@ export function SalesListPage() {
   }, [filters, request, retry]);
 
   const update = (patch: Partial<typeof filters>) => setParams(buildSalesSearchParams({ ...filters, ...patch, page: patch.page ?? 1 }));
-  const dateInput = (label: string, key: "startDate" | "endDate", value: string) => <label htmlFor={key} className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted">{label}<input id={key} type="date" value={value} onChange={(event) => { const next = event.target.value; update(key === "startDate" ? { startDate: next } : { endDate: next }); }} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand" /></label>;
-  const select = (id: string, label: string, value: string, values: readonly { id: number; name: string }[], key: "saleStatusId" | "salePaymentStatusId" | "saleChannelId") => <label htmlFor={id} className="grid min-w-40 flex-1 gap-1.5 text-xs font-extrabold text-pw-muted">{label}<SelectControl id={id} aria-label={label} value={value} options={[{ value: "", label: "Todos" }, ...values.map((option) => ({ value: String(option.id), label: option.name }))]} onChange={(event) => update({ [key]: event.target.value })} /></label>;
+  const dateInput = (label: string, key: "startDate" | "endDate", value: string) => <label htmlFor={key} className="grid min-w-0 gap-1.5 text-xs font-extrabold text-pw-muted">{label}<DateFilter resetKey={dateResetKey} id={key} value={value} onChange={(next) => { if (key === "endDate" && next && filters.startDate && next < filters.startDate) { setDateResetKey((current) => current + 1); update({ endDate: filters.startDate }); } else update(key === "startDate" ? { startDate: next } : { endDate: next }); }} /></label>;
+  const select = (id: string, label: string, value: string, values: readonly { id: number; name: string }[], key: "saleStatusId" | "salePaymentStatusId" | "saleChannelId") => <label htmlFor={id} className="grid min-w-0 gap-1.5 text-xs font-extrabold text-pw-muted">{label}<SelectControl id={id} aria-label={label} value={value} options={[{ value: "", label: "Todos" }, ...values.map((option) => ({ value: String(option.id), label: option.name }))]} onChange={(event) => update({ [key]: event.target.value })} /></label>;
   return <div className="space-y-5">
-    <FilterBar aria-label="Filtros de ventas" onSubmit={(event) => event.preventDefault()}>
+    <FilterBar className="sm:grid sm:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]" aria-label="Filtros de ventas" onSubmit={(event) => event.preventDefault()}>
       {dateInput("Desde", "startDate", filters.startDate)}{dateInput("Hasta", "endDate", filters.endDate)}
       {select("sale-status", "Estado de venta", filters.saleStatusId, saleStatuses, "saleStatusId")}
       {select("payment-status", "Estado de pago", filters.salePaymentStatusId, paymentStatuses, "salePaymentStatusId")}
       {select("sale-channel", "Canal", filters.saleChannelId, saleChannels, "saleChannelId")}
+      <button type="button" onClick={() => { setDateResetKey((key) => key + 1); update({ startDate: "", endDate: "", saleStatusId: "", salePaymentStatusId: "", saleChannelId: "" }); }} className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-pw-brand">Limpiar filtros</button>
     </FilterBar>
     {loading ? <LoadingState /> : null}
     {!loading && error?.forbidden ? <EmptyState title="Acceso restringido" description="No tienes permiso para consultar las ventas." action={<Link to="/">Volver al inicio</Link>} /> : null}

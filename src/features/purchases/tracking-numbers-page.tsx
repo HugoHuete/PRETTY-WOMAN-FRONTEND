@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import {
   Fragment,
   useEffect,
@@ -114,7 +115,7 @@ function formatDate(value: string | null) {
     ? value
     : new Intl.DateTimeFormat('es-NI', {
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
       }).format(date);
 }
@@ -155,6 +156,7 @@ export function TrackingNumbersPage() {
   const { request } = useAuth();
   const { setAction, setHeading } = usePageActions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [dateResetKey, setDateResetKey] = useState(0);
   const filters = useMemo(
     () => filtersFromSearchParams(searchParams),
     [searchParams],
@@ -326,7 +328,7 @@ export function TrackingNumbersPage() {
       updateFilters({ ...filters, [key]: event.target.value, page: 1 });
     };
 
-  const clearFilters = () => updateFilters(defaultFilters);
+  const clearFilters = () => { setDateResetKey((key) => key + 1); updateFilters(defaultFilters); };
   const hasActiveFilters = Boolean(
     filters.isReceived ||
       filters.trackingNumber ||
@@ -510,23 +512,11 @@ export function TrackingNumbersPage() {
         </label>
         <label className="grid gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="tracking-date-from">
           Fecha inicial
-          <input
-            className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30"
-            id="tracking-date-from"
-            type="date"
-            value={filters.purchaseDateFrom}
-            onChange={changeFilter('purchaseDateFrom')}
-          />
+          <DateFilter resetKey={dateResetKey} id="tracking-date-from" value={filters.purchaseDateFrom} onChange={(value) => updateFilters({ ...filters, purchaseDateFrom: value, page: 1 })} />
         </label>
         <label className="grid gap-1.5 text-xs font-extrabold text-pw-muted" htmlFor="tracking-date-to">
           Fecha final
-          <input
-            className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-normal text-pw-ink outline-none focus:border-pw-brand-deep focus:ring-2 focus:ring-pw-brand/30"
-            id="tracking-date-to"
-            type="date"
-            value={filters.purchaseDateTo}
-            onChange={changeFilter('purchaseDateTo')}
-          />
+          <DateFilter resetKey={dateResetKey} id="tracking-date-to" value={filters.purchaseDateTo} onChange={(value) => updateFilters({ ...filters, purchaseDateTo: value, page: 1 })} />
         </label>
         {hasActiveFilters ? (
           <button

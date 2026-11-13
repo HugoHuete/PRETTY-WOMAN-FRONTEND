@@ -169,7 +169,7 @@ function formatDate(value: string | null) {
     ? value
     : new Intl.DateTimeFormat("es-NI", {
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
       }).format(date);
 }
