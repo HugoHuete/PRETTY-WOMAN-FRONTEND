@@ -74,6 +74,8 @@ export type CreateSalePaymentPayload = {
 };
 
 export type CreateSalePayload = {
+  saleDate?: string;
+  delivery?: CreateSaleDeliveryPayload;
   saleChannelId: number;
   saleStatusId: 1 | 2;
   clientId?: number;

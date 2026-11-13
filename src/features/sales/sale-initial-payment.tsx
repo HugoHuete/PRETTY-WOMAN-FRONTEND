@@ -14,8 +14,9 @@ function formatReceived(amount: number, currency: PaymentDraft["currency"]) {
     : money.format(amount);
 }
 
-export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRate, terminals, terminalLoading, terminalError, onRetryTerminals, onChange }: {
+export function SaleInitialPayment({ estimatedBalance: productBalance, shippingBalance = 0, exchangeRate: fallbackRate, terminals, terminalLoading, terminalError, onRetryTerminals, onChange }: {
   estimatedBalance: number;
+  shippingBalance?: number;
   exchangeRate: number | null;
   terminals: SaleCatalogOption[];
   terminalLoading: boolean;
@@ -23,6 +24,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
   onRetryTerminals: () => void;
   onChange: (movements: CreateSalePaymentPayload[]) => void;
 }) {
+  const estimatedBalance = roundMoney(Math.max(0, productBalance) + Math.max(0, shippingBalance));
   const { storeRate: contextRate, status } = useExchangeRate();
   const storeRate = contextRate ?? fallbackRate;
   const [drafts, setDrafts] = useState<PaymentDraft[]>([]);
@@ -54,6 +56,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
 
   const payments = useMemo(() => {
     let remaining = Math.max(0, estimatedBalance);
+    let remainingProducts = Math.max(0, productBalance);
     return drafts.map((draft) => {
       const calculation = calculate(draft, remaining);
       if (!calculation) {
@@ -68,10 +71,13 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
         } satisfies CreateSalePaymentPayload;
       }
       remaining = roundMoney(Math.max(0, remaining - calculation.applied));
+      const productAmount = roundMoney(Math.min(remainingProducts, calculation.applied));
+      const shippingAmount = roundMoney(calculation.applied - productAmount);
+      remainingProducts = roundMoney(Math.max(0, remainingProducts - productAmount));
       const payload: CreateSalePaymentPayload = {
         paymentMethodId: draft.methodId,
-        productAmount: calculation.applied,
-        shippingAmount: 0,
+        productAmount,
+        shippingAmount,
         amountReceivedNio: draft.currency === "NIO" ? calculation.received : 0,
         amountReceivedUsd: draft.currency === "USD" ? calculation.received : 0,
         changeGivenNio: calculation.change,
@@ -80,7 +86,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
       if (draft.currency === "USD" && calculation.rate) payload.exchangeRate = calculation.rate;
       return payload;
     });
-  }, [calculate, drafts, estimatedBalance]);
+  }, [calculate, drafts, estimatedBalance, productBalance]);
 
   useEffect(() => { onChange(payments); }, [onChange, payments]);
 
@@ -122,7 +128,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
     setDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
-  const totalApplied = roundMoney(payments.reduce((sum, payment) => sum + payment.productAmount, 0));
+  const totalApplied = roundMoney(payments.reduce((sum, payment) => sum + payment.productAmount + payment.shippingAmount, 0));
   const remainingBalance = roundMoney(Math.max(0, estimatedBalance - totalApplied));
 
   return (
@@ -146,7 +152,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
                 <li key={`${index}-${draft.methodId}-${draft.terminalId}`} className="flex flex-wrap items-center justify-between gap-3 bg-white px-3 py-3 sm:px-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-pw-ink">{getMethodLabel(draft)} <span className="font-medium text-pw-muted">· {draft.currency === "USD" ? "USD" : "Córdobas"}</span></p>
-                    <p className="mt-0.5 text-xs text-pw-muted">Recibido {formatReceived(received, draft.currency)} · Aplicado {money.format(payment.productAmount)}</p>
+                    <p className="mt-0.5 text-xs text-pw-muted">Recibido {formatReceived(received, draft.currency)} · Aplicado {money.format(payment.productAmount + payment.shippingAmount)}</p>
                     {payment.changeGivenNio > 0 ? <p className="mt-0.5 text-xs font-semibold text-pw-brand-deep">Cambio a entregar: {money.format(payment.changeGivenNio)}</p> : null}
                   </div>
                   <div className="flex shrink-0 gap-1">
@@ -192,7 +198,7 @@ export function SaleInitialPayment({ estimatedBalance, exchangeRate: fallbackRat
           currentRemainingBalance={remainingBalance}
           availableBalance={editingIndex === null
             ? remainingBalance
-            : roundMoney(remainingBalance + (payments[editingIndex]?.productAmount ?? 0))}
+            : roundMoney(remainingBalance + (payments[editingIndex]?.productAmount ?? 0) + (payments[editingIndex]?.shippingAmount ?? 0))}
           storeRate={storeRate}
           exchangeRateStatus={status}
           paymentOptions={paymentOptions}
@@ -338,7 +344,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
             <dd className="m-0 font-semibold tabular-nums">{calculation ? money.format(calculation.converted) : money.format(0)}</dd>
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-pw-line pt-2">
-            <dt className="font-bold">Se aplicará a la venta</dt>
+            <dt className="font-bold">Se aplicará a prendas y envío</dt>
             <dd className="m-0 font-extrabold tabular-nums">{calculation ? money.format(calculation.applied) : money.format(0)}</dd>
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-pw-line pt-2">

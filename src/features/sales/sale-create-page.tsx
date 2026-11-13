@@ -1,3 +1,4 @@
+import { saleDateForApi, todayInManagua } from "./sale-date";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -7,17 +8,21 @@ import { LoadingButton } from "../../shared/ui/loading-button";
 import { SelectControl } from "../../shared/ui/select-control";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
 import { SaleClientCreateDialog } from "./sale-client-create-dialog";
+import { SaleDeliveryCreateDialog } from "./sale-delivery-create-dialog";
 import { SaleClientPicker } from "./sale-client-picker";
 import { SaleGlobalDiscountDialog } from "./sale-global-discount-dialog";
 import { SaleInitialPayment } from "./sale-initial-payment";
 import { SaleProductLines } from "./sale-product-lines";
 import { SaleProductPicker } from "./sale-product-picker";
-import { createSale, getSalePaymentTerminals } from "./sales-api";
+import { createSale, getSalePaymentTerminals, getSaleMunicipalities, getSaleDeliveryAgencies } from "./sales-api";
 import type { ProductVariantDTO } from "../products/product-types";
 import {
   discountSourceIds,
   saleChannels,
   type CreateSalePaymentPayload,
+  type CreateSaleDeliveryPayload,
+  type SaleMunicipality,
+  type SaleDeliveryAgency,
   type SaleCatalogOption,
   type SaleClient,
 } from "./sales-types";
@@ -67,8 +72,16 @@ export function SaleCreatePage() {
   const { storeRate } = useExchangeRate();
   const navigate = useNavigate();
 
+  const [saleDate, setSaleDate] = useState(() => todayInManagua());
   const [channel, setChannel] = useState("1");
   const [saleStatusId, setSaleStatusId] = useState<1 | 2>(1);
+  const [delivery, setDelivery] = useState<CreateSaleDeliveryPayload | null>(null);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [municipalities, setMunicipalities] = useState<SaleMunicipality[]>([]);
+  const [agencies, setAgencies] = useState<SaleDeliveryAgency[]>([]);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [deliveryRetry, setDeliveryRetry] = useState(0);
   const [client, setClient] = useState<SaleClient | null>(null);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");
@@ -82,6 +95,18 @@ export function SaleCreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorSection, setErrorSection] = useState<"products" | "payment" | "form">("form");
+  useEffect(() => {
+    if (!deliveryOpen) return undefined;
+    let active = true;
+    setDeliveryLoading(true);
+    setDeliveryError(null);
+    void Promise.all([getSaleMunicipalities(request), getSaleDeliveryAgencies(request)])
+      .then(([nextMunicipalities, nextAgencies]) => { if (active) { setMunicipalities(nextMunicipalities); setAgencies(nextAgencies); } })
+      .catch(() => { if (active) setDeliveryError("No se pudieron cargar los municipios y agencias."); })
+      .finally(() => { if (active) setDeliveryLoading(false); });
+    return () => { active = false; };
+  }, [deliveryOpen, deliveryRetry, request]);
+
   const handlePaymentsChange = useCallback((nextPayments: CreateSalePaymentPayload[]) => {
     setPayments(nextPayments);
     if (errorSection === "payment") setError(null);
@@ -126,6 +151,7 @@ export function SaleCreatePage() {
     () => payments.reduce((amount, payment) => amount + payment.productAmount, 0),
     [payments],
   );
+  const appliedShipping = payments.reduce((amount, payment) => amount + payment.shippingAmount, 0);
   const balance = Math.max(0, total - appliedPayment);
 
   useEffect(() => {
@@ -270,8 +296,17 @@ export function SaleCreatePage() {
     setError(null);
     setErrorSection("form");
 
+    const saleDateValue = saleDateForApi(saleDate);
+    if (!saleDateValue) {
+      setError("Ingresa una fecha de venta válida.");
+      return;
+    }
     if (!channel) {
       setError("Selecciona el canal por el que se realizó la venta.");
+      return;
+    }
+    if (delivery && channel === "1") {
+      setError("Selecciona un canal de venta con envío o elimina el envío.");
       return;
     }
     if (!lines.length) {
@@ -308,13 +343,15 @@ export function SaleCreatePage() {
     }
     const firstPayment = payments[0];
     const hasPaymentAmount = payments.some((payment) => payment.amountReceivedNio > 0 || payment.amountReceivedUsd > 0);
-    if (hasPaymentAmount && (!firstPayment || !(firstPayment.productAmount > 0))) {
+    if (hasPaymentAmount && (!firstPayment || !(firstPayment.productAmount + firstPayment.shippingAmount > 0))) {
       setError("Ingresa un monto recibido para el pago inicial.");
       setErrorSection("payment");
       return;
     }
 
     const payload = {
+      saleDate: saleDateValue,
+      ...(delivery ? { delivery } : {}),
       saleChannelId: Number(channel),
       saleStatusId,
       ...(client ? { clientId: client.id } : {}),
@@ -334,8 +371,8 @@ export function SaleCreatePage() {
           })),
         }
         : {}),
-      ...(hasPaymentAmount && payments.some((payment) => payment.productAmount > 0)
-        ? { paymentMovements: payments.filter((payment) => payment.productAmount > 0) }
+      ...(hasPaymentAmount && payments.some((payment) => payment.productAmount + payment.shippingAmount > 0)
+        ? { paymentMovements: payments.filter((payment) => payment.productAmount + payment.shippingAmount > 0) }
         : {}),
     };
 
@@ -387,6 +424,10 @@ export function SaleCreatePage() {
               <h2 id="sale-channel-heading" className="text-base font-extrabold text-pw-ink">Datos de la venta</h2>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 sm:items-start">
+              <label htmlFor="sale-date" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
+                Fecha de venta
+                <input id="sale-date" type="date" required value={saleDate} onChange={(event) => setSaleDate(event.target.value)} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand" />
+              </label>
               <label htmlFor="sale-status-select" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
                 Tipo de registro
                 <SelectControl
@@ -454,6 +495,11 @@ export function SaleCreatePage() {
             />
           </section>
 
+          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">Envío <span className="font-medium text-pw-muted">(opcional)</span></h2><p className="mt-1 text-sm text-pw-muted">{channel === "1" ? "Selecciona un canal distinto de tienda física para agregar un envío." : "Agrega los datos de entrega para registrar el envío junto con la venta."}</p></div><button type="button" disabled={channel === "1"} onClick={() => setDeliveryOpen(true)} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{delivery ? "Editar envío" : "Agregar envío"}</button></div>
+            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => setDelivery(null)} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
+          </section>
+
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-comments-heading">
             <h2 id="sale-comments-heading" className="text-base font-extrabold text-pw-ink">Notas <span className="font-medium text-pw-muted">(opcional)</span></h2>
             <label htmlFor="sale-comments" className="sr-only">Comentarios de la venta</label>
@@ -500,13 +546,14 @@ export function SaleCreatePage() {
                 <dt className="text-pw-muted">Descuentos manuales</dt>
                 <dd className="font-semibold tabular-nums text-pw-ink">− {money.format(manualDiscount)}</dd>
               </div>
+              {delivery ? <div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-semibold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div> : null}
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
                 <dt className="font-extrabold text-pw-ink">Total estimado</dt>
-                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(total)}</dd>
+                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(total + (delivery?.shippingChargedToClient ?? 0))}</dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
                 <dt className="font-bold text-pw-ink">Saldo estimado</dt>
-                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(balance)}</dd>
+                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(balance + Math.max(0, (delivery?.shippingChargedToClient ?? 0) - appliedShipping))}</dd>
               </div>
             </dl>
           </section>
@@ -518,6 +565,7 @@ export function SaleCreatePage() {
             </div>
             <SaleInitialPayment
               estimatedBalance={total}
+              shippingBalance={delivery?.shippingChargedToClient ?? 0}
               exchangeRate={storeRate}
               terminals={terminals}
               terminalLoading={terminalLoading}
@@ -535,6 +583,7 @@ export function SaleCreatePage() {
         </aside>
       </div>
 
+      {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); return true; }} /> : null}
       <SaleClientCreateDialog
         open={createClientOpen}
         onClose={() => setCreateClientOpen(false)}

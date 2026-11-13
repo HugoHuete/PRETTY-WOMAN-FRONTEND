@@ -48,7 +48,13 @@ export function SaleDetailOverview({ sale, isAdmin, busy, onSave, onCancelSale, 
   const formattedDate = useMemo(() => new Intl.DateTimeFormat("es-NI", { dateStyle: "medium", timeStyle: "short" }).format(new Date(sale.saleDate)), [sale.saleDate]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const saved = await onSave({ saleDate: new Date(`${saleDate}T12:00:00`).toISOString(), saleChannelId: Number(channelId), comments: comments.trim() || null });
+    const dateChanged = saleDate !== dateValue(sale.saleDate);
+    const updatedDate = new Date(sale.saleDate);
+    if (dateChanged) {
+      const [year, month, day] = saleDate.split("-").map(Number);
+      updatedDate.setFullYear(year, month - 1, day);
+    }
+    const saved = await onSave({ ...(dateChanged ? { saleDate: updatedDate.toISOString() } : {}), saleChannelId: Number(channelId), comments: comments.trim() || null });
     if (saved) setEditing(false);
   };
 
