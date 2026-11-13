@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -139,6 +139,7 @@ describe("ProductsPage", () => {
 
     renderProducts();
 
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     expect(await screen.findByText("Vestido satinado")).toBeVisible();
     expect(screen.getByText("1 presentación")).toBeVisible();
     expect(screen.getByText("3")).toBeVisible();
@@ -156,6 +157,7 @@ describe("ProductsPage", () => {
 
     renderProducts();
 
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     expect(screen.getByRole("button", { name: "Disponibilidad" })).toHaveTextContent("Disponible");
     expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40&availability=1");
@@ -172,6 +174,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Disponibilidad" }));
     await user.click(screen.getAllByRole("option", { name: "Todos" }).find((option) => option.tagName === "BUTTON")!);
@@ -207,6 +210,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await user.click((await screen.findAllByRole("button", { name: "Ver detalles de Vestido satinado" })).find((button) => button.getAttribute("aria-expanded") === "false")!);
     await user.click(screen.getByRole("button", { name: "Ver movimientos de Coral · M" }));
 
@@ -225,6 +229,7 @@ describe("ProductsPage", () => {
 
     renderProducts();
 
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     expect(screen.getByRole("columnheader", { name: /C.digo/ })).toBeVisible();
     expect(screen.getByRole("table", { name: /Productos agrupados/ })).toHaveClass("table-fixed", "min-w-[1100px]");
@@ -244,7 +249,7 @@ describe("ProductsPage", () => {
     expect(productCells[7]).toHaveClass("text-center");
   });
 
-  it("renders the view switch as a segmented control with the table selected", async () => {
+  it("muestra la cuadrícula por defecto y permite cambiar a tabla", async () => {
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories") return jsonResponse([]);
@@ -255,6 +260,9 @@ describe("ProductsPage", () => {
 
     renderProducts();
 
+    expect(await screen.findByRole("button", { name: /Cuadr/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: /Cat.*cuadr/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     expect(screen.getByRole("button", { name: "Tabla" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Tabla" })).toHaveClass("bg-white");
@@ -272,6 +280,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await user.click((await screen.findAllByRole("button", { name: "Ver detalles de Vestido satinado" })).find((button) => button.getAttribute("aria-expanded") === "false")!);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -316,6 +325,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await user.click((await screen.findAllByRole("button", { name: "Ver detalles de Vestido satinado" })).find((button) => button.getAttribute("aria-expanded") === "false")!);
     await user.click(screen.getByRole("button", { name: "Ver movimientos de Coral · M" }));
 
@@ -347,6 +357,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await user.click((await screen.findAllByRole("button", { name: "Ver detalles de Vestido satinado" })).find((button) => button.getAttribute("aria-expanded") === "false")!);
     await user.click(screen.getByRole("button", { name: "Ver movimientos de Coral · M" }));
 
@@ -365,6 +376,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
 
     await user.click(screen.getByRole("button", { name: "Categoría" }));
@@ -373,6 +385,22 @@ describe("ProductsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Talla" }));
     expect(within(screen.getByRole("listbox", { name: "Talla" })).getByRole("option", { name: "M" })).toBeVisible();
+  });
+
+  it("omite el nombre vacío de una presentación en la cuadrícula", async () => {
+    const original = product();
+    auth.request.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ presentations: [{ ...original.presentations[0], name: "  " }] })]));
+      if (["/api/v1/categories", "/api/v1/sizes", "/api/v1/subcategories"].includes(path)) return jsonResponse([]);
+      throw new Error("Unexpected request: " + path);
+    });
+    renderProducts();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Agrupar por" }));
+    await user.click(within(screen.getByRole("listbox", { name: "Agrupar por" })).getByRole("option", { name: "Presentación" }));
+    const card = screen.getByRole("article", { name: "Producto Vestido satinado · 1042" });
+    expect(within(card).queryByText("Sin nombre")).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Ver variantes de Vestido satinado · 1042" })).toBeVisible();
   });
 
   it("presenta la cuadrícula como un catálogo visual compacto", async () => {
@@ -386,6 +414,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
 
@@ -405,6 +434,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText(longName);
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
 
@@ -424,6 +454,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.type(screen.getByRole("searchbox", { name: "Código o referencia" }), "1042");
 
@@ -443,6 +474,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
     await user.click(screen.getByRole("button", { name: "Ver variantes de Vestido satinado" }));
@@ -487,6 +519,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Agrupar por" }));
     await user.click(screen.getAllByRole("option", { name: /Presentaci.n/ }).find((option) => option.tagName === "BUTTON")!);
@@ -520,6 +553,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getAllByRole("button", { name: "Ver detalles de Vestido satinado" }).find((button) => button.getAttribute("aria-expanded") === "false")!);
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
@@ -540,6 +574,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Disponibilidad" }));
     const reservedOption = screen
@@ -578,6 +613,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Ver movimientos" }));
@@ -591,7 +627,8 @@ describe("ProductsPage", () => {
     const user = userEvent.setup();
     vi.spyOn(window, "innerHeight", "get").mockReturnValue(600);
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
-      return { bottom: this.getAttribute("aria-label")?.includes("Producto final dos") ? 590 : 100 } as DOMRect;
+      const last = this.getAttribute("aria-label")?.includes("Producto final dos");
+      return { top: last ? 550 : 60, bottom: last ? 590 : 100, right: 700 } as DOMRect;
     });
     const items = [
       product(),
@@ -606,13 +643,17 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Producto final dos");
     await user.click(screen.getByRole("button", { name: "Acciones de Producto final dos" }));
 
-    expect(screen.getByRole("menu", { name: "Acciones de Producto final dos" })).toHaveClass("bottom-full");
+    const lastMenu = screen.getByRole("menu", { name: "Acciones de Producto final dos" });
+    expect(lastMenu).toHaveClass("fixed");
+    expect(lastMenu).toHaveStyle({ top: "398px" });
+    expect(lastMenu.parentElement).toBe(document.body);
 
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
-    expect(screen.getByRole("menu", { name: "Acciones de Vestido satinado" })).toHaveClass("top-full");
+    expect(screen.getByRole("menu", { name: "Acciones de Vestido satinado" })).toHaveStyle({ top: "108px" });
   });
 
   it("shows the currency prefix and product thumbnail in the price dialog", async () => {
@@ -624,6 +665,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Modificar precio" }));
@@ -643,6 +685,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Modificar precio" }));
@@ -671,6 +714,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Agrupar por" }));
     await user.click(screen.getAllByRole("option", { name: /Presentaci.n/ }).find((option) => option.tagName === "BUTTON")!);
@@ -702,6 +746,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Categoría" }));
     await user.click(within(screen.getByRole("listbox", { name: "Categoría" })).getByRole("option", { name: "Vestidos" }));
@@ -723,6 +768,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Gestionar imágenes" }));
@@ -741,6 +787,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Gestionar imágenes" }));
@@ -771,6 +818,7 @@ describe("ProductsPage", () => {
     });
 
     renderProducts();
+    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
     await screen.findByText("Vestido satinado");
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Gestionar imágenes" }));
