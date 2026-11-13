@@ -387,6 +387,24 @@ describe("ProductsPage", () => {
     expect(within(screen.getByRole("listbox", { name: "Talla" })).getByRole("option", { name: "M" })).toBeVisible();
   });
 
+  it("agrupa por presentación al abrir y permite cambiar a producto", async () => {
+    auth.request.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
+      if (["/api/v1/categories", "/api/v1/sizes", "/api/v1/subcategories"].includes(path)) return jsonResponse([]);
+      throw new Error("Unexpected request: " + path);
+    });
+    renderProducts();
+    const user = userEvent.setup();
+    const group = await screen.findByRole("button", { name: "Agrupar por" });
+    expect(group).toHaveTextContent("Presentación");
+    expect(screen.getByRole("article", { name: "Producto Coral" })).toBeVisible();
+    await user.click(group);
+    await user.click(within(screen.getByRole("listbox", { name: "Agrupar por" })).getByRole("option", { name: "Producto" }));
+    expect(screen.getByRole("article", { name: "Producto Vestido satinado" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Tabla" }));
+    expect(screen.getByText("Vestido satinado")).toBeVisible();
+  });
+
   it("omite el nombre vacío de una presentación en la cuadrícula", async () => {
     const original = product();
     auth.request.mockImplementation((path: string) => {
@@ -511,7 +529,7 @@ describe("ProductsPage", () => {
       ],
     };
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ presentations: [product().presentations[0], secondPresentation] })]));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/producto.jpg", presentations: [{ ...product().presentations[0], primaryImageUrl: "/images/coral.jpg" }, secondPresentation] })]));
       if (path === "/api/v1/categories") return jsonResponse([]);
       if (path === "/api/v1/sizes") return jsonResponse([]);
       if (path === "/api/v1/subcategories") return jsonResponse([]);
@@ -520,11 +538,14 @@ describe("ProductsPage", () => {
 
     renderProducts();
     fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
-    await screen.findByText("Vestido satinado");
+    expect(screen.getAllByText("Vestido satinado")).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: "Agrupar por" }));
     await user.click(screen.getAllByRole("option", { name: /Presentaci.n/ }).find((option) => option.tagName === "BUTTON")!);
 
     expect(screen.getAllByRole("row")).toHaveLength(3);
+    const rows = screen.getAllByRole("row");
+    expect(within(rows[1]).getByRole("img")).toHaveAttribute("src", "/images/coral.jpg");
+    expect(within(rows[2]).getByRole("img")).toHaveAttribute("src", "/images/negro.jpg");
 
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
 
