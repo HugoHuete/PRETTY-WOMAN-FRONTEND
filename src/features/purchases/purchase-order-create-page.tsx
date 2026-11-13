@@ -964,7 +964,7 @@ export function PresentationEditor({
     {!isCollapsed ? <div id={presentationDetailsId} className="mt-4 space-y-3">
       {presentation.variants.map((variant, variantIndex) => {
         const path = `product-${productIndex}-presentation-${presentationIndex}-variant-${variantIndex}`;
-        return <div className="grid gap-3 rounded-lg border border-pw-line bg-white p-3 sm:grid-cols-2 xl:grid-cols-[1.1fr_.8fr_1fr_1fr_auto]" key={`variant-${variantIndex}`}>
+        return <div className="grid gap-3 rounded-lg border border-pw-line bg-white p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto]" key={`variant-${variantIndex}`}>
           <Field label="Talla" error={fieldError(errors, `${path}-sizeId`)}>
             <SelectControl
               aria-label={`Talla ${variantIndex + 1} de la presentación ${presentationIndex + 1} del producto ${productIndex + 1}`}

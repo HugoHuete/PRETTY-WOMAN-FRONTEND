@@ -663,7 +663,7 @@ export function PurchaseOrderEditPage() {
       ) : null}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
       <section className="rounded-xl border border-pw-line bg-white p-5" aria-labelledby="order-edit-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -710,7 +710,7 @@ export function PurchaseOrderEditPage() {
         </div>
         {isCsvModalOpen ? <CsvImportDialog csvDelimiter={csvDelimiter} isDragging={isDraggingCsv} inputRef={csvInputRef} returnFocusRef={csvTriggerRef} preview={csvImport} onApply={applyCsvImport} onCancel={closeCsvImporter} onDelimiterChange={(delimiter) => { setCsvDelimiter(delimiter); if (csvImport && !csvImport.fileError) setCsvImport({ ...parseCsvText(csvImport.text, delimiter), fileName: csvImport.fileName, text: csvImport.text }); }} onDragEnter={() => setIsDraggingCsv(true)} onDragLeave={() => setIsDraggingCsv(false)} onDrop={handleCsvDrop} onFileChange={handleCsvFileChange} onDownloadTemplate={downloadCsvTemplate} onBrowse={() => csvInputRef.current?.click()} /> : null}
         {productLock ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">{productLockMessage(order)}</p> : null}
-        <fieldset className="mt-5 space-y-5 border-0 p-0" disabled={productLock}>
+        <fieldset className="mt-5 min-w-0 space-y-5 border-0 p-0" disabled={productLock}>
           {products.map((product, productIndex) => (
             <article className="rounded-lg border border-pw-line p-4" key={product.id}>
               <header className="flex flex-wrap items-center gap-3">
