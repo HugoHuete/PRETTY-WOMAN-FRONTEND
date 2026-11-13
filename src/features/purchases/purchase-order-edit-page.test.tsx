@@ -128,6 +128,34 @@ function OrderNavigationProbe() {
 afterEach(() => auth.request.mockReset());
 
 describe("PurchaseOrderEditPage", () => {
+  it("importa productos CSV sin reemplazar los existentes", async () => {
+    mockEditRequests();
+    const user = userEvent.setup();
+    renderEdit();
+    await user.click(await screen.findByRole("button", { name: "Importar CSV" }));
+    const dialog = screen.getByRole("dialog", { name: "Importar productos desde CSV" });
+    const file = new File(["codigoProveedor;nombre;subcategoria;presentacion;talla;cantidad;costoUnitario\nNUEVO;Blusa;Vestidos;Azul;M;2;10"], "productos.csv", { type: "text/csv" });
+    await user.upload(within(dialog).getByLabelText("Archivo CSV de productos"), file);
+    await user.click(await within(dialog).findByRole("button", { name: "Aplicar importación" }));
+    expect(screen.getByLabelText("Código proveedor del producto 1")).toHaveValue("SOHO25120");
+    expect(screen.getByLabelText("Código proveedor del producto 2")).toHaveValue("NUEVO");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith("/api/v1/orders/48", expect.objectContaining({ method: "PUT", body: expect.stringContaining('"supplierProductCode":"NUEVO"') })));
+
+  });
+
+  it("impide importar códigos que ya están en la orden", async () => {
+    mockEditRequests();
+    const user = userEvent.setup();
+    renderEdit();
+    await user.click(await screen.findByRole("button", { name: "Importar CSV" }));
+    const dialog = screen.getByRole("dialog", { name: "Importar productos desde CSV" });
+    const file = new File(["codigoProveedor;nombre;subcategoria;presentacion;talla;cantidad;costoUnitario\nSOHO25120;Blusa;Vestidos;Azul;M;2;10"], "duplicado.csv", { type: "text/csv" });
+    await user.upload(within(dialog).getByLabelText("Archivo CSV de productos"), file);
+    expect(await within(dialog).findByText(/ya existe en la orden/)).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Aplicar importación" })).toBeDisabled();
+  });
+
   it("carga los datos generales actuales y mantiene la tasa como referencia", async () => {
     mockEditRequests();
 

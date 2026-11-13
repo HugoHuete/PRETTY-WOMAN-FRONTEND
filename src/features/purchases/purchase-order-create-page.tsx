@@ -17,7 +17,7 @@ import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { SelectControl } from "../../shared/ui/select-control";
 import { convertToCordobas, useExchangeRate } from "../../shared/finance/exchange-rate-provider";
 import { type SupplierDTO } from "./purchase-order-types";
-import { parsePurchaseOrderCsv, type ImportedPurchaseOrderProduct, type PurchaseOrderCsvDelimiter, type PurchaseOrderCsvResult } from "./purchase-order-csv";
+import { readCsvText, parsePurchaseOrderCsv, type ImportedPurchaseOrderProduct, type PurchaseOrderCsvDelimiter, type PurchaseOrderCsvResult } from "./purchase-order-csv";
 
 export type CatalogOption = { id: number; name: string };
 
@@ -59,18 +59,10 @@ export type CatalogState = {
   sizes: CatalogOption[];
 };
 
-type CsvImportPreview = PurchaseOrderCsvResult & { fileName: string; text: string; fileError?: boolean };
+export type CsvImportPreview = PurchaseOrderCsvResult & { fileName: string; text: string; fileError?: boolean };
 
 const MAX_CSV_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
-async function readCsvText(file: File) {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return new TextDecoder("windows-1252").decode(bytes);
-  }
-}
 
 function today() {
   return new Intl.DateTimeFormat("en-CA").format(new Date());
@@ -753,7 +745,7 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
   </svg>;
 }
 
-function CsvImportDialog({
+export function CsvImportDialog({
   csvDelimiter,
   isDragging,
   inputRef,

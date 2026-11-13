@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type DragEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
@@ -7,12 +7,15 @@ import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { SelectControl } from "../../shared/ui/select-control";
 import {
   PresentationEditor,
+  CsvImportDialog,
+  type CsvImportPreview,
   type CatalogState,
   type FieldError,
   type PresentationDraft,
   type ProductDraft,
   type VariantDraft,
 } from "./purchase-order-create-page";
+import { readCsvText, parsePurchaseOrderCsv, type PurchaseOrderCsvDelimiter } from "./purchase-order-csv";
 import { type OrderDTO, type SupplierDTO } from "./purchase-order-types";
 
 type EditDraft = {
@@ -283,6 +286,12 @@ export function PurchaseOrderEditPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryVersion, setRetryVersion] = useState(0);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const csvTriggerRef = useRef<HTMLButtonElement>(null);
+  const [csvImport, setCsvImport] = useState<CsvImportPreview | null>(null);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvDelimiter, setCsvDelimiter] = useState<PurchaseOrderCsvDelimiter>(";");
+  const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const nextProductId = useRef(-1);
   const nextPresentationId = useRef(-1);
 
@@ -442,6 +451,47 @@ export function PurchaseOrderEditPage() {
       } : presentation),
     } : product));
     setMutationError(null);
+  };
+
+  const closeCsvImporter = () => { setCsvImport(null); setIsCsvModalOpen(false); setIsDraggingCsv(false); };
+  const parseCsvText = (text: string, delimiter: PurchaseOrderCsvDelimiter) => {
+    const result = parsePurchaseOrderCsv(text, catalog!, delimiter);
+    const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim();
+    const codes = new Set(products.map((product) => normalize(product.supplierProductCode)));
+    return { ...result, errors: [...result.errors, ...result.products.filter((product) => codes.has(normalize(product.supplierProductCode))).map((product) => `El código del proveedor "${product.supplierProductCode}" ya existe en la orden.`)] };
+  };
+  const parseCsvFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setCsvImport({ products: [], errors: ["El archivo CSV no puede superar los 5 MB."], rowCount: 0, validRowCount: 0, fileName: file.name, text: "", fileError: true });
+      return;
+    }
+    try {
+      const text = await readCsvText(file);
+      setCsvImport({ ...parseCsvText(text, csvDelimiter), fileName: file.name, text });
+    } catch {
+      setCsvImport({ products: [], errors: ["No se pudo leer el archivo CSV."], rowCount: 0, validRowCount: 0, fileName: file.name, text: "", fileError: true });
+    }
+  };
+  const handleCsvFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (file) void parseCsvFile(file);
+  };
+  const handleCsvDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault(); setIsDraggingCsv(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) void parseCsvFile(file);
+  };
+  const applyCsvImport = () => {
+    if (!csvImport || csvImport.errors.length || !csvImport.products.length) return;
+    const imported = csvImport.products.map((product) => ({ ...product, id: nextProductId.current--, subcategoryId: String(product.subcategoryId), presentations: product.presentations.map((presentation) => ({ ...presentation, id: nextPresentationId.current--, variants: presentation.variants.map((variant) => ({ ...variant, sizeId: String(variant.sizeId) })) })) }));
+    setProducts((current) => [...current, ...imported]);
+    closeCsvImporter();
+  };
+  const downloadCsvTemplate = () => {
+    const rows = [["codigoProveedor", "nombre", "subcategoria", "presentacion", "talla", "cantidad", "costoUnitario"], ["SOHO-25120", "Vestido satinado", "Vestidos", "Azul", "M", "3", "8.50"]];
+    const url = URL.createObjectURL(new Blob([rows.map((row) => row.join(csvDelimiter)).join("\n") + "\n"], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "plantilla-productos-orden.csv"; link.click(); URL.revokeObjectURL(url);
   };
 
   const addProduct = () => {
@@ -656,8 +706,9 @@ export function PurchaseOrderEditPage() {
             <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-pw-muted">Detalle de la orden</p>
             <h2 id="products-edit-title" className="mt-1 text-xl font-extrabold">Productos de la orden</h2>
           </div>
-          <button className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={productLock} onClick={addProduct}>+ Agregar producto</button>
+          <div className="flex flex-wrap gap-2"><button ref={csvTriggerRef} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft disabled:opacity-50" type="button" disabled={productLock} onClick={() => { setCsvImport(null); setCsvDelimiter(";"); setIsCsvModalOpen(true); }}>Importar CSV</button><button className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-muted hover:bg-pw-brand-soft disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={productLock} onClick={addProduct}>+ Agregar producto</button></div>
         </div>
+        {isCsvModalOpen ? <CsvImportDialog csvDelimiter={csvDelimiter} isDragging={isDraggingCsv} inputRef={csvInputRef} returnFocusRef={csvTriggerRef} preview={csvImport} onApply={applyCsvImport} onCancel={closeCsvImporter} onDelimiterChange={(delimiter) => { setCsvDelimiter(delimiter); if (csvImport && !csvImport.fileError) setCsvImport({ ...parseCsvText(csvImport.text, delimiter), fileName: csvImport.fileName, text: csvImport.text }); }} onDragEnter={() => setIsDraggingCsv(true)} onDragLeave={() => setIsDraggingCsv(false)} onDrop={handleCsvDrop} onFileChange={handleCsvFileChange} onDownloadTemplate={downloadCsvTemplate} onBrowse={() => csvInputRef.current?.click()} /> : null}
         {productLock ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">{productLockMessage(order)}</p> : null}
         <fieldset className="mt-5 space-y-5 border-0 p-0" disabled={productLock}>
           {products.map((product, productIndex) => (

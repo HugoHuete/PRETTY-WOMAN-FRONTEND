@@ -243,3 +243,12 @@ export function parsePurchaseOrderCsv(
 
   return { products, errors, rowCount: rows.length - 1, validRowCount };
 }
+
+export async function readCsvText(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
