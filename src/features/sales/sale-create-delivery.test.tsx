@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { SaleCreatePage } from './sale-create-page';
 
-const api = vi.hoisted(() => ({ createSale: vi.fn().mockResolvedValue(1), getSalePaymentTerminals: vi.fn().mockResolvedValue([]), getSaleMunicipalities: vi.fn().mockResolvedValue([{ id: 1, name: 'Managua', departmentName: 'Managua' }]), getSaleDeliveryAgencies: vi.fn().mockResolvedValue([{ id: 2, name: 'Agencia prueba', enabled: true }]) }));
+const api = vi.hoisted(() => ({ createSale: vi.fn().mockResolvedValue(1), getSalePaymentTerminals: vi.fn().mockResolvedValue([]), getSaleMunicipalities: vi.fn().mockResolvedValue([{ id: 1, name: 'Managua', departmentName: 'Managua' }]), getSaleDeliveryAgencies: vi.fn().mockResolvedValue([{ id: 2, name: 'Agencia prueba', enabled: true }]), createSaleClient: vi.fn().mockResolvedValue(12), getSaleClient: vi.fn().mockResolvedValue({ id: 12, name: 'Ana', phone: '12345678' }), getSaleClients: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 1, totalCount: 0 }), updateSaleClient: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./sales-api', () => api);
 vi.mock('../auth/auth-provider', () => ({ useAuth: () => ({ request: requestMock }) }));
 const requestMock = vi.hoisted(() => vi.fn());
@@ -10,14 +10,95 @@ vi.mock('react-router-dom', async (importOriginal) => ({ ...await importOriginal
 vi.mock('../../shared/layout/page-actions-context', () => ({ usePageActions: () => ({ setHeading: vi.fn() }) }));
 vi.mock('../../shared/ui/toast-context', () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 vi.mock('../../shared/finance/exchange-rate-provider', () => ({ useExchangeRate: () => ({ storeRate: 36 }) }));
-vi.mock('./sale-client-create-dialog', () => ({ SaleClientCreateDialog: () => null }));
-vi.mock('./sale-client-picker', () => ({ SaleClientPicker: () => null }));
+vi.mock('./sale-client-picker', () => ({ SaleClientPicker: ({ selectedClient }: { selectedClient: { name: string } | null }) => <div>{selectedClient?.name}</div> }));
 vi.mock('./sale-global-discount-dialog', () => ({ SaleGlobalDiscountDialog: () => null }));
 vi.mock('./sale-initial-payment', () => ({ SaleInitialPayment: () => null }));
 vi.mock('./sale-product-lines', () => ({ SaleProductLines: () => null }));
 vi.mock('./sale-product-picker', () => ({ SaleProductPicker: ({ onAdd }: { onAdd: (item: unknown) => void }) => <button type="button" onClick={() => onAdd({ product: { name: 'Prenda', code: 10 }, variant: { id: 4, sizeName: 'M', availableQuantity: 2, salePrice: 100, discountedSalePrice: null, discountCampaignId: null }, presentationName: 'Azul', presentationVariants: [] })}>Prenda de prueba</button> }));
 
 describe('crear venta con envío', () => {
+  it('descarta la selección de clienta al cancelar el envío', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    expect(screen.queryByRole('button', { name: 'Crear clienta' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Canal de venta' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Canal de venta' })).getByRole('option', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    let dialog = screen.getByRole('dialog', { name: 'Crear envío' });
+    fireEvent.change(within(dialog).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(dialog).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Crear clienta' }));
+    await within(dialog).findByText('Ana');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    dialog = screen.getByRole('dialog', { name: 'Crear envío' });
+    expect(within(dialog).queryByText('Ana')).not.toBeInTheDocument();
+  });
+
+  it('resalta clientas bloqueadas y permite crear si solo coincide el nombre', async () => {
+    const blocked = { id: 25, name: 'Ana', phone: '87654321', isBlocked: true, blockedReason: 'Cuenta bloqueada' };
+    api.getSaleClients.mockImplementationOnce(async () => ({ items: [blocked], page: 1, totalPages: 1, totalCount: 1 }));
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Canal de venta' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Canal de venta' })).getByRole('option', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    const delivery = screen.getByRole('dialog', { name: 'Crear envío' });
+    fireEvent.change(within(delivery).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(delivery).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.click(within(delivery).getByRole('button', { name: 'Crear clienta' }));
+    const matches = await screen.findByRole('dialog', { name: 'Coincidencias de clientas' });
+    expect(within(matches).getByText('Bloqueada')).toBeVisible();
+    expect(within(matches).getByRole('button', { name: 'Seleccionar' })).toBeDisabled();
+    fireEvent.click(within(matches).getByRole('button', { name: 'Crear clienta nueva' }));
+    expect(await within(delivery).findByText('Ana')).toBeVisible();
+  });
+
+  it('impide crear si coincide un usuario de Instagram', async () => {
+    const existing = { id: 26, name: 'Otra clienta', instagram: 'ana' };
+    api.getSaleClients.mockImplementation(async (_request, query) => ({ items: query.instagramUser ? [existing] : [], page: 1, totalPages: 1, totalCount: query.instagramUser ? 1 : 0 }));
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Canal de venta' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Canal de venta' })).getByRole('option', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    const delivery = screen.getByRole('dialog', { name: 'Crear envío' });
+    fireEvent.change(within(delivery).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(delivery).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.change(within(delivery).getByLabelText('Usuario de Instagram (opcional)'), { target: { value: 'ana' } });
+    fireEvent.click(within(delivery).getByRole('button', { name: 'Crear clienta' }));
+    const matches = await screen.findByRole('dialog', { name: 'Coincidencias de clientas' });
+    expect(within(matches).queryByRole('button', { name: 'Crear clienta nueva' })).not.toBeInTheDocument();
+    api.getSaleClients.mockReset().mockResolvedValue({ items: [], page: 1, totalPages: 1, totalCount: 0 });
+  });
+
+  it('busca coincidencias y actualiza solo los campos marcados', async () => {
+    const existing = { id: 22, name: 'Ana anterior', phone: '12345678', address: 'Dirección anterior', isFriend: true, comments: 'Conservar nota' };
+    api.getSaleClients.mockResolvedValueOnce({ items: [existing], page: 1, totalPages: 1, totalCount: 1 });
+    api.getSaleClient.mockResolvedValueOnce(existing);
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Canal de venta' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Canal de venta' })).getByRole('option', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    const dialog = screen.getByRole('dialog', { name: 'Crear envío' });
+    fireEvent.change(within(dialog).getByLabelText('Nombre *'), { target: { value: 'Ana nueva' } });
+    fireEvent.change(within(dialog).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.change(within(dialog).getByLabelText('Dirección (opcional)'), { target: { value: 'Dirección nueva' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Crear clienta' }));
+    const matches = await screen.findByRole('dialog', { name: 'Coincidencias de clientas' });
+    fireEvent.click(within(matches).getByRole('button', { name: 'Seleccionar' }));
+    fireEvent.click(within(matches).getByRole('checkbox', { name: /Dirección/ }));
+    fireEvent.click(within(matches).getByRole('button', { name: 'Usar esta clienta' }));
+    await waitFor(() => expect(api.updateSaleClient).toHaveBeenCalledWith(requestMock, 22, expect.objectContaining({ name: 'Ana anterior', phoneNumber: '12345678', address: 'Dirección nueva', isFriend: true, comments: 'Conservar nota' })));
+    expect(api.getSaleClients).toHaveBeenCalledWith(requestMock, expect.objectContaining({ name: 'Ana nueva', phoneNumber: '12345678' }));
+    expect(within(dialog).getByText('Ana anterior')).toBeVisible();
+  });
+
   it('envía los datos del envío y la fecha junto con la venta', async () => {
     HTMLDialogElement.prototype.showModal = function () { this.open = true; };
     HTMLDialogElement.prototype.close = function () { this.open = false; };
@@ -27,6 +108,11 @@ describe('crear venta con envío', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Prenda de prueba' }));
     fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
     const dialog = screen.getByRole('dialog', { name: 'Crear envío' });
+    fireEvent.change(within(dialog).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(dialog).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Crear clienta' }));
+    await within(dialog).findByText('Ana');
+    expect(within(dialog).getByText('Ana')).toBeVisible();
     await within(dialog).findByRole('button', { name: 'Agencia de envío' });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Agencia de envío' })).toBeEnabled());
     fireEvent.change(within(dialog).getByLabelText('Código del envío'), { target: { value: 'ENV-1' } });
@@ -39,6 +125,6 @@ describe('crear venta con envío', () => {
     expect(screen.getByText('Envío cobrado')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Fecha de venta'), { target: { value: '2026-07-04' } });
     fireEvent.click(screen.getByRole('button', { name: 'Registrar venta' }));
-    await waitFor(() => expect(api.createSale).toHaveBeenCalledWith(requestMock, expect.objectContaining({ saleDate: '2026-07-04T18:00:00.000Z', delivery: { code: 'ENV-1', deliveryAgencyId: 2, municipalityId: 1, shippingChargedToClient: 50 } })));
+    await waitFor(() => expect(api.createSale).toHaveBeenCalledWith(requestMock, expect.objectContaining({ clientId: 12, saleDate: '2026-07-04T18:00:00.000Z', delivery: { code: 'ENV-1', deliveryAgencyId: 2, municipalityId: 1, shippingChargedToClient: 50 } })));
   });
 });

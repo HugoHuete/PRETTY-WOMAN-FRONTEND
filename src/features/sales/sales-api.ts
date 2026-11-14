@@ -143,6 +143,14 @@ export async function createSaleClient(request: AuthRequest, payload: CreateSale
   });
 }
 
+export async function updateSaleClient(request: AuthRequest, id: number, payload: CreateSaleClientPayload & { isFriend: boolean; comments?: string | null }) {
+  return requestJson<void>(request, `/api/v1/clients/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getSaleClient(request: AuthRequest, id: number) {
   const client = await requestJson<ClientResponse>(request, `/api/v1/clients/${id}`);
   return normalizeClient(client);

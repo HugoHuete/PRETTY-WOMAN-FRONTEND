@@ -7,9 +7,7 @@ import { useToast } from "../../shared/ui/toast-context";
 import { LoadingButton } from "../../shared/ui/loading-button";
 import { SelectControl } from "../../shared/ui/select-control";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
-import { SaleClientCreateDialog } from "./sale-client-create-dialog";
 import { SaleDeliveryCreateDialog } from "./sale-delivery-create-dialog";
-import { SaleClientPicker } from "./sale-client-picker";
 import { SaleGlobalDiscountDialog } from "./sale-global-discount-dialog";
 import { SaleInitialPayment } from "./sale-initial-payment";
 import { SaleProductLines } from "./sale-product-lines";
@@ -83,6 +81,7 @@ export function SaleCreatePage() {
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [deliveryRetry, setDeliveryRetry] = useState(0);
   const [client, setClient] = useState<SaleClient | null>(null);
+  const [deliveryClient, setDeliveryClient] = useState<SaleClient | null>(null);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");
   const [payments, setPayments] = useState<CreateSalePaymentPayload[]>([]);
@@ -90,7 +89,6 @@ export function SaleCreatePage() {
   const [terminalError, setTerminalError] = useState<string | null>(null);
   const [terminalLoading, setTerminalLoading] = useState(true);
   const [terminalRetry, setTerminalRetry] = useState(0);
-  const [createClientOpen, setCreateClientOpen] = useState(false);
   const [globalDiscountOpen, setGlobalDiscountOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -456,14 +454,6 @@ export function SaleCreatePage() {
                   ]}
                 />
               </label>
-              <div>
-                <h3 className="mb-1.5 text-xs font-extrabold text-pw-muted">Clienta <span className="font-medium">(opcional)</span></h3>
-                <SaleClientPicker
-                  selectedClient={client}
-                  onSelect={setClient}
-                  onCreateClient={() => setCreateClientOpen(true)}
-                />
-              </div>
             </div>
           </section>
 
@@ -496,8 +486,8 @@ export function SaleCreatePage() {
           </section>
 
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">Envío <span className="font-medium text-pw-muted">(opcional)</span></h2><p className="mt-1 text-sm text-pw-muted">{channel === "1" ? "Selecciona un canal distinto de tienda física para agregar un envío." : "Agrega los datos de entrega para registrar el envío junto con la venta."}</p></div><button type="button" disabled={channel === "1"} onClick={() => setDeliveryOpen(true)} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{delivery ? "Editar envío" : "Agregar envío"}</button></div>
-            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => setDelivery(null)} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">Envío <span className="font-medium text-pw-muted">(opcional)</span></h2><p className="mt-1 text-sm text-pw-muted">{channel === "1" ? "Selecciona un canal distinto de tienda física para agregar un envío." : "Agrega los datos de entrega para registrar el envío junto con la venta."}</p></div><button type="button" disabled={channel === "1"} onClick={() => { setDeliveryClient(client); setDeliveryOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{delivery ? "Editar envío" : "Agregar envío"}</button></div>
+            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => { setDelivery(null); setClient(null); }} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
           </section>
 
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-comments-heading">
@@ -583,15 +573,7 @@ export function SaleCreatePage() {
         </aside>
       </div>
 
-      {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); return true; }} /> : null}
-      <SaleClientCreateDialog
-        open={createClientOpen}
-        onClose={() => setCreateClientOpen(false)}
-        onCreated={(next) => {
-          setClient(next);
-          setCreateClientOpen(false);
-        }}
-      />
+      {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} clientSelection={{ client: deliveryClient, onSelect: setDeliveryClient }} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); setClient(deliveryClient); return true; }} /> : null}
       <SaleGlobalDiscountDialog
         open={globalDiscountOpen}
         lines={saleLines}
