@@ -38,7 +38,7 @@ describe("FinanceMovementCreateDialog", () => {
     expect(screen.queryByText("Los movimientos de ventas, compras y préstamos se registran desde sus propios módulos.")).not.toBeInTheDocument();
   });
 
-  it("submits the selected calendar date as a local-midnight timestamp", async () => {
+  it("submits the selected calendar date with the current time", async () => {
     const user = userEvent.setup();
     request.mockResolvedValue(new Response(null, { status: 201 }));
     const { onSaved } = renderDialog();
@@ -54,8 +54,15 @@ describe("FinanceMovementCreateDialog", () => {
     const [, init] = request.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toMatchObject({
       description: "Aporte inicial",
-      movementDate: new Date("2026-10-11T00:00:00").toISOString(),
+      movementDate: expect.any(String),
     });
+    const date = new Date(JSON.parse(String(init.body)).movementDate);
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Managua", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
+    const timeFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Managua", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    const now = Date.now();
+    const possibleTimes = [timeFormatter.format(new Date(now)), timeFormatter.format(new Date(now - 60_000))];
+    expect(parts).toContain("11/10/2026");
+    expect(possibleTimes.some((time) => parts.includes(time))).toBe(true);
     expect(onSaved).toHaveBeenCalledOnce();
   });
 });

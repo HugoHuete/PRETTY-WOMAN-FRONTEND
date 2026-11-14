@@ -1,3 +1,4 @@
+import { dateWithCurrentManaguaTime } from "../../shared/date/current-time";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { SelectControl, type SelectOption } from "../../shared/ui/select-control";
 import {
@@ -37,7 +38,7 @@ function getLocalDateInputValue(value: string) {
 
 function movementTimestampForDate(dateValue: string, movement?: FinancialMovement) {
   if (!dateValue) return undefined;
-  if (!movement) return new Date(`${dateValue}T00:00:00`).toISOString();
+  if (!movement) return dateWithCurrentManaguaTime(dateValue);
   if (dateValue === getLocalDateInputValue(movement.movementDate)) return movement.movementDate;
 
   const originalDate = new Date(movement.movementDate);

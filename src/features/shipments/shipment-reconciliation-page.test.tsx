@@ -118,9 +118,14 @@ describe("shipment reconciliation page", () => {
     const postRequest = auth.request.mock.calls.find(([path]) => path === "/api/v1/deliveryagencyreconciliations");
     const payload = JSON.parse(postRequest?.[1]?.body as string) as {
       deliveryAgencyId: number;
+      reconciliationDate: string;
       deliveries: { saleDeliveryId: number; amountCollectedNio: number }[];
       postSaleDeliveries: { postSaleDeliveryId: number; amountCollectedNio: number; shippingPaidToAgency: number }[];
     };
+    const actualTime = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Managua", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(payload.reconciliationDate));
+    const timeFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Managua", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    const now = Date.now();
+    expect([timeFormatter.format(new Date(now)), timeFormatter.format(new Date(now - 60_000))]).toContain(actualTime);
     expect(payload.deliveryAgencyId).toBe(1);
     expect(payload.deliveries).toEqual([expect.objectContaining({ saleDeliveryId: 7, amountCollectedNio: 400 })]);
     expect(payload.postSaleDeliveries).toEqual([

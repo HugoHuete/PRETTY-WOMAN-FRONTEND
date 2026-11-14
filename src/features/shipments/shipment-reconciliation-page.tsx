@@ -1,3 +1,4 @@
+import { dateWithCurrentManaguaTime } from "../../shared/date/current-time";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -361,7 +362,7 @@ export function ShipmentReconciliationPage() {
     setSaveError(null);
     const payload: CreateShipmentReconciliationPayload = {
       deliveryAgencyId: Number(deliveryAgencyId),
-      reconciliationDate: reconciliationDate ? new Date(`${reconciliationDate}T12:00:00-06:00`).toISOString() : undefined,
+      reconciliationDate: reconciliationDate ? dateWithCurrentManaguaTime(reconciliationDate) : undefined,
       settlementExchangeRate: settlementRate,
       comments: comments.trim() || undefined,
       deliveries: selectedDeliveries.map((delivery) => {
