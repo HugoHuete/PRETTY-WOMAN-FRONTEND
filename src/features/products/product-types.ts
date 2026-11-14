@@ -78,6 +78,7 @@ export type PaginatedProducts = {
 export type ProductFilters = {
   page: number;
   pageSize: number;
+  codeDescending?: boolean;
   availability: string;
   code: string;
   categoryId: string;
@@ -107,6 +108,7 @@ export function buildProductsPath(filters: ProductFilters): string {
   if (filters.categoryId.trim()) params.set("categoryId", filters.categoryId.trim());
   if (filters.subcategoryId.trim()) params.set("subcategoryId", filters.subcategoryId.trim());
   if (filters.sizeId.trim()) params.set("sizeId", filters.sizeId.trim());
+  if (filters.codeDescending) params.set("codeDescending", "true");
 
   return `/api/v1/products?${params.toString()}`;
 }

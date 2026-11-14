@@ -128,6 +128,42 @@ describe("buildProductsPath", () => {
 });
 
 describe("ProductsPage", () => {
+  it("conserva el foco del orden durante la carga", async () => {
+    let resolveSorted: (response: Response) => void = () => {};
+    auth.request.mockImplementation((path: string) => {
+      if (path.includes("codeDescending=true")) return new Promise<Response>((resolve) => { resolveSorted = resolve; });
+      if (path.startsWith("/api/v1/products?")) return jsonResponse(paginated());
+      if (["/api/v1/categories", "/api/v1/sizes", "/api/v1/subcategories"].includes(path)) return jsonResponse([]);
+      throw new Error("Unexpected request: " + path);
+    });
+    renderProducts();
+    const user = userEvent.setup();
+    const order = await screen.findByRole("button", { name: "Ordenar código" });
+    await user.click(order);
+    within(screen.getByRole("listbox", { name: "Ordenar código" })).getByRole("option", { name: "Código: mayor a menor" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40&availability=1&codeDescending=true"));
+    expect(order).toHaveFocus();
+    resolveSorted(await jsonResponse(paginated()));
+    await waitFor(() => expect(order).toHaveFocus());
+  });
+
+  it("cambia el orden de codigo y conserva los filtros", async () => {
+    auth.request.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/products?")) return jsonResponse(paginated());
+      if (["/api/v1/categories", "/api/v1/sizes", "/api/v1/subcategories"].includes(path)) return jsonResponse([]);
+      throw new Error("Unexpected request: " + path);
+    });
+    renderProducts();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Ordenar código" }));
+    await user.click(within(screen.getByRole("listbox", { name: "Ordenar código" })).getByRole("option", { name: "Código: mayor a menor" }));
+    await waitFor(() => expect(auth.request).toHaveBeenCalledWith("/api/v1/products?page=1&pageSize=40&availability=1&codeDescending=true"));
+    await user.click(await screen.findByRole("button", { name: "Ordenar código" }));
+    await user.click(within(screen.getByRole("listbox", { name: "Ordenar código" })).getByRole("option", { name: "Código: menor a mayor" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ordenar código" })).toHaveTextContent("Código: menor a mayor"));
+  });
+
   it("renders a product with presentation count and stock totals", async () => {
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
@@ -397,7 +433,13 @@ describe("ProductsPage", () => {
     const user = userEvent.setup();
     const group = await screen.findByRole("button", { name: "Agrupar por" });
     expect(group).toHaveTextContent("Presentación");
-    expect(screen.getByRole("article", { name: "Producto Coral" })).toBeVisible();
+    expect(within(screen.getByRole("article", { name: "Producto Coral" })).getByRole("heading", { name: "1042 - C$1,250.00" })).toBeVisible();
+    expect(within(screen.getByRole("article", { name: "Producto Coral" })).getByText("Coral")).toBeVisible();
+    const imageButton = within(screen.getByRole("article", { name: "Producto Coral" })).getByRole("button", { name: "Ver variantes de Coral" });
+    imageButton.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("dialog", { name: "Variantes de Coral" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Cerrar variantes" }));
     await user.click(group);
     await user.click(within(screen.getByRole("listbox", { name: "Agrupar por" })).getByRole("option", { name: "Producto" }));
     expect(screen.getByRole("article", { name: "Producto Vestido satinado" })).toBeVisible();
@@ -417,6 +459,7 @@ describe("ProductsPage", () => {
     await user.click(await screen.findByRole("button", { name: "Agrupar por" }));
     await user.click(within(screen.getByRole("listbox", { name: "Agrupar por" })).getByRole("option", { name: "Presentación" }));
     const card = screen.getByRole("article", { name: "Producto Vestido satinado · 1042" });
+    expect(within(card).getByRole("heading", { name: "1042 - C$1,250.00" })).toBeVisible();
     expect(within(card).queryByText("Sin nombre")).not.toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Ver variantes de Vestido satinado · 1042" })).toBeVisible();
   });
@@ -551,7 +594,7 @@ describe("ProductsPage", () => {
 
     expect(screen.getByText("Coral")).toBeVisible();
     expect(screen.getByText("Negro")).toBeVisible();
-    await user.click(screen.getAllByRole("button", { name: "Ver variantes de Negro" }).find((button) => button.textContent === "Ver variantes")!);
+    await user.click(screen.getByRole("button", { name: "Ver variantes de Negro" }));
 
     const dialog = screen.getByRole("dialog", { name: "Variantes de Negro" });
     expect(within(dialog).getByRole("heading", { name: "Variantes de Negro" })).toHaveClass("truncate", "whitespace-nowrap");
