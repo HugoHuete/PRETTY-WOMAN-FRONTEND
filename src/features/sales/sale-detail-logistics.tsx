@@ -196,7 +196,7 @@ function DeliveryCard({ sale, delivery, isAdmin, busy, onAction, onEdit }: { sal
     {delivery.deliveryStatusId === 1 && !canSend ? <p className="mt-2 text-xs text-pw-muted">Para despachar, los productos y el costo de envío deben estar pagados.</p> : null}
   </article>;
 }
-export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliveryAgencies, deliveryCatalogLoading, deliveryCatalogError, onRetryDeliveryCatalogs, onDeliveryAction, onEditDelivery, onCreateDelivery }: {
+export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliveryAgencies, deliveryCatalogLoading, deliveryCatalogError, onRetryDeliveryCatalogs, onDeliveryAction, onEditDelivery, onCreateDelivery, onCompletePickup, pickupError }: {
   sale: SaleDetail;
   isAdmin: boolean;
   busy: boolean;
@@ -208,20 +208,30 @@ export function SaleDetailLogistics({ sale, isAdmin, busy, municipalities, deliv
   onDeliveryAction: (deliveryId: number, action: SaleDeliveryAction) => Promise<boolean>;
   onEditDelivery: (deliveryId: number, payload: PatchSaleDeliveryPayload) => Promise<boolean>;
   onCreateDelivery: (payload: CreateSaleDeliveryPayload) => Promise<boolean>;
+  onCompletePickup: () => Promise<boolean>;
+  pickupError?: string | null;
 }) {
   const local = sale.saleChannelId === 1;
   const [addingDelivery, setAddingDelivery] = useState(false);
+  const [confirmPickup, setConfirmPickup] = useState(false);
+  const [pickupAttemptFailed, setPickupAttemptFailed] = useState(false);
+  const pickupDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const element = pickupDialog.current; if (confirmPickup) element?.showModal(); return () => element?.close(); }, [confirmPickup]);
   const orderedDeliveries = [...sale.deliveries].sort((first, second) => {
     const byCreatedDate = Date.parse(second.createdAt) - Date.parse(first.createdAt);
     return Number.isNaN(byCreatedDate) || byCreatedDate === 0 ? second.id - first.id : byCreatedDate;
   });
   const hasActiveDelivery = sale.deliveries.some((delivery) => [1, 4, 6].includes(delivery.deliveryStatusId));
   const canCreateDelivery = !local && [1, 2, 3].includes(sale.saleStatusId) && !hasActiveDelivery;
+  const showPickup = !local && [1, 2, 3].includes(sale.saleStatusId);
+  const pickupReason = sale.salePaymentStatusId !== 3 ? "Debes pagar completamente la venta antes del retiro." : hasActiveDelivery ? "Finaliza o cancela el envío activo antes del retiro." : sale.selectionHolds.some((hold) => hold.productHoldStatusId === 1) ? "Resuelve las prendas pendientes de selección antes del retiro." : null;
   return <>
     <section className="rounded-2xl border border-pw-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sale-delivery-title">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-title" className="text-base font-extrabold">Entrega</h2></div>{canCreateDelivery ? <button type="button" disabled={busy} onClick={() => setAddingDelivery(true)} className="min-h-9 rounded-lg border border-pw-brand px-3 text-xs font-bold text-pw-brand-deep">Crear envío</button> : null}</header>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="sale-delivery-title" className="text-base font-extrabold">Entrega</h2><div className="flex flex-wrap items-center gap-2">{showPickup ? <button type="button" disabled={busy || Boolean(pickupReason)} onClick={() => { setPickupAttemptFailed(false); setConfirmPickup(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">Registrar retiro en tienda</button> : null}{canCreateDelivery ? <button type="button" disabled={busy} onClick={() => setAddingDelivery(true)} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">Crear envío</button> : null}</div></header>
+      {showPickup && pickupReason ? <p className="mb-4 text-xs text-pw-muted">{pickupReason}</p> : null}
       {local ? <p className="rounded-xl bg-pw-canvas p-4 text-sm text-pw-muted">Esta venta se retira en la tienda y no requiere envío.</p> : orderedDeliveries.length ? <div className="space-y-3">{orderedDeliveries.map((delivery) => <DeliveryCard key={delivery.id} sale={sale} delivery={delivery} isAdmin={isAdmin} busy={busy} onAction={onDeliveryAction} onEdit={onEditDelivery} />)}</div> : <p className="rounded-xl border border-dashed border-pw-line py-7 text-center text-sm text-pw-muted">Todavía no se ha creado una entrega.</p>}
     </section>
+    {confirmPickup ? createPortal(<dialog ref={pickupDialog} aria-labelledby="pickup-title" onCancel={(event) => { event.preventDefault(); if (!busy) setConfirmPickup(false); }} className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-pw-line bg-white p-5 text-pw-ink shadow-2xl backdrop:bg-black/50"><h2 id="pickup-title" className="text-lg font-extrabold">Confirmar retiro en tienda</h2><p className="mt-2 text-sm text-pw-muted">Confirma que se entregaron las prendas. La venta se marcará como completada.</p>{pickupAttemptFailed && pickupError ? <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{pickupError}</p> : null}<div className="mt-5 flex justify-end gap-2"><button type="button" disabled={busy} onClick={() => setConfirmPickup(false)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Volver</button><LoadingButton type="button" isLoading={busy} onClick={() => void onCompletePickup().then((success) => { if (success) setConfirmPickup(false); else setPickupAttemptFailed(true); })} className="min-h-10 text-sm">Confirmar retiro</LoadingButton></div></dialog>, document.body) : null}
     {addingDelivery && canCreateDelivery ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={deliveryAgencies} loading={deliveryCatalogLoading} error={deliveryCatalogError} busy={busy} clientId={sale.clientId} onRetryCatalogs={onRetryDeliveryCatalogs} onClose={() => setAddingDelivery(false)} onSave={onCreateDelivery} /> : null}
   </>;
 }

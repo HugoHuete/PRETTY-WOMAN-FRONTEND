@@ -359,6 +359,7 @@ function PaymentDialogContent({ editing, initialDraft, drafts, editingIndex, est
                 : calculation
                   ? money.format(coversAvailableBalance ? calculation.change : projectedRemainingBalance)
                   : money.format(projectedRemainingBalance)}
+              {!exceedsAvailableBalance && !coversAvailableBalance && storeRate && storeRate > 0 ? <span className="block text-right text-sm font-semibold text-pw-muted">US${(projectedRemainingBalance / (Math.round(storeRate * 10000) / 10000)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> : null}
             </dd>
           </div>
         </dl>

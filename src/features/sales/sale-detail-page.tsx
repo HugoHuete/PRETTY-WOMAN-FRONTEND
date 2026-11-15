@@ -4,7 +4,7 @@ import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
 import { useToast } from "../../shared/ui/toast-context";
 import { EmptyState, ErrorState, LoadingState } from "../../shared/ui/screen-state";
-import { ApiRequestError, cancelSale, addSalePayment, createSaleDelivery, refundSalePayment, updateSalePayment, getSale, getSaleDeliveryAgencies, getSaleMunicipalities, getSaleClient, getSalePaymentTerminals, getSaleProductCatalog, patchSaleHeader, replaceSaleProducts, runSaleDeliveryAction, resolveSaleSelectionHold, returnSaleSelectionHold, undoSaleSelectionHoldResolution, updateSaleDelivery, addSaleSelectionHolds } from "./sales-api";
+import { ApiRequestError, cancelSale, completeStorePickup, addSalePayment, createSaleDelivery, refundSalePayment, updateSalePayment, getSale, getSaleDeliveryAgencies, getSaleMunicipalities, getSaleClient, getSalePaymentTerminals, getSaleProductCatalog, patchSaleHeader, replaceSaleProducts, runSaleDeliveryAction, resolveSaleSelectionHold, returnSaleSelectionHold, undoSaleSelectionHoldResolution, updateSaleDelivery, addSaleSelectionHolds } from "./sales-api";
 import { SaleDetailClient } from "./sale-detail-client";
 import { SaleDetailOverview } from "./sale-detail-overview";
 import { SaleDetailProducts } from "./sale-detail-products";
@@ -164,6 +164,7 @@ export function SaleDetailPage() {
   const refundPayment = (movementId: number, payload: RefundSalePaymentMovementPayload) => runMutation(() => refundSalePayment(request, id, movementId, payload), "Reembolso registrado.");
   const deliveryAction = (deliveryId: number, action: "send" | "delivered-pending-selection" | "complete" | "fail" | "cancel") => runMutation(() => runSaleDeliveryAction(request, id, deliveryId, action), "Estado de entrega actualizado.");
   const editDelivery = (deliveryId: number, payload: PatchSaleDeliveryPayload) => runMutation(() => updateSaleDelivery(request, id, deliveryId, payload), "Envío actualizado.");
+  const completePickup = () => runMutation(() => completeStorePickup(request, id), "Retiro en tienda registrado.");
   const addDelivery = (payload: CreateSaleDeliveryPayload) => runMutation(() => createSaleDelivery(request, id, payload), "Envío creado.");
   const addHold = (payload: CreateSaleSelectionProductPayload[]) => runMutation(() => addSaleSelectionHolds(request, id, payload), "Prenda apartada para selección.");
   const resolveHold = (holdId: number, selected: boolean) => runMutation(() => resolveSaleSelectionHold(request, id, holdId, { selected, ...(selected ? { discountAmount: 0, discountSourceId: 1 } : {}) }), "Selección actualizada.");
@@ -183,7 +184,7 @@ export function SaleDetailPage() {
           <SaleDetailProducts sale={sale} products={products} isAdmin={isAdmin} busy={busy} onSave={saveProducts} />
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
-          <SaleDetailLogistics sale={sale} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} />
+          <SaleDetailLogistics sale={sale} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onCompletePickup={completePickup} pickupError={mutationError} />
           <SaleDetailPostSale key={sale.id} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
         <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onCreateClient={(created) => saveClient(created)} /></aside>

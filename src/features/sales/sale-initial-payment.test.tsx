@@ -12,7 +12,11 @@ describe('pago inicial con envío', () => {
     render(<SaleInitialPayment estimatedBalance={100} shippingBalance={50} exchangeRate={36} terminals={[]} terminalLoading={false} terminalError={null} onRetryTerminals={() => {}} onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Agregar pago' }));
     const dialog = screen.getByRole('dialog', { name: 'Agregar pago' });
+    expect(within(dialog).getByText('US$4.17')).toBeVisible();
+    fireEvent.change(within(dialog).getByLabelText('Monto recibido'), { target: { value: '36' } });
+    expect(within(dialog).getByText('US$3.17')).toBeVisible();
     fireEvent.change(within(dialog).getByLabelText('Monto recibido'), { target: { value: '150' } });
+    expect(within(dialog).queryByText('US$3.17')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Agregar pago' }));
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ productAmount: 100, shippingAmount: 50, changeGivenNio: 0 })]));
   });

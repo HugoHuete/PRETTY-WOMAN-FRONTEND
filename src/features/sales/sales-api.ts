@@ -190,6 +190,9 @@ async function sendSaleCommand(request: AuthRequest, path: string, method: strin
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
+export function completeStorePickup(request: AuthRequest, id: number) {
+  return sendSaleCommand(request, `/api/v1/sales/${id}/complete-store-pickup`, "POST");
+}
 export function cancelSale(request: AuthRequest, id: number) {
   return sendSaleCommand(request, `/api/v1/sales/${id}/cancel`, "POST");
 }

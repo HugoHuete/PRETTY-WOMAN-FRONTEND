@@ -462,7 +462,6 @@ export function SaleCreatePage() {
             <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 id="sale-products-heading" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2>
-                {channel === "1" ? <p className="mt-1 text-xs text-pw-muted">La selección de prendas está disponible para ventas con envío.</p> : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -539,7 +538,10 @@ export function SaleCreatePage() {
               {delivery ? <div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-semibold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div> : null}
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
                 <dt className="font-extrabold text-pw-ink">Total estimado</dt>
-                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(total + (delivery?.shippingChargedToClient ?? 0))}</dd>
+                <dd className="text-right font-extrabold tabular-nums text-pw-ink">
+                  <span className="block">{money.format(total + (delivery?.shippingChargedToClient ?? 0))}</span>
+                  {storeRate && storeRate > 0 ? <span className="block text-sm font-semibold text-pw-muted">US${((total + (delivery?.shippingChargedToClient ?? 0)) / (Math.round(storeRate * 10000) / 10000)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> : <span className="block text-xs font-medium text-pw-muted">Tasa de cambio no disponible</span>}
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
                 <dt className="font-bold text-pw-ink">Saldo estimado</dt>

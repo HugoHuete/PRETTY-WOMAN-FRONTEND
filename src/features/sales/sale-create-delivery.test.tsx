@@ -123,6 +123,7 @@ describe('crear venta con envío', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Crear envío' })).not.toBeInTheDocument());
     expect(api.createSale).not.toHaveBeenCalled();
     expect(screen.getByText('Envío cobrado')).toBeVisible();
+    expect(screen.getByText('US$4.17')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Fecha de venta'), { target: { value: '2026-07-04' } });
     fireEvent.click(screen.getByRole('button', { name: 'Registrar venta' }));
     await waitFor(() => expect(api.createSale).toHaveBeenCalledWith(requestMock, expect.objectContaining({ clientId: 12, saleDate: '2026-07-04T18:00:00.000Z', delivery: { code: 'ENV-1', deliveryAgencyId: 2, municipalityId: 1, shippingChargedToClient: 50 } })));
