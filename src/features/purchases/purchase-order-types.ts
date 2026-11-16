@@ -112,6 +112,7 @@ export type OrderProductVariantDTO = {
 };
 
 export type OrderProductPresentationDTO = {
+  primaryImageUrl?: string | null;
   id: number;
   name: string | null;
   sortOrder: number;
@@ -119,6 +120,7 @@ export type OrderProductPresentationDTO = {
 };
 
 export type OrderProductDTO = {
+  primaryImageUrl?: string | null;
   id: number;
   supplierProductCode: string;
   code: number;

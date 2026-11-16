@@ -134,6 +134,35 @@ afterEach(() => {
 });
 
 describe("PurchaseOrderReceivePage", () => {
+  it("muestra la imagen de cada producto y abre la galería durante la recepción", async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    const product = { ...orderFixture.products[0], primaryImageUrl: "/vestido.webp" };
+    mockReceiveRequests({ order: { ...orderFixture, products: [product] } });
+    renderReceive();
+    fireEvent.click(await screen.findByRole("button", { name: "Ver imágenes de Vestido satinado" }));
+    const gallery = screen.getByRole("dialog", { name: "Imágenes de Vestido satinado" });
+    expect(within(gallery).getByRole("img")).toHaveAttribute("src", "/vestido.webp");
+    fireEvent.click(within(gallery).getByRole("button", { name: "Cerrar imágenes" }));
+    expect(screen.queryByRole("dialog", { name: "Imágenes de Vestido satinado" })).not.toBeInTheDocument();
+    expect(auth.request.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("completa las cantidades pendientes sin guardar la recepción", async () => {
+    const size = orderFixture.products[0].presentations[0].sizes[0];
+    const order = { ...orderFixture, products: [{ ...orderFixture.products[0], presentations: [{ ...orderFixture.products[0].presentations[0], sizes: [size, { ...size, id: 302, sizeName: "L", quantity: 2, receivedQuantity: 2 }] }] }] };
+    mockReceiveRequests({ order });
+    renderReceive();
+    const first = await screen.findByLabelText("Cantidad recibida de " + variantLabel());
+    const second = screen.getByLabelText("Cantidad recibida de Vestido satinado - Azul - L");
+    fireEvent.change(first, { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Completar cantidades pendientes" }));
+    expect(first).toHaveValue(3);
+    expect(second).toHaveValue(0);
+    expect(auth.request.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+    expect(screen.queryByRole("dialog", { name: "Confirmar recepción" })).not.toBeInTheDocument();
+  });
+
   it("carga la orden y muestra las cantidades iniciales", async () => {
     mockReceiveRequests();
 

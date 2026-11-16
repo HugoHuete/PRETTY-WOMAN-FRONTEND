@@ -10,6 +10,7 @@ import {
   LoadingState,
   PermissionDeniedState,
 } from "../../shared/ui/screen-state";
+import { OrderProductImages } from "./purchase-order-product-images";
 import { SelectControl } from "../../shared/ui/select-control";
 import {
   formatCordobas,
@@ -1062,7 +1063,9 @@ export function PurchaseOrderDetailPage() {
                   aria-label={`Presentaciones de ${product.name}`}
                   className="overflow-hidden rounded-lg border border-pw-line"
                 >
-                  <div className="space-y-1 bg-pw-brand-soft px-4 py-3">
+                  <div className="flex items-center gap-3 bg-pw-brand-soft px-4 py-3">
+                    <OrderProductImages product={product} />
+                    <div className="min-w-0 space-y-1">
                     <p
                       className="truncate text-sm text-pw-ink"
                       title={`Código proveedor: ${product.supplierProductCode}`}
@@ -1079,6 +1082,7 @@ export function PurchaseOrderDetailPage() {
                       <span className="font-medium text-pw-muted">Nombre:</span>{" "}
                       <span className="font-normal text-pw-ink">{product.name}</span>
                     </p>
+                    </div>
                   </div>
                   {rows.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-pw-muted">

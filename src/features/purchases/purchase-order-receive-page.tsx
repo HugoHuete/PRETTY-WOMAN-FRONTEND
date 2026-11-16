@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
+import { OrderProductImages } from "./purchase-order-product-images";
 import { ConfirmDialog } from "../../shared/ui/confirm-dialog";
 import { LoadingButton } from "../../shared/ui/loading-button";
 import { ErrorState, LoadingState, PermissionDeniedState } from "../../shared/ui/screen-state";
@@ -487,16 +488,22 @@ export function PurchaseOrderReceivePage() {
                 <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-pw-muted">Inventario</p>
                 <h2 id="receive-products-title" className="mt-1 text-xl font-extrabold">Productos recibidos</h2>
               </div>
+              <button type="button" disabled={isSubmitting || !lines.some((line) => line.pendingQuantity > 0)} onClick={() => { setLines((current) => current.map((line) => ({ ...line, quantity: String(line.pendingQuantity) }))); clearMutationError(); }} className="min-h-11 rounded-lg border border-pw-brand px-4 text-sm font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft disabled:opacity-50">Completar cantidades pendientes</button>
             </div>
             <div className="mt-5 space-y-4">
-              {productGroups.map((group) => (
+              {productGroups.map((group) => {
+                const product = order.products.find((item) => item.id === group.productId);
+                return (
                 <section className="overflow-hidden rounded-lg border border-pw-line" key={group.productId} aria-labelledby={`receive-product-${group.productId}`}>
-                  <header className="border-b border-pw-line bg-pw-brand-soft/40 px-3 py-3">
+                  <header className="flex items-center gap-3 border-b border-pw-line bg-pw-brand-soft/40 px-3 py-3">
+                    {product ? <OrderProductImages product={product} /> : null}
+                    <div className="min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-pw-muted">Código proveedor</p>
                       <p className="break-words text-sm font-extrabold text-pw-brand-deep">{group.supplierProductCode ?? "Sin código"}</p>
                     </div>
                     <h3 id={`receive-product-${group.productId}`} className="mt-1 break-words text-xs font-semibold text-pw-muted">{group.productName}</h3>
+                    </div>
                   </header>
                   <div className="overflow-x-auto">
                     <table aria-label={`Tallas a recibir de ${group.productName}`} className="min-w-[1040px] w-full border-collapse text-sm">
@@ -559,7 +566,7 @@ export function PurchaseOrderReceivePage() {
                     </table>
                   </div>
                 </section>
-              ))}
+              ); })}
             </div>
           </section>
 
