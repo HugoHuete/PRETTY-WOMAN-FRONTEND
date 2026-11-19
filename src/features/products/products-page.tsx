@@ -25,7 +25,23 @@ function fromParams(params: URLSearchParams): ProductFilters {
 async function detail(response: Response, fallback: string) { try { const body = await response.json() as { detail?: string; title?: string }; return body.detail ?? body.title ?? fallback; } catch { return fallback; } }
 function query(filters: ProductFilters) { return buildProductsPath(filters).slice("/api/v1/products?".length); }
 function text(value: string | null | undefined, fallback = "Sin nombre") { return value?.trim() || fallback; }
-function price(product: ProductDTO) { const values = product.presentations.flatMap((p) => p.sizes.map((s) => s.discountedSalePrice ?? s.salePrice)); return values.length ? formatProductPrice(Math.min(...values)) : "Sin precio"; }
+function lowestPrice(product: ProductDTO) {
+  let lowest: { current: number; regular: number } | undefined;
+  for (const presentation of product.presentations) {
+    for (const size of presentation.sizes) {
+      const current = size.discountedSalePrice ?? size.salePrice;
+      if (!lowest || current < lowest.current || (current === lowest.current && size.salePrice < lowest.regular)) {
+        lowest = { current, regular: size.salePrice };
+      }
+    }
+  }
+  return lowest;
+}
+
+function price(product: ProductDTO) {
+  const lowest = lowestPrice(product);
+  return lowest ? formatProductPrice(lowest.current) : "Sin precio";
+}
 function imageFor(product: ProductDTO, cache: Record<number, ProductImageDTO[]>) { return product.presentations.flatMap((p) => cache[p.id] ?? []).find((image) => image.isPrimary)?.thumbnailUrl ?? product.primaryImageUrl ?? product.presentations[0]?.primaryImageUrl ?? null; }
 
 export function ProductsPage() {
@@ -136,8 +152,18 @@ function ProductGrid({ products, group, cache, onVariants }: { products: Product
   return <section aria-label="Catálogo en cuadrícula" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">{items.map(({ product, presentation }) => <GridCard key={presentation ? String(product.id) + "-" + presentation.id : product.id} product={product} presentation={presentation} cache={cache} onVariants={onVariants} />)}</section>;
 }
 function GridCard({ product, presentation, cache, onVariants }: { product: ProductDTO; presentation?: Presentation; cache: Record<number, ProductImageDTO[]>; onVariants: (product: ProductDTO, presentation?: Presentation) => void }) {
-  const presentationName = presentation?.name?.trim(); const accessibleTitle = presentation ? presentationName || `${product.name} · ${product.code}` : product.name; const item = presentation ? { ...product, presentations: [presentation] } : product; const title = `${product.code} - ${price(item)}`; const image = presentation ? cache[presentation.id]?.find((current) => current.isPrimary)?.thumbnailUrl ?? presentation.primaryImageUrl : imageFor(product, cache); const availableSizes = [...new Set(item.presentations.flatMap((current) => current.sizes.filter((size) => size.availableQuantity > 0).map((size) => size.sizeName?.trim() || "Talla única")))];
-  return <article aria-label={"Producto " + accessibleTitle} className="group overflow-hidden rounded-xl border border-pw-line bg-white shadow-sm"><button type="button" aria-label={"Ver variantes de " + accessibleTitle} className="relative block aspect-[4/5] w-full cursor-pointer bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-pw-brand" onClick={() => onVariants(product, presentation)}><ProductImage src={image} alt={"Imagen de " + accessibleTitle} className="h-full w-full rounded-none" fit="contain" /><span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[0.6875rem] font-extrabold text-pw-brand-deep shadow-sm">{productAvailabilityLabel(productAvailability(item))}</span></button><div className="p-2.5"><h3 className="truncate text-sm font-extrabold text-pw-ink" title={title}>{product.code} <span className="text-pw-muted">-</span> <span className="text-pw-brand-deep">{price(item)}</span></h3>{presentationName ? <p className="truncate text-xs text-pw-ink" title={presentationName}>{presentationName}</p> : null}<p className="mt-0.5 text-xs font-medium leading-snug text-pw-ink" title={availableSizes.join(" · ")}>Tallas: {availableSizes.length ? availableSizes.join(" · ") : "Sin disponibilidad"}</p></div></article>;
+  const presentationName = presentation?.name?.trim(); const accessibleTitle = presentation ? presentationName || `${product.name} · ${product.code}` : product.name; const item = presentation ? { ...product, presentations: [presentation] } : product; const lowest = lowestPrice(item);
+  const displayPrice = lowest ? formatProductPrice(lowest.current) : "Sin precio";
+  const regularPrice = lowest && lowest.regular > lowest.current ? formatProductPrice(lowest.regular) : null;
+  const title = `${product.code} - ${displayPrice}`; const image = presentation ? cache[presentation.id]?.find((current) => current.isPrimary)?.thumbnailUrl ?? presentation.primaryImageUrl : imageFor(product, cache); const availableSizes = [...new Set(item.presentations.flatMap((current) => current.sizes.filter((size) => size.availableQuantity > 0).map((size) => size.sizeName?.trim() || "Talla única")))];
+  return <article aria-label={"Producto " + accessibleTitle} className="group overflow-hidden rounded-xl border border-pw-line bg-white shadow-sm"><button type="button" aria-label={"Ver variantes de " + accessibleTitle} className="relative block aspect-[4/5] w-full cursor-pointer bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-pw-brand" onClick={() => onVariants(product, presentation)}><ProductImage src={image} alt={"Imagen de " + accessibleTitle} className="h-full w-full rounded-none" fit="contain" /><span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[0.6875rem] font-extrabold text-pw-brand-deep shadow-sm">{productAvailabilityLabel(productAvailability(item))}</span></button><div className="p-2.5"><h3 className="truncate text-sm font-extrabold text-pw-ink" title={title}>{product.code} <span className="text-pw-muted">-</span> <span className="text-pw-brand-deep">{displayPrice}</span></h3>
+      {regularPrice ? (
+        <p className="text-xs text-pw-muted">
+          <span className="sr-only">Precio normal: </span>
+          <s>{regularPrice}</s>
+        </p>
+      ) : null}
+      {presentationName ? <p className="truncate text-xs text-pw-ink" title={presentationName}>{presentationName}</p> : null}<p className="mt-0.5 text-xs font-medium leading-snug text-pw-ink" title={availableSizes.join(" · ")}>Tallas: {availableSizes.length ? availableSizes.join(" · ") : "Sin disponibilidad"}</p></div></article>;
 }
 function VariantsDialog({ item, onClose, onMovement }: { item: { product: ProductDTO; presentation?: Presentation }; onClose: () => void; onMovement: (product: ProductDTO, presentation: Presentation, variant: Variant) => void }) {
   const ref = useRef<HTMLButtonElement>(null); const presentations = item.presentation ? [item.presentation] : item.product.presentations; useEffect(() => ref.current?.focus(), []);

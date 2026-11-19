@@ -447,6 +447,31 @@ describe("ProductsPage", () => {
     expect(screen.getByText("Vestido satinado")).toBeVisible();
   });
 
+  it("muestra tachado el precio normal de la variante que determina el precio de la tarjeta", async () => {
+    const original = product();
+    const presentation = original.presentations[0];
+    const variant = presentation.sizes[0];
+    const discounted = product({
+      presentations: [{
+        ...presentation,
+        sizes: [
+          { ...variant, salePrice: 400 },
+          { ...variant, id: variant.id + 1, salePrice: 440, discountedSalePrice: 352 },
+        ],
+      }],
+    });
+    auth.request.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/products?")) return jsonResponse(paginated([discounted]));
+      return jsonResponse([]);
+    });
+
+    renderProducts();
+
+    const card = await screen.findByRole("article", { name: "Producto Coral" });
+    expect(within(card).getByRole("heading", { name: "1042 - C$352.00" })).toBeVisible();
+    expect(card.querySelector("s")).toHaveTextContent("C$440.00");
+  });
+
   it("omite el nombre vacío de una presentación en la cuadrícula", async () => {
     const original = product();
     auth.request.mockImplementation((path: string) => {
