@@ -120,11 +120,86 @@ function formatDate(value: string | null) {
       }).format(date);
 }
 
-function formatUsd(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
+function formatEstimatedDelivery(warehouseDate: string | null) {
+  if (!warehouseDate) return '';
+
+  const date = new Date(`${warehouseDate.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return '';
+
+  date.setUTCDate(date.getUTCDate() + 21);
+  return formatDate(date.toISOString());
+}
+
+function trackingUrl(baseUrl: string | null | undefined, trackingNumber: string) {
+  const base = baseUrl?.trim();
+  if (!base) return null;
+
+  try {
+    const url = new URL(base);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    const trackingUrl = new URL(url.href + encodeURIComponent(trackingNumber));
+    return trackingUrl.origin === url.origin ? trackingUrl.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function TrackingNumberCell({ baseUrl, trackingNumber }: {
+  baseUrl: string | null | undefined;
+  trackingNumber: string;
+}) {
+  const href = trackingUrl(baseUrl, trackingNumber);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+
+  async function copyTrackingNumber() {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        {href ? (
+          <a
+            className="min-w-0 wrap-anywhere font-extrabold text-pw-brand-deep underline underline-offset-4"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {trackingNumber}
+          </a>
+        ) : (
+          <strong className="min-w-0 wrap-anywhere">{trackingNumber}</strong>
+        )}
+        <button
+          type="button"
+          className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-pw-brand"
+          onClick={copyTrackingNumber}
+          aria-label={`Copiar tracking ${trackingNumber}`}
+          title={copyStatus === 'copied' ? 'Copiado' : 'Copiar tracking'}
+        >
+          <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {copyStatus === 'copied' ? (
+              <path d="m5 12 4 4L19 6" />
+            ) : (
+              <>
+                <rect x="8" y="8" width="12" height="12" rx="2" />
+                <path d="M16 4H6a2 2 0 0 0-2 2v10" />
+              </>
+            )}
+          </svg>
+        </button>
+      </div>
+      <span role="status" className={copyStatus === 'error' ? 'text-xs text-red-700' : 'sr-only'}>
+        {copyStatus === 'copied' ? 'Número de tracking copiado.' :
+          copyStatus === 'error' ? 'No se pudo copiar el número.' : ''}
+      </span>
+    </>
+  );
 }
 
 async function problemDetail(
@@ -638,6 +713,11 @@ type TrackingTableProps = {
   onFormChange: (form: TrackingFormValues) => void;
 };
 
+const trackingColumns = [
+  'Fecha de compra', 'Empresa de envío', 'Tracking', 'Estado',
+  'Fecha de envío', 'Fecha de bodega', 'Fecha entrega estimada', 'Acciones',
+];
+
 function TrackingTable({
   items,
   editingTrackingId,
@@ -664,7 +744,7 @@ function TrackingTable({
         </caption>
         <thead className="bg-pw-brand-soft text-[0.9375rem] uppercase tracking-[0.045em] text-pw-ink">
           <tr>
-            {['Tracking', 'Orden', 'Empresa de envío', 'Peso', 'Envío (USD)', 'Estado', 'Fechas', 'Acciones'].map(
+            {trackingColumns.map(
               (header) => (
                 <th
                   className="border-b border-pw-brand/35 px-4 py-3.5 font-extrabold"
@@ -681,18 +761,13 @@ function TrackingTable({
           {items.map((item) => (
             <Fragment key={item.id}>
               <tr className="hover:bg-pw-brand-soft/40">
-                <td className="max-w-52 px-4 py-3">
-                  <strong className="block truncate" title={item.trackingNumber}>
-                    {item.trackingNumber}
-                  </strong>
-                </td>
                 <td className="px-4 py-3">
+                  <span className="block whitespace-nowrap">{formatDate(item.purchaseDate ?? null)}</span>
                   <Link
-                    className="font-extrabold text-pw-brand-deep underline underline-offset-4"
+                    className="mt-1 inline-block text-xs font-semibold text-pw-brand-deep underline underline-offset-4"
                     to={`/purchases/orders/${item.orderId}`}
-                    aria-label={`OC-${item.orderId}`}
                   >
-                    OC-{item.orderId}
+                    {item.orderId} - {item.supplierName ?? 'Sin registrar'}
                   </Link>
                 </td>
                 <td className="max-w-44 px-4 py-3">
@@ -700,49 +775,51 @@ function TrackingTable({
                     {item.shippingCompanyName ?? 'Sin empresa'}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3">{item.weight.toFixed(2)}</td>
-                <td className="whitespace-nowrap px-4 py-3">{formatUsd(item.shippingCost)}</td>
+                <td className="min-w-72 px-4 py-3">
+                  <TrackingNumberCell
+                    key={item.trackingNumber}
+                    baseUrl={shippingCompanies.find((company) => company.id === item.shippingCompanyId)?.url}
+                    trackingNumber={item.trackingNumber}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge tone={item.productReceiptId ? 'success' : 'warning'}>
                     {item.productReceiptId ? 'Recibido' : 'Pendiente'}
                   </StatusBadge>
                 </td>
-                <td className="min-w-44 px-4 py-3 text-sm">
-                  <dl className="grid gap-1">
-                    <div>
-                      <dt className="inline text-xs font-extrabold text-pw-muted">Envío: </dt>
-                      <dd className="inline">{formatDate(item.supplierShipmentDate)}</dd>
-                    </div>
-                    <div>
-                      <dt className="inline text-xs font-extrabold text-pw-muted">Bodega: </dt>
-                      <dd className="inline">{formatDate(item.warehouseDeliveryDate)}</dd>
-                    </div>
-                  </dl>
-                </td>
+                <td className="whitespace-nowrap px-4 py-3">{formatDate(item.supplierShipmentDate)}</td>
+                <td className="whitespace-nowrap px-4 py-3">{formatDate(item.warehouseDeliveryDate)}</td>
+                <td className="whitespace-nowrap px-4 py-3">{formatEstimatedDelivery(item.warehouseDeliveryDate)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
                     <button
-                      className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-semibold text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep"
+                      className="inline-grid size-9 shrink-0 place-items-center rounded-lg border bg-white border-pw-line text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-pw-brand"
+                      title="Editar tracking"
                       type="button"
                       aria-label={`Editar tracking ${item.trackingNumber}`}
                       onClick={() => onEdit(item)}
                     >
-                      Editar
+                      <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m15 5 4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15z" />
+                      </svg>
                     </button>
                     <button
-                      className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-700 hover:bg-red-50"
+                      className="inline-grid size-9 shrink-0 place-items-center rounded-lg border bg-white border-red-200 text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-pw-brand"
+                      title="Eliminar tracking"
                       type="button"
                       aria-label={`Eliminar tracking ${item.trackingNumber}`}
                       onClick={() => onDeleteRequest(item.id)}
                     >
-                      Eliminar
+                      <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" />
+                      </svg>
                     </button>
                   </div>
                 </td>
               </tr>
               {editingTrackingId === item.id ? (
                 <tr>
-                  <td className="bg-pw-canvas px-4 py-4" colSpan={8}>
+                  <td className="bg-pw-canvas px-4 py-4" colSpan={trackingColumns.length}>
                     <form
                       aria-label={`Editar tracking ${item.trackingNumber}`}
                       className="rounded-lg border border-pw-line bg-white p-4"
@@ -849,7 +926,7 @@ function TrackingTable({
               ) : null}
               {pendingDeleteTrackingId === item.id ? (
                 <tr>
-                  <td className="bg-red-50 px-4 py-3" colSpan={8}>
+                  <td className="bg-red-50 px-4 py-3" colSpan={trackingColumns.length}>
                     <div
                       className="flex flex-wrap items-center justify-between gap-3 text-sm text-red-700"
                       role="alert"

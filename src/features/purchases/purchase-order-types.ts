@@ -50,6 +50,8 @@ export type ShippingCompanyDTO = {
 export type OrderTrackingNumberDTO = {
   id: number;
   orderId: number;
+  purchaseDate?: string | null;
+  supplierName?: string | null;
   shippingCompanyId: number;
   trackingNumber: string;
   supplierShipmentDate: string | null;

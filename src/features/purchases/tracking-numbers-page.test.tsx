@@ -23,7 +23,7 @@ vi.mock('../auth/auth-provider', () => ({
 const shippingCompanyFixture = {
   id: 2,
   name: 'Cargo Express',
-  url: null,
+  url: 'https://carrier.example/track?number=',
 } satisfies ShippingCompanyDTO;
 
 const statusFixture = {
@@ -34,6 +34,8 @@ const statusFixture = {
 const trackingFixture = {
   id: 22,
   orderId: 48,
+  purchaseDate: '2026-07-12T00:00:00Z',
+  supplierName: 'SOHO',
   shippingCompanyId: 2,
   trackingNumber: 'SOHO-782190',
   supplierShipmentDate: '2026-07-15T00:00:00Z',
@@ -107,9 +109,15 @@ describe('tracking number helpers', () => {
 });
 
 describe('TrackingNumbersPage', () => {
-  it('loads filters and renders tracking details with an order link', async () => {
+  it.each([
+    { warehouseDeliveryDate: null, warehouseLabel: 'Sin registrar', estimate: '' },
+    { warehouseDeliveryDate: '2026-10-29T00:00:00Z', warehouseLabel: '29/10/2026', estimate: '19/11/2026' },
+  ])('renders and copies tracking with warehouse date $warehouseDeliveryDate', async ({ warehouseDeliveryDate, warehouseLabel, estimate }) => {
+    const user = userEvent.setup();
     auth.request.mockImplementation((url: string) => {
-      if (url.startsWith('/api/v1/tracking-numbers')) return jsonResponse(pageFixture);
+      if (url.startsWith('/api/v1/tracking-numbers')) {
+        return jsonResponse({ ...pageFixture, items: [{ ...trackingFixture, warehouseDeliveryDate }] });
+      }
       if (url === '/api/v1/shipping-companies') return jsonResponse([shippingCompanyFixture]);
       if (url === '/api/v1/orders/statuses') return jsonResponse([statusFixture]);
       return jsonResponse([]);
@@ -117,10 +125,25 @@ describe('TrackingNumbersPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('SOHO-782190')).toBeVisible();
+    const trackingLink = await screen.findByRole('link', { name: 'SOHO-782190' });
+    expect(trackingLink).toHaveAttribute('href', 'https://carrier.example/track?number=SOHO-782190');
+    expect(trackingLink).toHaveAttribute('target', '_blank');
+    await user.click(screen.getByRole('button', { name: 'Copiar tracking SOHO-782190' }));
+    expect(await navigator.clipboard.readText()).toBe('SOHO-782190');
+    expect(screen.getByText('Número de tracking copiado.')).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader').slice(0, 3).map((header) => header.textContent))
+      .toEqual(['Fecha de compra', 'Empresa de envío', 'Tracking']);
+    const purchaseCell = screen.getAllByRole('cell')[0];
+    expect(Array.from(purchaseCell.children, (item) => item.textContent))
+      .toEqual(['12/07/2026', '48 - SOHO']);
     expect(screen.getAllByText('Cargo Express')).toHaveLength(2);
     expect(screen.getByText('Pendiente')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'OC-48' })).toHaveAttribute(
+    expect(screen.queryByRole('columnheader', { name: 'Orden' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader').slice(-4).map((header) => header.textContent))
+      .toEqual(['Fecha de envío', 'Fecha de bodega', 'Fecha entrega estimada', 'Acciones']);
+    expect(screen.getAllByRole('cell').slice(-4, -1).map((cell) => cell.textContent))
+      .toEqual(['15/07/2026', warehouseLabel, estimate]);
+    expect(screen.getByRole('link', { name: '48 - SOHO' })).toHaveAttribute(
       'href',
       '/purchases/orders/48',
     );
