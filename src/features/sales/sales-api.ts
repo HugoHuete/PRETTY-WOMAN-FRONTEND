@@ -151,6 +151,14 @@ export async function updateSaleClient(request: AuthRequest, id: number, payload
   });
 }
 
+export function blockSaleClient(request: AuthRequest, id: number, blockedReason: string) {
+  return requestJson<void>(request, `/api/v1/clients/${id}/block`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ blockedReason }),
+  });
+}
+
 export async function getSaleClient(request: AuthRequest, id: number) {
   const client = await requestJson<ClientResponse>(request, `/api/v1/clients/${id}`);
   return normalizeClient(client);

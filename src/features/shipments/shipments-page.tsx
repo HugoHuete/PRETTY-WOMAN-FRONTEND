@@ -16,6 +16,8 @@ import { buildShipmentSearchParams, defaultShipmentFilters, readShipmentFilters 
 import { getShipmentAgencies, getShipments } from "./shipments-api";
 import type { Shipment, ShipmentAction } from "./shipments-types";
 
+import { ShipmentClientDialog } from "./shipment-client-dialog";
+
 const currency = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
 const statusLabels: Record<number, string> = {
   1: "Pendiente de despacho",
@@ -74,6 +76,7 @@ function openSelectionHolds(sale: SaleDetail) {
 
 export function ShipmentsPage() {
   const { request, session } = useAuth();
+  const [clientId, setClientId] = useState<number | null>(null);
   const { setAction, setHeading } = usePageActions();
   const { showToast } = useToast();
   const [params, setParams] = useSearchParams();
@@ -304,7 +307,11 @@ export function ShipmentsPage() {
                 {result.items.map((shipment) => <tr key={shipment.id} className={shipment.id === selected?.id ? "bg-pw-brand-soft/60" : "hover:bg-pw-canvas/70"}>
                   <td className="px-3 py-3"><button type="button" aria-pressed={shipment.id === selected?.id} onClick={() => setSelectedId(shipment.id)} className="rounded-sm text-left font-extrabold text-pw-brand-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-pw-brand focus-visible:outline-offset-2">{shipment.code}</button><small className="mt-1 block text-xs text-pw-muted">{date(shipment.createdAt)}</small></td>
                   <td className="px-3 py-3"><Link to={`/sales/${shipment.saleId}`} className="font-bold text-pw-ink underline decoration-pw-brand/50 underline-offset-4 hover:decoration-pw-brand focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-pw-brand focus-visible:outline-offset-2">Venta #{shipment.saleId}</Link></td>
-                  <td className="px-3 py-3">{shipment.clientName || "Clienta no disponible"}</td>
+                  <td className="px-3 py-3">{shipment.clientId ? (
+                    <button type="button" aria-haspopup="dialog" onClick={() => setClientId(shipment.clientId)} className="min-h-10 text-left font-semibold text-pw-brand-deep underline decoration-pw-brand/50 underline-offset-4 hover:decoration-pw-brand focus-visible:outline-2 focus-visible:outline-pw-brand">
+                      {shipment.clientName || "Ver clienta"}
+                    </button>
+                  ) : shipment.clientName || "Clienta no disponible"}</td>
                   <td className="px-3 py-3"><span className="font-bold">{shipment.municipalityName || "—"}</span></td>
                   <td className="px-3 py-3">{shipment.deliveryAgencyName || "—"}</td>
                   <td className="px-3 py-3"><StatusBadge tone={statusTones[shipment.deliveryStatusId] ?? "neutral"}>{deliveryStatusName(shipment)}</StatusBadge></td>
@@ -342,6 +349,8 @@ export function ShipmentsPage() {
         </aside> : null}
       </div>
     </> : null}
+
+    {clientId !== null ? <ShipmentClientDialog key={clientId} clientId={clientId} isAdmin={isAdmin} request={request} onClose={() => setClientId(null)} /> : null}
 
     {pendingAction ? <ConfirmDialog
       open
