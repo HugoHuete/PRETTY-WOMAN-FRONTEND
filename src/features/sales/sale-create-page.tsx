@@ -1,5 +1,6 @@
 import { saleDateForApi, todayInManagua } from "./sale-date";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
@@ -7,6 +8,7 @@ import { useToast } from "../../shared/ui/toast-context";
 import { LoadingButton } from "../../shared/ui/loading-button";
 import { SelectControl } from "../../shared/ui/select-control";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
+import { SaleClientFields } from "./sale-client-fields";
 import { SaleDeliveryCreateDialog } from "./sale-delivery-create-dialog";
 import { SaleGlobalDiscountDialog } from "./sale-global-discount-dialog";
 import { SaleInitialPayment } from "./sale-initial-payment";
@@ -82,6 +84,12 @@ export function SaleCreatePage() {
   const [deliveryRetry, setDeliveryRetry] = useState(0);
   const [client, setClient] = useState<SaleClient | null>(null);
   const [deliveryClient, setDeliveryClient] = useState<SaleClient | null>(null);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientDraft, setClientDraft] = useState<SaleClient | null>(null);
+  const [clientBusy, setClientBusy] = useState(false);
+  const [, setClientDirty] = useState(false);
+  const clientDialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const element = clientDialogRef.current; if (clientDialogOpen) element?.showModal(); return () => element?.close(); }, [clientDialogOpen]);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");
   const [payments, setPayments] = useState<CreateSalePaymentPayload[]>([]);
@@ -486,7 +494,7 @@ export function SaleCreatePage() {
 
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">Envío <span className="font-medium text-pw-muted">(opcional)</span></h2><p className="mt-1 text-sm text-pw-muted">{channel === "1" ? "Selecciona un canal distinto de tienda física para agregar un envío." : "Agrega los datos de entrega para registrar el envío junto con la venta."}</p></div><button type="button" disabled={channel === "1"} onClick={() => { setDeliveryClient(client); setDeliveryOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{delivery ? "Editar envío" : "Agregar envío"}</button></div>
-            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => { setDelivery(null); setClient(null); }} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
+            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => setDelivery(null)} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
           </section>
 
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-comments-heading">
@@ -550,6 +558,12 @@ export function SaleCreatePage() {
             </dl>
           </section>
 
+          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-create-client-title">
+            <h2 id="sale-create-client-title" className="text-base font-extrabold text-pw-ink">Clienta <span className="font-medium text-pw-muted">(opcional)</span></h2>
+            {client ? <div className="mt-3 text-sm"><p className="break-words font-bold text-pw-ink">{client.name}</p><p className="mt-1 break-words text-pw-muted">{client.phone || "Sin teléfono"}</p>{client.address?.trim() ? <p className="mt-1 whitespace-pre-wrap break-words text-pw-muted">{client.address}</p> : null}</div> : <p className="mt-3 text-sm text-pw-muted">No hay clienta asociada.</p>}
+            <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setClientDraft(client); setClientDirty(false); setClientDialogOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">{client ? "Cambiar clienta" : "Buscar o crear clienta"}</button>{client ? <button type="button" onClick={() => setClient(null)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold text-pw-ink">Quitar</button> : null}</div>
+          </section>
+
           <section id="sale-payment" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-payment-heading">
             {error && errorSection === "payment" ? <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
             <div className="mb-3">
@@ -575,6 +589,11 @@ export function SaleCreatePage() {
         </aside>
       </div>
 
+      {clientDialogOpen ? createPortal(<dialog ref={clientDialogRef} aria-labelledby="sale-client-manage-title" onCancel={(event) => { event.preventDefault(); if (!clientBusy) setClientDialogOpen(false); }} className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-pw-line bg-white p-5 text-pw-ink shadow-2xl backdrop:bg-black/50">
+        <header className="mb-4 flex items-start justify-between gap-3"><h2 id="sale-client-manage-title" className="text-lg font-extrabold">Buscar o crear clienta</h2><button type="button" aria-label="Cerrar clienta" disabled={clientBusy} onClick={() => setClientDialogOpen(false)} className="grid h-10 w-10 place-items-center rounded-lg border border-pw-line text-xl">×</button></header>
+        <SaleClientFields context="venta" client={clientDraft} onSelect={(selected) => { setClientDraft(selected); if (selected) { setClient(selected); setClientDialogOpen(false); } }} onBusyChange={setClientBusy} onDirtyChange={setClientDirty} />
+        <footer className="mt-4 flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={clientBusy} onClick={() => setClientDialogOpen(false)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Cancelar</button></footer>
+      </dialog>, document.body) : null}
       {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} clientSelection={{ client: deliveryClient, onSelect: setDeliveryClient }} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); setClient(deliveryClient); return true; }} /> : null}
       <SaleGlobalDiscountDialog
         open={globalDiscountOpen}

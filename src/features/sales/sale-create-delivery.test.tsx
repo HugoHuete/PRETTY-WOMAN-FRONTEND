@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SaleCreatePage } from './sale-create-page';
 
 const api = vi.hoisted(() => ({ createSale: vi.fn().mockResolvedValue(1), getSalePaymentTerminals: vi.fn().mockResolvedValue([]), getSaleMunicipalities: vi.fn().mockResolvedValue([{ id: 1, name: 'Managua', departmentName: 'Managua' }]), getSaleDeliveryAgencies: vi.fn().mockResolvedValue([{ id: 2, name: 'Agencia prueba', enabled: true }]), createSaleClient: vi.fn().mockResolvedValue(12), getSaleClient: vi.fn().mockResolvedValue({ id: 12, name: 'Ana', phone: '12345678' }), getSaleClients: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 1, totalCount: 0 }), updateSaleClient: vi.fn().mockResolvedValue(undefined) }));
@@ -17,6 +17,70 @@ vi.mock('./sale-product-lines', () => ({ SaleProductLines: () => null }));
 vi.mock('./sale-product-picker', () => ({ SaleProductPicker: ({ onAdd }: { onAdd: (item: unknown) => void }) => <button type="button" onClick={() => onAdd({ product: { name: 'Prenda', code: 10 }, variant: { id: 4, sizeName: 'M', availableQuantity: 2, salePrice: 100, discountedSalePrice: null, discountCampaignId: null }, presentationName: 'Azul', presentationVariants: [] })}>Prenda de prueba</button> }));
 
 describe('crear venta con envío', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it('asocia una clienta a la venta sin crear un envío y la conserva al quitarlo', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar o crear clienta' }));
+    const clientDialog = screen.getByRole('dialog', { name: 'Buscar o crear clienta' });
+    fireEvent.change(within(clientDialog).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(clientDialog).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.click(within(clientDialog).getByRole('button', { name: 'Crear clienta' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscar o crear clienta' })).not.toBeInTheDocument());
+    expect(within(screen.getByRole('region', { name: 'Clienta (opcional)' })).getByText('Ana')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Canal de venta' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Canal de venta' })).getByRole('option', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Prenda de prueba' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar envío' }));
+    const delivery = screen.getByRole('dialog', { name: 'Crear envío' });
+    expect(within(delivery).getByText('Ana')).toBeVisible();
+    await waitFor(() => expect(within(delivery).getByRole('button', { name: 'Agencia de envío' })).toBeEnabled());
+    fireEvent.change(within(delivery).getByLabelText('Código del envío'), { target: { value: 'ENV-1' } });
+    fireEvent.click(within(delivery).getByRole('button', { name: 'Agencia de envío' }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: 'Agencia de envío' })).getByRole('option', { name: 'Agencia prueba' }));
+    fireEvent.click(within(delivery).getByRole('button', { name: 'Crear envío' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quitar envío' }));
+    expect(within(screen.getByRole('region', { name: 'Clienta (opcional)' })).getByText('Ana')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar venta' }));
+    await waitFor(() => expect(api.createSale).toHaveBeenCalledWith(requestMock, expect.objectContaining({ clientId: 12 })));
+  });
+
+  it('conserva el formulario de clienta al cerrar las coincidencias con Escape', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar o crear clienta' }));
+    const clientDialog = screen.getByRole('dialog', { name: 'Buscar o crear clienta' });
+    const name = within(clientDialog).getByLabelText('Nombre *');
+    fireEvent.change(name, { target: { value: 'Ana' } });
+    fireEvent.click(within(clientDialog).getByRole('button', { name: 'Buscar clienta' }));
+    const matches = await screen.findByRole('dialog', { name: 'Coincidencias de clientas' });
+    fireEvent(matches, new Event('cancel', { cancelable: true }));
+    expect(matches).not.toBeInTheDocument();
+    expect(clientDialog).toBeInTheDocument();
+    expect(name).toHaveValue('Ana');
+  });
+
+  it('asocia de inmediato una coincidencia sin cambios', async () => {
+    const existing = { id: 22, name: 'Ana', phone: '12345678' };
+    api.getSaleClients.mockResolvedValueOnce({ items: [existing], page: 1, totalPages: 1, totalCount: 1 });
+    api.getSaleClient.mockResolvedValueOnce(existing);
+    HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+    HTMLDialogElement.prototype.close = function () { this.open = false; };
+    render(<SaleCreatePage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar o crear clienta' }));
+    const clientDialog = screen.getByRole('dialog', { name: 'Buscar o crear clienta' });
+    fireEvent.change(within(clientDialog).getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+    fireEvent.change(within(clientDialog).getByLabelText('Teléfono *'), { target: { value: '12345678' } });
+    fireEvent.click(within(clientDialog).getByRole('button', { name: 'Buscar clienta' }));
+    const matches = await screen.findByRole('dialog', { name: 'Coincidencias de clientas' });
+    fireEvent.click(within(matches).getByRole('button', { name: 'Seleccionar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscar o crear clienta' })).not.toBeInTheDocument());
+    expect(within(screen.getByRole('region', { name: 'Clienta (opcional)' })).getByText('Ana')).toBeVisible();
+    expect(api.updateSaleClient).not.toHaveBeenCalled();
+  });
+
   it('descarta la selección de clienta al cancelar el envío', async () => {
     HTMLDialogElement.prototype.showModal = function () { this.open = true; };
     HTMLDialogElement.prototype.close = function () { this.open = false; };

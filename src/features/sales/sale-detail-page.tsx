@@ -148,16 +148,17 @@ export function SaleDetailPage() {
   const saveProducts = (payload: ReplaceSaleProductsPayload) => runMutation(() => replaceSaleProducts(request, id, payload), "Prendas de la venta actualizadas.");
   const saveClient = async (selected: SaleClient | null) => {
     const saved = await saveHeader({ clientId: selected?.id ?? null });
-    if (!saved) return;
+    if (!saved) return false;
     if (!selected) {
       setClient(null);
-      return;
+      return true;
     }
     try {
       setClient(await getSaleClient(request, selected.id));
     } catch {
       setClient(selected);
     }
+    return true;
   };
   const addPayment = (payload: CreateSalePaymentMovementPayload) => runMutation(() => addSalePayment(request, id, payload), "Pago registrado.");
   const updatePayment = (movementId: number, payload: UpdateSalePaymentMovementPayload) => runMutation(() => updateSalePayment(request, id, movementId, payload), "Pago corregido.");
@@ -184,10 +185,10 @@ export function SaleDetailPage() {
           <SaleDetailProducts sale={sale} products={products} isAdmin={isAdmin} busy={busy} onSave={saveProducts} />
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
-          <SaleDetailLogistics sale={sale} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onCompletePickup={completePickup} pickupError={mutationError} />
+          <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={setClient} onCompletePickup={completePickup} pickupError={mutationError} />
           <SaleDetailPostSale key={sale.id} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
-        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onCreateClient={(created) => saveClient(created)} /></aside>
+        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} /></aside>
       </div>
       {catalogLoading ? <p className="sr-only" role="status">Cargando datos de productos</p> : null}
     </> : null}
