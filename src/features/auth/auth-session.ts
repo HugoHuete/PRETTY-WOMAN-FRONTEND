@@ -1,3 +1,5 @@
+import { CatalogCache } from '../../shared/api/catalog-cache';
+
 /**
  * Estado sensible de la sesión. Se conserva en memoria y nunca se persiste
  * en localStorage o sessionStorage.
@@ -160,6 +162,7 @@ export class AuthSessionManager {
     this.sessionVersion += 1;
     this.clear(false);
   };
+  private readonly catalogCache = new CatalogCache();
   private session: AuthSession | null = null;
   private state: AuthState = { status: 'anonymous', session: null };
   private initializePromise: Promise<AuthSession | null> | null = null;
@@ -252,17 +255,30 @@ export class AuthSessionManager {
       if (!current) throw new AuthApiError(401, 'La sesión ya no es válida.');
     }
 
-    let response = await this.fetchWithSession(path, init, current);
-    if (response.status !== 401) return response;
+    const scope = this.catalogScope(current);
+    return this.catalogCache.request(path, init, scope, this.now, () =>
+      this.requestWithSession(path, init, current),
+    );
+  }
+
+  private catalogScope(session: AuthSession) {
+    return [this.apiBaseUrl, session.user.id, ...[...session.user.roles].sort()];
+  }
+
+  private async requestWithSession(path: string, init: RequestInit, current: AuthSession) {
+    const response = await this.fetchWithSession(path, init, current);
+    if (response.status !== 401) return { response, scope: this.catalogScope(current) };
 
     // Un 401 prueba que el servidor rechazó este token. Otra pestaña podría
     // tener exactamente el mismo token, aunque todavía no haya expirado, por
     // lo que aquí se fuerza el refresh y no se reutiliza una respuesta peer.
-    current = await this.refreshWithLock(this.sessionVersion, true);
-    if (!current) throw new AuthApiError(401, 'La sesión ya no es válida.');
+    const refreshed = await this.refreshWithLock(this.sessionVersion, true);
+    if (!refreshed) throw new AuthApiError(401, 'La sesión ya no es válida.');
 
-    response = await this.fetchWithSession(path, init, current);
-    return response;
+    return {
+      response: await this.fetchWithSession(path, init, refreshed),
+      scope: this.catalogScope(refreshed),
+    };
   }
 
   dispose() {

@@ -56,6 +56,103 @@ afterEach(() => {
 });
 
 describe('AuthSessionManager', () => {
+  it('comparte los catálogos concurrentes y los conserva hasta que vencen en 24 horas', async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    let now = Date.parse('2026-11-20T12:00:00Z');
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith('/auth/login')) return Response.json(session);
+      return Response.json([{ id: 1, name: 'Municipio' }]);
+    });
+    const options = {
+      apiBaseUrl: 'https://api.example.com',
+      channelFactory: () => null,
+      fetchFn,
+      now: () => now,
+    };
+    const first = new AuthSessionManager(options);
+    await first.signIn('maria.vendedora', 'contraseña');
+
+    const path = '/api/v1/municipalities';
+    const responses = await Promise.all([first.request(path), first.request(path)]);
+    for (const response of responses) {
+      expect(await response.json()).toEqual([{ id: 1, name: 'Municipio' }]);
+    }
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    await first.request(path);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+
+    const reopened = new AuthSessionManager(options);
+    await reopened.signIn('maria.vendedora', 'contraseña');
+    now += 24 * 60 * 60 * 1000 - 1;
+    expect(await (await reopened.request(path)).json()).toEqual([{ id: 1, name: 'Municipio' }]);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    now += 1;
+    await reopened.request(path);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    await first.request(path);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    first.dispose();
+    reopened.dispose();
+  });
+
+  it.each([
+    { change: 'la cuenta', user: { ...session.user, id: 'user-2' }, shouldCache: false },
+    { change: 'los roles', user: { ...session.user, roles: ['Admin'] }, shouldCache: false },
+    { change: 'solo el token', user: session.user, shouldCache: true },
+  ])('protege el catálogo compartido cuando cambia $change durante un reintento', async ({ user, shouldCache }) => {
+    const setItem = vi.fn();
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem });
+    const refreshed = { ...session, user, accessToken: 'retry-token' };
+    const items = [{ id: 1, name: 'Agencia' }];
+    let rejectOriginal!: (response: Response) => void;
+    const originalRequest = new Promise<Response>((resolve) => {
+      rejectOriginal = resolve;
+    });
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/login')) return Response.json(session);
+      if (url.endsWith('/auth/refresh')) return Response.json(refreshed);
+      const token = new Headers(init?.headers).get('Authorization');
+      return token === 'Bearer retry-token' ? Response.json(items) : originalRequest;
+    });
+    const manager = new AuthSessionManager({
+      apiBaseUrl: 'https://api.example.com',
+      channelFactory: (name) => new FakeChannel(name),
+      fetchFn,
+    });
+    const peer = new FakeChannel('auth-session');
+    await manager.signIn('maria.vendedora', 'contraseña');
+
+    const path = '/api/v1/deliveryagencies';
+    const requests = [manager.request(path), manager.request(path)];
+    const results = Promise.allSettled(requests);
+    peer.postMessage({ type: 'session-updated', session: refreshed });
+    rejectOriginal(new Response(null, { status: 401 }));
+
+    for (const result of await results) {
+      if (shouldCache) {
+        expect(result.status).toBe('fulfilled');
+        if (result.status === 'fulfilled') expect(await result.value.json()).toEqual(items);
+      } else {
+        expect(result).toEqual({
+          status: 'rejected',
+          reason: new Error('La sesión cambió durante la consulta del catálogo. Vuelve a intentarlo.'),
+        });
+      }
+    }
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+    expect(setItem).toHaveBeenCalledTimes(shouldCache ? 1 : 0);
+
+    expect(await (await manager.request(path)).json()).toEqual(items);
+    expect(fetchFn).toHaveBeenCalledTimes(shouldCache ? 4 : 5);
+    manager.dispose();
+    peer.close();
+  });
+
   it('invoca el fetch nativo con el contexto global', async () => {
     const nativeFetch = vi.fn(function (this: unknown) {
       if (this !== globalThis) throw new TypeError('Illegal invocation');
