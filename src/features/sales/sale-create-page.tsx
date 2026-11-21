@@ -1,3 +1,4 @@
+import { SaleClientEditButton } from "./sale-client-edit-button";
 import { saleDateForApi, todayInManagua } from "./sale-date";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
@@ -561,7 +562,7 @@ export function SaleCreatePage() {
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-create-client-title">
             <h2 id="sale-create-client-title" className="text-base font-extrabold text-pw-ink">Clienta <span className="font-medium text-pw-muted">(opcional)</span></h2>
             {client ? <div className="mt-3 text-sm"><p className="break-words font-bold text-pw-ink">{client.name}</p><p className="mt-1 break-words text-pw-muted">{client.phone || "Sin teléfono"}</p>{client.address?.trim() ? <p className="mt-1 whitespace-pre-wrap break-words text-pw-muted">{client.address}</p> : null}</div> : <p className="mt-3 text-sm text-pw-muted">No hay clienta asociada.</p>}
-            <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setClientDraft(client); setClientDirty(false); setClientDialogOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">{client ? "Cambiar clienta" : "Buscar o crear clienta"}</button>{client ? <button type="button" onClick={() => setClient(null)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold text-pw-ink">Quitar</button> : null}</div>
+            <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setClientDraft(client); setClientDirty(false); setClientDialogOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">{client ? "Cambiar clienta" : "Buscar o crear clienta"}</button>{client ? <SaleClientEditButton client={client} onUpdated={setClient} /> : null}{client ? <button type="button" onClick={() => setClient(null)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold text-pw-ink">Quitar</button> : null}</div>
           </section>
 
           <section id="sale-payment" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-payment-heading">
@@ -594,7 +595,7 @@ export function SaleCreatePage() {
         <SaleClientFields context="venta" client={clientDraft} onSelect={(selected) => { setClientDraft(selected); if (selected) { setClient(selected); setClientDialogOpen(false); } }} onBusyChange={setClientBusy} onDirtyChange={setClientDirty} />
         <footer className="mt-4 flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={clientBusy} onClick={() => setClientDialogOpen(false)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Cancelar</button></footer>
       </dialog>, document.body) : null}
-      {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} clientSelection={{ client: deliveryClient, onSelect: setDeliveryClient }} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); setClient(deliveryClient); return true; }} /> : null}
+      {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} clientSelection={{ client: deliveryClient, onSelect: (selected) => { setDeliveryClient(selected); if (selected) setClient((current) => current?.id === selected.id ? selected : current); } }} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); setClient(deliveryClient); return true; }} /> : null}
       <SaleGlobalDiscountDialog
         open={globalDiscountOpen}
         lines={saleLines}

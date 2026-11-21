@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-provider";
 import { usePageActions } from "../../shared/layout/page-actions-context";
@@ -40,6 +40,7 @@ export function SaleDetailPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(0);
+  const clientProfileVersion = useRef(0);
   const processedDeliveryAnchor = useRef<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -119,11 +120,27 @@ export function SaleDetailPage() {
   useEffect(() => {
     if (!sale?.clientId) { setClient(null); return undefined; }
     let active = true;
+    const version = clientProfileVersion.current;
+    const isCurrent = () => active && version === clientProfileVersion.current;
     void getSaleClient(request, sale.clientId).then((result) => {
-      if (active) setClient(result);
-    }).catch(() => { if (active) setClient({ id: sale.clientId!, name: sale.clientName ?? "Clienta", phone: null, instagram: null, messenger: null }); });
+      if (isCurrent()) setClient(result);
+    }).catch(() => { if (isCurrent()) setClient({ id: sale.clientId!, name: sale.clientName ?? "Clienta", phone: null, instagram: null, messenger: null }); });
     return () => { active = false; };
   }, [request, sale?.clientId, sale?.clientName]);
+
+  const profileClientId = sale?.id === id ? sale.clientId : null;
+  const profileScope = useMemo(() => ({ saleId: id, clientId: profileClientId }), [id, profileClientId]);
+  const activeProfileScope = useRef<typeof profileScope | null>(null);
+  useLayoutEffect(() => {
+    activeProfileScope.current = profileScope;
+    return () => { activeProfileScope.current = null; };
+  }, [profileScope]);
+
+  const refreshClientProfile = (updated: SaleClient) => {
+    if (activeProfileScope.current !== profileScope || updated.id !== profileScope.clientId) return;
+    clientProfileVersion.current += 1;
+    setClient(updated);
+  };
 
   const runMutation = async (action: () => Promise<unknown>, successTitle: string, successDetail?: string) => {
     setBusy(true);
@@ -185,10 +202,10 @@ export function SaleDetailPage() {
           <SaleDetailProducts sale={sale} products={products} isAdmin={isAdmin} busy={busy} onSave={saveProducts} />
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
-          <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={setClient} onCompletePickup={completePickup} pickupError={mutationError} />
+          <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={refreshClientProfile} onCompletePickup={completePickup} pickupError={mutationError} deliverySaveError={mutationError} />
           <SaleDetailPostSale key={sale.id} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
-        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} /></aside>
+        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onClientUpdated={refreshClientProfile} /></aside>
       </div>
       {catalogLoading ? <p className="sr-only" role="status">Cargando datos de productos</p> : null}
     </> : null}

@@ -21,6 +21,7 @@ function normalizeSearch(value: string) {
 
 type SelectControlProps = {
   id: string;
+  triggerId?: string;
   name?: string;
   value: string;
   options: SelectOption[];
@@ -36,6 +37,7 @@ type SelectControlProps = {
 
 export function SelectControl({
   id,
+  triggerId,
   name,
   value,
   options,
@@ -121,6 +123,7 @@ export function SelectControl({
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      event.preventDefault();
       close();
       triggerRef.current?.focus();
     };
@@ -248,6 +251,7 @@ export function SelectControl({
       </select>
 
       <button
+        id={triggerId}
         ref={triggerRef}
         type="button"
         className={`pw-select-trigger${!value ? " is-placeholder" : ""}`}

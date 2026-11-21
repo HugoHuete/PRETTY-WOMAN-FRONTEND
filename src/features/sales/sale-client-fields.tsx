@@ -1,10 +1,11 @@
+import { SaleClientEditButton } from "./sale-client-edit-button";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../auth/auth-provider";
 import { createSaleClient, getSaleClient, getSaleClients, updateSaleClient } from "./sales-api";
 import type { SaleClient } from "./sales-types";
 
-export function SaleClientFields({ client, onSelect, onBusyChange, onDirtyChange, context = "envío", disabled = false }: { disabled?: boolean; context?: "venta" | "envío"; client: SaleClient | null; onSelect: (client: SaleClient | null) => void; onBusyChange: (busy: boolean) => void; onDirtyChange: (dirty: boolean) => void }) {
+export function SaleClientFields({ client, onSelect, onProfileUpdated = onSelect, onBusyChange, onDirtyChange, context = "envío", disabled = false }: { disabled?: boolean; context?: "venta" | "envío"; client: SaleClient | null; onSelect: (client: SaleClient | null) => void; onProfileUpdated?: (client: SaleClient) => void; onBusyChange: (busy: boolean) => void; onDirtyChange: (dirty: boolean) => void }) {
   const { request } = useAuth();
   const clientSelection = { client, onSelect };
   const [clientValues, setClientValues] = useState({ name: "", phoneNumber: "", address: "", instagramUser: "", messengerUser: "" });
@@ -46,14 +47,15 @@ export function SaleClientFields({ client, onSelect, onBusyChange, onDirtyChange
 
   const createClient = async () => {
     if (!clientSelection || !clientValues.name.trim() || !clientValues.phoneNumber.trim()) return;
-    const id = await createSaleClient(request, {
+    const payload = {
       name: clientValues.name.trim(), phoneNumber: clientValues.phoneNumber.trim(),
       address: clientValues.address.trim() || undefined, instagramUser: clientValues.instagramUser.trim() || undefined,
       messengerUser: clientValues.messengerUser.trim() || undefined,
-    });
+    };
+    const id = await createSaleClient(request, payload);
     let client: SaleClient;
     try { client = await getSaleClient(request, id); }
-    catch { client = { id, name: clientValues.name.trim(), phone: clientValues.phoneNumber.trim() }; }
+    catch { client = { id, name: payload.name, phone: payload.phoneNumber, address: payload.address }; }
     clientSelection.onSelect(client);
     setClientValues({ name: "", phoneNumber: "", address: "", instagramUser: "", messengerUser: "" });
     setMatches(null);
@@ -91,7 +93,7 @@ export function SaleClientFields({ client, onSelect, onBusyChange, onDirtyChange
   return <>
       {clientSelection ? <section aria-labelledby="delivery-client-title" className="space-y-3 rounded-xl border border-pw-line p-3">
         <h3 id="delivery-client-title" className="text-sm font-extrabold">Clienta <span className="font-medium text-pw-muted">(opcional)</span></h3>
-        {clientSelection.client ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-pw-brand-soft p-3"><strong>{clientSelection.client.name}</strong><button type="button" disabled={disabled} onClick={() => clientSelection.onSelect(null)} className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-bold">Cambiar clienta</button></div> : null}
+        {clientSelection.client ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-pw-brand-soft p-3"><strong>{clientSelection.client.name}</strong><div className="flex flex-wrap gap-2"><SaleClientEditButton client={clientSelection.client} disabled={disabled} onUpdated={onProfileUpdated} /><button type="button" disabled={disabled} onClick={() => clientSelection.onSelect(null)} className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-bold">Cambiar clienta</button></div></div> : null}
         {!clientSelection.client ? <><div className="grid gap-3 sm:grid-cols-2">
           {([ ["name", "Nombre"], ["phoneNumber", "Teléfono"], ["instagramUser", "Usuario de Instagram"], ["messengerUser", "Usuario de Messenger"], ["address", "Dirección"] ] as const).map(([key, label]) => <label key={key} htmlFor={`delivery-client-${key}`} className={"grid gap-1 text-xs font-bold text-pw-muted " + (key === "address" ? "sm:col-span-2" : "")}>{label}{key === "name" || key === "phoneNumber" ? " *" : " (opcional)"}{key === "address" ? <textarea id={`delivery-client-${key}`} rows={2} disabled={creatingClient} value={clientValues[key]} onChange={(event) => (setMatches(null), setCandidate(null), setUpdates({}), setClientValues((current) => ({ ...current, [key]: event.target.value })))} className="rounded-lg border border-pw-line px-3 py-2 text-sm text-pw-ink" /> : <input id={`delivery-client-${key}`} disabled={creatingClient} value={clientValues[key]} onChange={(event) => (setMatches(null), setCandidate(null), setUpdates({}), setClientValues((current) => ({ ...current, [key]: event.target.value })))} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm text-pw-ink" />}</label>)}
         </div>{hasUnsavedClient ? <p className="text-xs text-pw-muted">Crea la clienta o borra sus datos antes de guardar {context === "venta" ? "la venta" : "el envío"}.</p> : null}{clientError ? <p role="alert" className="text-sm text-red-800">{clientError}</p> : null}<div className="flex flex-wrap items-center gap-2"><button type="button" disabled={creatingClient || !clientValues.name.trim() || !clientValues.phoneNumber.trim()} onClick={() => void searchClients(1, true)} className="min-h-11 rounded-lg border border-pw-brand px-4 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{creatingClient ? "Creando clienta…" : "Crear clienta"}</button><button type="button" disabled={creatingClient} onClick={() => void searchClients(1)} className="min-h-11 rounded-lg border border-pw-brand px-4 text-sm font-bold text-pw-brand-deep disabled:opacity-50">Buscar clienta</button></div></> : null}
