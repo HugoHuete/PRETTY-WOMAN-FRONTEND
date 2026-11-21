@@ -251,7 +251,7 @@ describe("ProductsPage", () => {
     await user.click(screen.getByRole("button", { name: "Ver movimientos de Coral · M" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Movimientos de inventario" });
-    expect(dialog).toHaveTextContent("12 sept 2026");
+    expect(dialog).toHaveTextContent("12/09/2026");
   });
 
   it("shows supplier code under the product and separates category columns", async () => {
@@ -490,45 +490,41 @@ describe("ProductsPage", () => {
   });
 
   it("presenta la cuadrícula como un catálogo visual compacto", async () => {
-    const user = userEvent.setup();
+    const presentation = { ...product().presentations[0], primaryImageUrl: "/images/coral.jpg" };
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) {
-        return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
+        return jsonResponse(paginated([product({ presentations: [presentation] })]));
       }
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
 
     renderProducts();
-    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
-    await screen.findByText("Vestido satinado");
-    await user.click(screen.getByRole("button", { name: /Cuadr/ }));
-
-    const catalog = screen.getByRole("region", { name: /Cat.*cuadr/ });
+    const catalog = await screen.findByRole("region", { name: /Cat.*cuadr/ });
     expect(catalog).toHaveClass("grid-cols-2", "sm:grid-cols-3", "md:grid-cols-4", "lg:grid-cols-5", "xl:grid-cols-6", "2xl:grid-cols-8");
-    expect(screen.getByRole("img", { name: "Imagen de Vestido satinado" })).toHaveClass("aspect-square");
+    const image = within(catalog).getByRole("img", { name: "Imagen de Coral" });
+    expect(image).toHaveAttribute("src", "/images/coral.jpg");
+    expect(image).toHaveClass("aspect-square", "object-contain");
   });
   it("trunca el nombre de la tarjeta a una sola línea y mantiene legible su estado", async () => {
-    const user = userEvent.setup();
     const longName = "Pañuelo cuadrado pequeño de satén de seda para la cabeza y accesorios";
+    const presentation = { ...product().presentations[0], name: longName };
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) {
-        return jsonResponse(paginated([product({ name: longName, primaryImageUrl: "/images/panuelo.jpg" })]));
+        return jsonResponse(paginated([product({ presentations: [presentation] })]));
       }
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
 
     renderProducts();
-    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
-    await screen.findByText(longName);
-    await user.click(screen.getByRole("button", { name: /Cuadr/ }));
-
-    const card = screen.getByRole("article", { name: "Producto " + longName });
-    expect(within(card).getByRole("heading", { name: "1042" })).toHaveClass("truncate");
-    expect(within(card).getByRole("heading", { name: "1042" })).not.toHaveClass("line-clamp-2");
-    expect(card).toHaveTextContent("VSAT-CRL");
-    expect(within(card).getAllByText("Disponible", { exact: true })[0]).toHaveClass("text-pw-brand-deep");
+    const card = await screen.findByRole("article", { name: "Producto " + longName });
+    const name = within(card).getByText(longName);
+    expect(name).toHaveClass("truncate");
+    expect(name).toHaveAttribute("title", longName);
+    const status = within(card).getByText("Disponible", { exact: true });
+    expect(status).toBeVisible();
+    expect(status).toHaveClass("text-pw-brand-deep");
   });
 
   it("espera a que termine de escribirse el código antes de buscar", async () => {
@@ -553,21 +549,18 @@ describe("ProductsPage", () => {
   it("expande el detalle visual usando el ancho disponible", async () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ primaryImageUrl: "/images/vestido.jpg" })]));
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
-      if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
 
     renderProducts();
-    fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
-    await screen.findByText("Vestido satinado");
-    await user.click(screen.getByRole("button", { name: /Cuadr/ }));
-    await user.click(screen.getByRole("button", { name: "Ver variantes de Vestido satinado" }));
+    await user.click(await screen.findByRole("button", { name: "Ver variantes de Coral" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Variantes de Vestido satinado" });
+    const dialog = screen.getByRole("dialog", { name: "Variantes de Coral" });
     expect(dialog).toBeVisible();
-    expect(within(dialog).getByRole("table", { name: "Variantes de Vestido satinado" })).toBeVisible();
+    expect(dialog).toHaveClass("w-full");
+    expect(within(dialog).getByRole("table", { name: "Variantes de Coral" })).toBeVisible();
   });
   it("switches to presentation grouping and renders each variant with its image", async () => {
     const user = userEvent.setup();
@@ -766,8 +759,10 @@ describe("ProductsPage", () => {
 
   it("updates the price of every product variant from the product action menu", async () => {
     const user = userEvent.setup();
+    const [coral] = product().presentations;
+    const black = { ...coral, id: 8, name: "Negro", sizes: [{ ...coral.sizes[0], id: 71 }] };
     auth.request.mockImplementation((path: string, init?: RequestInit) => {
-      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
+      if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated([product({ presentations: [coral, black] })]));
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
       if (path === "/api/v1/products/42/price" && init?.method === "PATCH") return Promise.resolve(new Response(null, { status: 204 }));
       throw new Error("Unexpected request: " + path);
@@ -775,12 +770,14 @@ describe("ProductsPage", () => {
 
     renderProducts();
     fireEvent.click(await screen.findByRole("button", { name: "Tabla" }));
-    await screen.findByText("Vestido satinado");
+    await user.click(screen.getByRole("button", { name: "Agrupar por" }));
+    await user.click(within(screen.getByRole("listbox", { name: "Agrupar por" })).getByRole("option", { name: "Producto" }));
     await user.click(screen.getByRole("button", { name: "Acciones de Vestido satinado" }));
     await user.click(screen.getByRole("menuitem", { name: "Modificar precio" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Modificar precio" });
     expect(dialog).toHaveTextContent("Producto completo");
+    expect(dialog).toHaveTextContent("Se actualizarán 2 variantes.");
     const input = within(dialog).getByRole("spinbutton", { name: "Nuevo precio" });
     await user.clear(input);
     await user.type(input, "1350");
@@ -884,9 +881,11 @@ describe("ProductsPage", () => {
     await user.click(screen.getByRole("button", { name: "Cerrar gestión de imágenes" }));
     await user.click(screen.getByRole("button", { name: /Cuadr/ }));
 
-    await user.click(screen.getByRole("button", { name: "Ver variantes de Vestido satinado" }));
-    const dialog = screen.getByRole("dialog", { name: "Variantes de Vestido satinado" });
-    expect(within(dialog).getByRole("table", { name: "Variantes de Vestido satinado" })).toBeVisible();
+    const card = screen.getByRole("article", { name: "Producto Coral" });
+    expect(within(card).getByRole("img", { name: "Imagen de Coral" })).toHaveAttribute("src", "/images/coral-thumb.webp");
+    await user.click(within(card).getByRole("button", { name: "Ver variantes de Coral" }));
+    const dialog = screen.getByRole("dialog", { name: "Variantes de Coral" });
+    expect(within(dialog).getByRole("table", { name: "Variantes de Coral" })).toBeVisible();
     const imageListRequests = auth.request.mock.calls.filter(([path]) => path === "/api/v1/products/42/images?productPresentationId=7");
     expect(imageListRequests).toHaveLength(1);
   });

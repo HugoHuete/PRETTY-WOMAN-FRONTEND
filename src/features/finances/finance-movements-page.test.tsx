@@ -9,6 +9,7 @@ import { financeMovementFiltersFromSearchParams, searchParamsFromFinanceMovement
 import { defaultFinanceMovementFilters } from "./finance-types";
 
 const auth = vi.hoisted(() => ({ request: vi.fn() }));
+const creationTime = "2026-11-20T15:24:37.000Z";
 
 vi.mock("../auth/auth-provider", () => ({
   useAuth: () => ({ request: auth.request, session: { user: { roles: ["Admin"] } } }),
@@ -39,10 +40,6 @@ function movement(overrides: Record<string, unknown> = {}) {
     comments: "Compra de temporada.",
     ...overrides,
   };
-}
-
-function localMidnightTimestamp(date: string) {
-  return new Date(`${date}T00:00:00`).toISOString();
 }
 
 function todayLocalDate() {
@@ -83,7 +80,10 @@ function renderFinanceAt(path = "/finances") {
   return render(<MemoryRouter initialEntries={[path]}><ToastProvider><PageActionsProvider><FinanceMovementsPage /><ActionHost /></PageActionsProvider></ToastProvider></MemoryRouter>);
 }
 
-afterEach(() => auth.request.mockReset());
+afterEach(() => {
+  vi.useRealTimers();
+  auth.request.mockReset();
+});
 
 describe("FinanceMovementsPage", () => {
   it("loads movement types and the initial server page", async () => {
@@ -114,8 +114,8 @@ describe("FinanceMovementsPage", () => {
 
     expect(await screen.findByText("Pago de proveedor")).toBeVisible();
     expect(auth.request).toHaveBeenCalledWith("/api/v1/finances/movements?page=1&pageSize=20&fromDate=2026-10-01&toDate=2026-10-31&financialMovementTypeId=2&movementDirectionId=2");
-    expect(screen.getByLabelText("Desde")).toHaveValue("2026-10-01");
-    expect(screen.getByLabelText("Hasta")).toHaveValue("2026-10-31");
+    expect(screen.getByLabelText("Desde")).toHaveValue("01/10/2026");
+    expect(screen.getByLabelText("Hasta")).toHaveValue("31/10/2026");
   });
 
   it("resets to page 1 when a filter changes", async () => {
@@ -124,8 +124,8 @@ describe("FinanceMovementsPage", () => {
     renderFinanceAt("/finances?page=3&pageSize=20");
 
     await screen.findByText("Pago de proveedor");
-    await user.click(screen.getByLabelText("Desde"));
-    await user.type(screen.getByLabelText("Desde"), "2026-10-01");
+    await user.type(screen.getByLabelText("Desde"), "01/10/2026");
+    await user.tab();
     await waitFor(() => expect(auth.request).toHaveBeenLastCalledWith("/api/v1/finances/movements?page=1&pageSize=20&fromDate=2026-10-01"));
   });
 
@@ -383,6 +383,7 @@ describe("FinanceMovementsPage", () => {
   });
 
   it("creates an expense with its category and refreshes the current list", async () => {
+    vi.setSystemTime(creationTime);
     const user = userEvent.setup();
     let created = false;
     auth.request.mockImplementation((path: string, init?: RequestInit) => {
@@ -414,7 +415,7 @@ describe("FinanceMovementsPage", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description: "Compra de empaques",
-        movementDate: localMidnightTimestamp("2026-10-11"),
+        movementDate: "2026-10-11T15:24:37.000Z",
         financialMovementTypeId: 44,
         expenseCategoryId: 8,
         amount: 2500,
@@ -430,6 +431,7 @@ describe("FinanceMovementsPage", () => {
   });
 
   it("requires an explicit direction for an adjustment and omits the expense category", async () => {
+    vi.setSystemTime(creationTime);
     const user = userEvent.setup();
     mockFinanceApi();
     renderFinanceAt();
@@ -453,7 +455,7 @@ describe("FinanceMovementsPage", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description: "Corrección de caja",
-        movementDate: localMidnightTimestamp(todayLocalDate()),
+        movementDate: `${todayLocalDate()}T15:24:37.000Z`,
         financialMovementTypeId: 47,
         movementDirectionId: 1,
         amount: 350,

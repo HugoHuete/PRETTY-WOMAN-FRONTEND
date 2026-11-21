@@ -318,7 +318,7 @@ describe('PurchaseOrdersPage', () => {
       : jsonResponse([]));
     renderOrders();
     const row = (await screen.findByText('OC-48')).closest('tr')!;
-    expect(within(row).getByRole('cell', { name: '12 jul 2026' })).toBeInTheDocument();
+    expect(within(row).getByRole('cell', { name: '12/07/2026' })).toBeInTheDocument();
   });
 
   it('requests orders, suppliers, and statuses using URL filters', async () => {

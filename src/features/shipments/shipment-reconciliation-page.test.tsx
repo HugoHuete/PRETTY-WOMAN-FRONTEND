@@ -77,7 +77,7 @@ describe("shipment reconciliation page", () => {
         code: "RET-09",
         clientName: "Ana Pérez",
         shippingChargedToClient: 0,
-        shippingPaidToAgency: 35,
+        shippingPaidToAgency: 0,
         amountToCollect: 0,
         createdAt: "2026-11-01T15:00:00Z",
       }, {
@@ -92,7 +92,7 @@ describe("shipment reconciliation page", () => {
         code: "EX-10",
         clientName: "Ana Pérez",
         shippingChargedToClient: 25,
-        shippingPaidToAgency: 25,
+        shippingPaidToAgency: 0,
         amountToCollect: 200,
         createdAt: "2026-11-01T16:00:00Z",
       }]);
@@ -112,6 +112,12 @@ describe("shipment reconciliation page", () => {
     expect(screen.getByRole("checkbox", { name: "Incluir envío postventa RET-09" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Incluir envío postventa EX-10" })).toBeChecked();
     expect(screen.getByLabelText("Recibido en C$")).toHaveValue(400);
+
+    const returnRow = screen.getByRole("row", { name: /RET-09/ });
+    const returnShippingPaid = within(returnRow).getByRole("spinbutton", { name: "" });
+    await user.clear(returnShippingPaid);
+    await user.type(returnShippingPaid, "35");
+
     await user.click(screen.getByRole("button", { name: "Registrar conciliación" }));
 
     await waitFor(() => expect(auth.request).toHaveBeenCalledWith("/api/v1/deliveryagencyreconciliations", expect.objectContaining({ method: "POST" })));

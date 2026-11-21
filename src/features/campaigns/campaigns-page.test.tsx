@@ -142,7 +142,7 @@ describe("CampaignsPage", () => {
     expect(await screen.findByText("Verano rosa")).toBeVisible();
     expect(screen.getByRole("link", { name: "Verano rosa" })).toHaveAttribute("href", "/discounts/campaigns/12");
     expect(screen.getByText("Activa")).toBeVisible();
-    expect(screen.getByText("20 sept 2026")).toBeVisible();
+    expect(screen.getByText("20/09/2026")).toBeVisible();
     expect(auth.request).toHaveBeenCalledWith(
       "/api/v1/discountcampaigns?page=1&pageSize=20",
     );
@@ -549,7 +549,7 @@ describe("CampaignsPage", () => {
     renderCampaigns("/discounts/campaigns/12");
 
     expect(await screen.findByRole("heading", { name: "Verano rosa" })).toBeVisible();
-    expect(screen.getByText("20 sept 2026")).toBeVisible();
+    expect(screen.getByText("20/09/2026")).toBeVisible();
     expect(screen.getByText("Activa")).toBeVisible();
     expect(screen.getByText("Código 34")).toBeVisible();
     expect(screen.getByText("Monto fijo")).toBeVisible();

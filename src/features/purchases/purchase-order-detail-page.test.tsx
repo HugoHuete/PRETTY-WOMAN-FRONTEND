@@ -205,7 +205,7 @@ describe("PurchaseOrderDetailPage", () => {
     renderDetail();
 
     const section = await screen.findByRole("region", { name: "Recepciones" });
-    expect(within(section).getByText("14 jul 2026")).toBeInTheDocument();
+    expect(within(section).getByText("14/07/2026")).toBeInTheDocument();
     expect(within(section).getByText("$12.50")).toBeInTheDocument();
     expect(within(section).queryByText("Unidades")).not.toBeInTheDocument();
     expect(within(section).getByRole("button", { name: "Editar recepción #17" })).toBeInTheDocument();
