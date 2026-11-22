@@ -1,3 +1,5 @@
+import type { ProductDTO } from "../products/product-types";
+
 export type DiscountType = 1 | 2 | 3;
 
 export type CampaignFormInput = {
@@ -141,4 +143,32 @@ export function parseCampaignCsv(text: string, delimiter: CampaignCsvDelimiter =
 
 export function buildCampaignCsvTemplate(delimiter: CampaignCsvDelimiter = ";") {
   return `${campaignCsvHeaders.join(delimiter)}\n`;
+}
+
+export async function lookupCampaignProducts(
+  request: (path: string) => Promise<Response>,
+  codes: number[],
+) {
+  const uniqueCodes = [...new Set(codes)];
+  const products = new Map<number, ProductDTO>();
+  const failedBatches = new Map<number, number>();
+  const batchSize = 100;
+
+  for (let offset = 0; offset < uniqueCodes.length; offset += batchSize) {
+    const batch = uniqueCodes.slice(offset, offset + batchSize);
+    const params = new URLSearchParams({ page: "1", pageSize: String(batch.length) });
+    for (const code of batch) params.append("code", String(code));
+
+    try {
+      const response = await request(`/api/v1/products?${params}`);
+      if (!response.ok) throw new Error();
+      const result = await response.json() as { items: ProductDTO[] };
+      for (const product of result.items) products.set(product.code, product);
+    } catch {
+      const batchNumber = offset / batchSize + 1;
+      for (const code of batch) failedBatches.set(code, batchNumber);
+    }
+  }
+
+  return { products, failedBatches };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCampaignCsvTemplate,
   buildCampaignPayload,
+  lookupCampaignProducts,
   parseCampaignCsv,
   type CampaignLineInput,
 } from "./campaigns-api";
@@ -70,3 +71,28 @@ describe("campaign API contract", () => {
     expect(buildCampaignCsvTemplate(";")).toBe("productCode;productPresentationId;discountTypeId;discountValue\n");
     expect(buildCampaignCsvTemplate(",")).toBe("productCode,productPresentationId,discountTypeId,discountValue\n");
   });});
+
+it("looks up 455 codes in five batches and tracks failed and missing codes separately", async () => {
+  const codes = Array.from({ length: 455 }, (_, index) => index + 2000);
+  const batches: number[][] = [];
+  const request = async (path: string) => {
+    const url = new URL(path, "http://localhost");
+    const batch = url.searchParams.getAll("code").map(Number);
+    batches.push(batch);
+    expect(url.pathname).toBe("/api/v1/products");
+    expect(Number(url.searchParams.get("pageSize"))).toBe(batch.length);
+    if (batch[0] === 2100) return new Response(null, { status: 429 });
+    return Response.json({ items: batch.filter(code => code !== 2000).reverse().map(code => ({ code })) });
+  };
+
+  const { products, failedBatches } = await lookupCampaignProducts(request, [...codes, 2001]);
+
+  expect(batches.map(batch => batch.length)).toEqual([100, 100, 100, 100, 55]);
+  expect(batches.flat()).toEqual(codes);
+  expect(products.size).toBe(354);
+  expect(products.get(2454)?.code).toBe(2454);
+  expect(products.has(2000)).toBe(false);
+  expect(failedBatches.has(2000)).toBe(false);
+  expect(failedBatches.size).toBe(100);
+  expect(failedBatches.get(2100)).toBe(2);
+});

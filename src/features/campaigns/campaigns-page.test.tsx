@@ -288,8 +288,7 @@ describe("CampaignsPage", () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
       if (path === "/api/v1/DiscountCampaigns") return Promise.resolve(jsonResponse(101, 201));
-      if (path === "/api/v1/products?page=1&pageSize=1&code=1044") return Promise.resolve(jsonResponse(paginated([productsResponse().items[0]])));
-      if (path === "/api/v1/products?page=1&pageSize=1&code=1055") return Promise.resolve(jsonResponse(paginated([productsResponse().items[1]])));
+      if (path === "/api/v1/products?page=1&pageSize=2&code=1044&code=1055") return Promise.resolve(jsonResponse(productsResponse()));
       return Promise.resolve(jsonResponse(paginated([])));
     });
 
@@ -343,8 +342,7 @@ describe("CampaignsPage", () => {
     const user = userEvent.setup();
     auth.request.mockImplementation((path: string) => {
       if (path === "/api/v1/DiscountCampaigns") return Promise.resolve(jsonResponse(102, 201));
-      if (path === "/api/v1/products?page=1&pageSize=1&code=1044") return Promise.resolve(jsonResponse(paginated([productsResponse().items[0]])));
-      if (path === "/api/v1/products?page=1&pageSize=1&code=1055") return Promise.resolve(jsonResponse(paginated([productsResponse().items[1]])));
+      if (path === "/api/v1/products?page=1&pageSize=2&code=1044&code=1055") return Promise.resolve(jsonResponse(productsResponse()));
       return Promise.resolve(jsonResponse(paginated([])));
     });
 
@@ -398,6 +396,30 @@ describe("CampaignsPage", () => {
     await user.click(screen.getByRole("button", { name: "Crear campaña" }));
 
     expect(await screen.findByText("No encontramos el producto código 7777.")).toBeVisible();
+    expect(auth.request).not.toHaveBeenCalledWith("/api/v1/DiscountCampaigns", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("reports a failed CSV batch once instead of reporting its products as missing", async () => {
+    const user = userEvent.setup();
+    auth.request.mockImplementation(async (path: string) => path.startsWith("/api/v1/products?")
+      ? new Response(null, { status: 429 })
+      : jsonResponse(paginated([])));
+
+    renderCampaigns("/discounts/campaigns/new");
+    await user.type(await screen.findByLabelText("Nombre de la campaña"), "Campaña con lote fallido");
+    await user.type(screen.getByLabelText("Fecha inicial"), "2026-10-01");
+    await user.type(screen.getByLabelText("Fecha final"), "2026-10-31");
+    await user.click(screen.getByRole("button", { name: "Importar CSV" }));
+    await user.upload(screen.getByLabelText("Archivo CSV de descuentos"), new File([
+      "productCode;productPresentationId;discountTypeId;discountValue\n2100;;2;20\n2101;;2;20",
+    ], "descuentos.csv", { type: "text/csv" }));
+    await user.click(screen.getByRole("button", { name: "Aplicar importación" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear campaña" })).not.toBeDisabled());
+    await user.click(screen.getByRole("button", { name: "Crear campaña" }));
+
+    expect(await screen.findByText(/No se pudo consultar el lote 1/)).toBeVisible();
+    expect(screen.queryByText("No encontramos el producto código 2100.")).not.toBeInTheDocument();
     expect(auth.request).not.toHaveBeenCalledWith("/api/v1/DiscountCampaigns", expect.objectContaining({ method: "POST" }));
   });
 

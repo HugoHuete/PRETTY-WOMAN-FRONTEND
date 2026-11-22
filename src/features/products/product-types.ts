@@ -19,6 +19,7 @@ export type ProductVariantDTO = {
 export type ProductPresentationDTO = {
   id: number;
   name: string | null;
+  colorId?: number | null;
   sortOrder: number;
   primaryImageUrl: string | null;
   sizes: ProductVariantDTO[];

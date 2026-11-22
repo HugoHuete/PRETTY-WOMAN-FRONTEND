@@ -11,7 +11,7 @@ import { SelectControl } from "../../shared/ui/select-control";
 import { StatusBadge } from "../../shared/ui/status-badge";
 import { useToast } from "../../shared/ui/toast-context";
 import { formatProductPrice, type ProductDTO } from "../products/product-types";
-import { buildCampaignCsvTemplate, buildCampaignPayload, parseCampaignCsv, type CampaignCsvDelimiter, type CampaignImportRow, type CampaignLineInput, type DiscountType } from "./campaigns-api";
+import { buildCampaignCsvTemplate, buildCampaignPayload, lookupCampaignProducts, parseCampaignCsv, type CampaignCsvDelimiter, type CampaignImportRow, type CampaignLineInput, type DiscountType } from "./campaigns-api";
 
 type AuthRequest = (path: string, init?: RequestInit) => Promise<Response>;
 type CampaignSummary = {
@@ -261,18 +261,6 @@ function discountedPrice(salePrice: number, discountTypeId: number, discountValu
   if (discountTypeId === 2) return Math.max(0, salePrice * (1 - discountValue / 100));
   if (discountTypeId === 3) return discountValue;
   return Math.max(0, salePrice - discountValue);
-}
-
-async function productsByCodes(request: AuthRequest, codes: number[]) {
-  const results = await Promise.all([...new Set(codes)].map(async (code) => {
-    try {
-      const result = await requestJson<Paginated<ProductDTO>>(request, `/api/v1/products?page=1&pageSize=1&code=${encodeURIComponent(code)}`);
-      return [code, result.items?.[0] ?? null] as const;
-    } catch {
-      return [code, null] as const;
-    }
-  }));
-  return new Map(results);
 }
 
 async function productsByIds(request: AuthRequest, ids: number[]) {
@@ -797,7 +785,7 @@ function CampaignForm({ request, campaignId }: { request: AuthRequest; campaignI
         if (detail) {
           setValues({ name: valueOf(detail.name), startDate: dateInputValue(detail.startDate), endDate: dateInputValue(detail.endDate) });
           const targets = detail.targets ?? [];
-          const products = await productsByCodes(request, targets.map((item) => item.productCode).filter((code): code is number => Number.isFinite(code)));
+          const { products } = await lookupCampaignProducts(request, targets.map((item) => item.productCode).filter((code): code is number => Number.isFinite(code)));
           if (!active) return;
           setLines(targets.map((item) => {
             const product = item.productCode ? products.get(item.productCode) : null;
@@ -936,15 +924,18 @@ function CampaignForm({ request, campaignId }: { request: AuthRequest; campaignI
     setValidation([]);
     setCsvRows(rows);
     setCsvFileName(csvImport.fileName);
-    void productsByCodes(request, rows.map((row) => row.productCode)).then((products) => {
+    void lookupCampaignProducts(request, rows.map((row) => row.productCode)).then(({ products, failedBatches }) => {
       setCsvEstimateLines(rows.map((row, index) => {
         const product = products.get(row.productCode);
         const presentation = product?.presentations.find((item) => item.id === row.productPresentationId);
-        const resolutionError = !product
-          ? `No encontramos el producto código ${row.productCode}.`
-          : row.productPresentationId !== null && !presentation
-            ? `No encontramos la presentación ${row.productPresentationId} para el producto código ${row.productCode}.`
-            : undefined;
+        const failedBatch = failedBatches.get(row.productCode);
+        const resolutionError = failedBatch !== undefined
+          ? `No se pudo consultar el lote ${failedBatch} de productos del CSV. Intenta importar el archivo de nuevo.`
+          : !product
+            ? `No encontramos el producto código ${row.productCode}.`
+            : row.productPresentationId !== null && !presentation
+              ? `No encontramos la presentación ${row.productPresentationId} para el producto código ${row.productCode}.`
+              : undefined;
         return {
           key: `csv-${index}-${row.productCode}-${row.productPresentationId ?? "all"}`,
           groupId: product?.id,
@@ -987,7 +978,7 @@ function CampaignForm({ request, campaignId }: { request: AuthRequest; campaignI
     if (campaignLines.some((line) => !Number.isFinite(line.discountValue) || line.discountValue <= 0)) nextValidation.push("Cada descuento debe tener un valor mayor que cero.");
     if (campaignLines.some((line) => line.discountTypeId === 2 && line.discountValue > 100)) nextValidation.push("El descuento porcentual no puede superar el 100%.");
     if (isResolvingCsv || (csvRows.length > 0 && csvEstimateLines.length !== csvRows.length)) nextValidation.push("Espera a que termine la consulta de los productos del CSV.");
-    nextValidation.push(...csvEstimateLines.flatMap((line) => line.resolutionError ? [line.resolutionError] : []));
+    nextValidation.push(...new Set(csvEstimateLines.flatMap((line) => line.resolutionError ? [line.resolutionError] : [])));
     nextValidation.push(...duplicateCampaignTargetErrors(campaignLines));
     if (nextValidation.length) { setValidation(nextValidation); return; }
 
