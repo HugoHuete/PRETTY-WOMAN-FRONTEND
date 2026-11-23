@@ -3,10 +3,20 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { SalesListPage } from './sales-list-page';
 
+const pageActions = vi.hoisted(() => ({ setHeading: vi.fn(), setAction: vi.fn() }));
 const api = vi.hoisted(() => ({ getSales: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 0, totalCount: 0 }), request: vi.fn() }));
 vi.mock('./sales-api', () => ({ getSales: api.getSales, ApiRequestError: class extends Error { status = 0; } }));
 vi.mock('../auth/auth-provider', () => ({ useAuth: () => ({ request: api.request }) }));
-vi.mock('../../shared/layout/page-actions-context', () => ({ usePageActions: () => ({ setHeading: vi.fn(), setAction: vi.fn() }) }));
+vi.mock('../../shared/layout/page-actions-context', () => ({ usePageActions: () => pageActions }));
+
+it('ofrece Cambios y devoluciones junto a Nueva venta', async () => {
+  render(<MemoryRouter initialEntries={['/sales']}><SalesListPage /></MemoryRouter>);
+  await screen.findByText('No hay ventas en este periodo');
+  const actions = pageActions.setAction.mock.lastCall?.[0];
+  render(<MemoryRouter>{actions}</MemoryRouter>);
+  expect(screen.getByRole('link', { name: 'Cambios y devoluciones' })).toHaveAttribute('href', '/sales/post-sale');
+  expect(screen.getByRole('link', { name: 'Nueva venta' })).toHaveAttribute('href', '/sales/new');
+});
 
 describe('filtros de ventas', () => {
   it('limpia todos los filtros y vuelve a la primera página', async () => {

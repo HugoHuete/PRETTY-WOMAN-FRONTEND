@@ -6,6 +6,7 @@ import {
   Outlet,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 import { useAuth } from "./features/auth/auth-provider";
 import { LoginPage } from "./features/auth/login-page";
@@ -25,6 +26,7 @@ import { CampaignsPage } from "./features/campaigns/campaigns-page";
 import { SalesListPage } from "./features/sales/sales-list-page";
 import { SaleCreatePage } from "./features/sales/sale-create-page";
 import { SaleDetailPage } from "./features/sales/sale-detail-page";
+import { SalePostSalePage } from "./features/sales/sale-post-sale-page";
 import { ShipmentsPage } from "./features/shipments/shipments-page";
 import { ShipmentReconciliationPage } from "./features/shipments/shipment-reconciliation-page";
 import { FinanceMovementsPage } from "./features/finances/finance-movements-page";
@@ -85,6 +87,11 @@ function SalesRoleRoute({ children }: { children: ReactNode }) {
   );
 }
 
+function PostSaleRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate replace to={{ pathname: "/sales/post-sale", search, hash }} />;
+}
+
 function App() {
   return (
     <ExchangeRateProvider>
@@ -95,6 +102,8 @@ function App() {
           <Route element={<AppShell />}>
             <Route element={<DashboardPage />} index />
             <Route element={<ShipmentsPage />} path="shipments" />
+            <Route element={<PostSaleRedirect />} path="post-sale" />
+            <Route element={<SalesRoleRoute><SalePostSalePage /></SalesRoleRoute>} path="sales/post-sale" />
             <Route
               element={
                 <RoleRoute roles={["Admin"]}>

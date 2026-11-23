@@ -9,6 +9,20 @@ const api = vi.hoisted(() => ({ getSaleExchanges: vi.fn().mockResolvedValue([]),
 vi.mock('../auth/auth-provider', () => ({ useAuth: () => ({ request }) }));
 vi.mock('./sales-api', () => api);
 
+it('enfoca la solicitud enlazada cuando un reintento logra cargarla', async () => {
+  api.getSaleReturns
+    .mockRejectedValueOnce(new Error('Error de red'))
+    .mockResolvedValueOnce([{ id: 3, statusId: 1, reasonId: 1, methodId: 1, refundTotal: 100, items: [] }]);
+  const sale = { id: 13262, saleStatusId: 4, productVariants: [{ id: 11, productId: 1, quantity: 1, finalUnitPrice: 100 }] } as SaleDetail;
+
+  render(<SaleDetailPostSale hash="#post-sale-return-3" sale={sale} products={[]} catalogLoading={false}
+    agencies={[]} terminals={[]} isAdmin busy={false} onMutation={vi.fn()} />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+  const heading = await screen.findByRole('heading', { name: 'Devolución #3' });
+  expect(heading.closest('article')).toHaveFocus();
+});
+
 describe('crear cambio', () => {
   it('permite entregar una prenda buscada aunque la prenda original no tenga existencias', async () => {
     HTMLDialogElement.prototype.showModal = function () { this.open = true; };

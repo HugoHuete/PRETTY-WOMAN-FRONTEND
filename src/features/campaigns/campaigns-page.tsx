@@ -11,7 +11,7 @@ import { SelectControl } from "../../shared/ui/select-control";
 import { StatusBadge } from "../../shared/ui/status-badge";
 import { useToast } from "../../shared/ui/toast-context";
 import { formatProductPrice, type ProductDTO } from "../products/product-types";
-import { buildCampaignCsvTemplate, buildCampaignPayload, lookupCampaignProducts, parseCampaignCsv, type CampaignCsvDelimiter, type CampaignImportRow, type CampaignLineInput, type DiscountType } from "./campaigns-api";
+import { buildCampaignCsvTemplate, buildCampaignPayload, campaignTimeZone, lookupCampaignProducts, parseCampaignCsv, type CampaignCsvDelimiter, type CampaignImportRow, type CampaignLineInput, type DiscountType } from "./campaigns-api";
 
 type AuthRequest = (path: string, init?: RequestInit) => Promise<Response>;
 type CampaignSummary = {
@@ -129,12 +129,24 @@ function formatDate(value: string | null | undefined) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: campaignTimeZone,
   }).format(date);
 }
 
 function dateInputValue(value: string | null | undefined) {
-  return value ? value.slice(0, 10) : "";
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("es-NI", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: campaignTimeZone,
+  }).formatToParts(date);
+  return ["year", "month", "day"]
+    .map((type) => parts.find((part) => part.type === type)?.value)
+    .join("-");
 }
 
 function statusLabel(statusId: number, statusName?: string | null) {
@@ -261,18 +273,6 @@ function discountedPrice(salePrice: number, discountTypeId: number, discountValu
   if (discountTypeId === 2) return Math.max(0, salePrice * (1 - discountValue / 100));
   if (discountTypeId === 3) return discountValue;
   return Math.max(0, salePrice - discountValue);
-}
-
-async function productsByIds(request: AuthRequest, ids: number[]) {
-  const results = await Promise.all([...new Set(ids)].map(async (id) => {
-    try {
-      const product = await requestJson<ProductDTO>(request, `/api/v1/products/${id}`);
-      return [id, product] as const;
-    } catch {
-      return [id, null] as const;
-    }
-  }));
-  return new Map(results);
 }
 
 function CampaignDirectory({ request }: { request: AuthRequest }) {
@@ -681,14 +681,15 @@ function CampaignDetailView({ request, campaignId }: { request: AuthRequest; cam
     let active = true;
     void requestJson<CampaignDetail>(request, `/api/v1/discountcampaigns/${campaignId}`)
       .then(async (campaign) => {
+        if (!active) return;
         const campaignTargets = campaign.targets ?? [];
-        const products = await productsByIds(request, campaignTargets
-          .map((target) => target.productId)
-          .filter((id): id is number => Number.isFinite(id)));
+        const { products } = await lookupCampaignProducts(request, campaignTargets
+          .map((target) => target.productCode)
+          .filter((code): code is number => Number.isFinite(code)));
         if (!active) return;
         setDetail(campaign);
         setTargets(campaignTargets.map((target) => {
-          const product = target.productId ? products.get(target.productId) : null;
+          const product = target.productCode == null ? undefined : products.get(target.productCode);
           return lineFromTarget({
             ...detailTarget(target),
             imageUrl: product ? productImage(product, target.productPresentationId ?? undefined) : null,

@@ -53,8 +53,8 @@ function campaign(overrides: Record<string, unknown> = {}) {
   return {
     id: 12,
     name: "Verano rosa",
-    startDate: "2026-09-20T00:00:00Z",
-    endDate: "2026-09-30T00:00:00Z",
+    startDate: "2026-09-20T06:00:00Z",
+    endDate: "2026-10-01T05:59:59.999Z",
     statusId: 2,
     statusName: "Activa",
     createdAt: "2026-09-01T00:00:00Z",
@@ -143,6 +143,7 @@ describe("CampaignsPage", () => {
     expect(screen.getByRole("link", { name: "Verano rosa" })).toHaveAttribute("href", "/discounts/campaigns/12");
     expect(screen.getByText("Activa")).toBeVisible();
     expect(screen.getByText("20/09/2026")).toBeVisible();
+    expect(screen.getByText("30/09/2026")).toBeVisible();
     expect(auth.request).toHaveBeenCalledWith(
       "/api/v1/discountcampaigns?page=1&pageSize=20",
     );
@@ -218,8 +219,8 @@ describe("CampaignsPage", () => {
         method: "POST",
         body: JSON.stringify({
           name: "Fin de temporada",
-          startDate: "2026-10-01T00:00:00.000Z",
-          endDate: "2026-10-15T23:59:59.000Z",
+          startDate: "2026-10-01T06:00:00.000Z",
+          endDate: "2026-10-16T05:59:59.999Z",
           targets: [{
             productId: null,
             productPresentationId: 3,
@@ -328,8 +329,8 @@ describe("CampaignsPage", () => {
         method: "POST",
         body: JSON.stringify({
           name: "Promo CSV",
-          startDate: "2026-10-01T00:00:00.000Z",
-          endDate: "2026-10-31T23:59:59.000Z",
+          startDate: "2026-10-01T06:00:00.000Z",
+          endDate: "2026-11-01T05:59:59.999Z",
           targets: [{ productId: 44, productPresentationId: null, discountTypeId: 1, discountValue: 25 }],
         }),
       }),
@@ -363,8 +364,8 @@ describe("CampaignsPage", () => {
         method: "POST",
         body: JSON.stringify({
           name: "Promo CSV completa",
-          startDate: "2026-10-01T00:00:00.000Z",
-          endDate: "2026-10-31T23:59:59.000Z",
+          startDate: "2026-10-01T06:00:00.000Z",
+          endDate: "2026-11-01T05:59:59.999Z",
           targets: [
             { productId: 44, productPresentationId: null, discountTypeId: 2, discountValue: 20 },
             { productId: null, productPresentationId: 4, discountTypeId: 3, discountValue: 700 },
@@ -500,7 +501,10 @@ describe("CampaignsPage", () => {
       expect.objectContaining({ method: "PUT" }),
     ));
     const updateRequest = auth.request.mock.calls.find(([path, init]) => path === "/api/v1/DiscountCampaigns/12" && init?.method === "PUT");
-    expect(JSON.parse(updateRequest?.[1]?.body as string).targets).toEqual([{
+    const payload = JSON.parse(updateRequest?.[1]?.body as string);
+    expect(payload.startDate).toBe("2026-09-20T06:00:00.000Z");
+    expect(payload.endDate).toBe("2026-10-01T05:59:59.999Z");
+    expect(payload.targets).toEqual([{
       productId: 35,
       productPresentationId: null,
       discountTypeId: 1,
@@ -563,7 +567,7 @@ describe("CampaignsPage", () => {
           }],
         }));
       }
-      if (path === "/api/v1/products/35") return Promise.resolve(jsonResponse({ title: "Producto no encontrado" }, 404));
+      if (path === "/api/v1/products?page=1&pageSize=1&code=34") return Promise.resolve(jsonResponse({ title: "Producto no encontrado" }, 404));
       if (path.startsWith("/api/v1/products")) return Promise.resolve(jsonResponse(paginated([])));
       return Promise.resolve(jsonResponse(paginated([])));
     });
@@ -572,6 +576,7 @@ describe("CampaignsPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Verano rosa" })).toBeVisible();
     expect(screen.getByText("20/09/2026")).toBeVisible();
+    expect(screen.getByText("30/09/2026")).toBeVisible();
     expect(screen.getByText("Activa")).toBeVisible();
     expect(screen.getByText("Código 34")).toBeVisible();
     expect(screen.getByText("Monto fijo")).toBeVisible();
@@ -596,11 +601,20 @@ describe("CampaignsPage", () => {
             discountTypeId: 1,
             discountTypeName: "FixedAmount",
             discountValue: 100,
+          }, {
+            id: 3,
+            productId: 35,
+            productPresentationId: null,
+            productName: "QA Top C$ Single",
+            productCode: 34,
+            presentationName: null,
+            discountTypeId: 1,
+            discountValue: 50,
           }],
         }));
       }
-      if (path === "/api/v1/products/44") {
-        return Promise.resolve(jsonResponse({
+      if (path === "/api/v1/products?page=1&pageSize=2&code=1044&code=34") {
+        return Promise.resolve(jsonResponse({ items: [{
           id: 44,
           code: 1044,
           name: "Vestido satinado",
@@ -633,7 +647,7 @@ describe("CampaignsPage", () => {
               discountCampaignName: "Oferta previa",
             }],
           }],
-        }));
+        }] }));
       }
       return Promise.resolve(jsonResponse(paginated([])));
     });
@@ -641,6 +655,10 @@ describe("CampaignsPage", () => {
     renderCampaigns("/discounts/campaigns/12");
 
     expect(await screen.findByText("Coral · S")).toBeVisible();
+    expect(auth.request.mock.calls.map(([path]) => path)).toEqual([
+      "/api/v1/discountcampaigns/12",
+      "/api/v1/products?page=1&pageSize=2&code=1044&code=34",
+    ]);
     expect(screen.getByText("Costo")).toBeVisible();
     expect(screen.getByText("Precio actual")).toBeVisible();
     expect(screen.getByText("Precio campaña")).toBeVisible();
@@ -649,7 +667,6 @@ describe("CampaignsPage", () => {
     expect(screen.getByText("C$1,200.00")).toBeVisible();
     expect(screen.getByText("C$1,150.00")).toBeVisible();
     expect(screen.getByText("C$450.00")).toBeVisible();
-    expect(auth.request).toHaveBeenCalledWith("/api/v1/products/44");
   });
 
   it("cancels and reactivates a campaign from the directory", async () => {

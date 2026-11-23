@@ -20,6 +20,8 @@ function errorMessage(caught: unknown, fallback: string) { return caught instanc
 export function SaleDetailPage() {
   const { id: routeId } = useParams();
   const location = useLocation();
+  const postSaleSearch = location.state?.postSaleSearch;
+  const fromPostSale = typeof postSaleSearch === "string";
   const id = Number(routeId);
   const { request, session } = useAuth();
   const isAdmin = session?.user.roles.includes("Admin") ?? false;
@@ -50,10 +52,10 @@ export function SaleDetailPage() {
   }, [id, request]);
 
   useEffect(() => {
-    setHeading({ title: Number.isInteger(id) && id > 0 ? `Venta #${id}` : "Detalle de venta", breadcrumbs: <Link to="/sales" className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-pw-brand-deep"><span aria-hidden="true">←</span> Ventas</Link> });
+    setHeading({ title: Number.isInteger(id) && id > 0 ? `Venta #${id}` : "Detalle de venta", breadcrumbs: <Link to={fromPostSale ? { pathname: "/sales/post-sale", search: postSaleSearch } : "/sales"} className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-pw-brand-deep"><span aria-hidden="true">←</span> {fromPostSale ? "Cambios y devoluciones" : "Ventas"}</Link> });
     setAction(null);
     return () => setHeading(null);
-  }, [id, setAction, setHeading]);
+  }, [fromPostSale, id, postSaleSearch, setAction, setHeading]);
 
   useEffect(() => {
     let active = true;
@@ -203,7 +205,7 @@ export function SaleDetailPage() {
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
           <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={refreshClientProfile} onCompletePickup={completePickup} pickupError={mutationError} deliverySaveError={mutationError} />
-          <SaleDetailPostSale key={sale.id} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
+          <SaleDetailPostSale key={sale.id} hash={location.hash} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
         <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onClientUpdated={refreshClientProfile} /></aside>
       </div>

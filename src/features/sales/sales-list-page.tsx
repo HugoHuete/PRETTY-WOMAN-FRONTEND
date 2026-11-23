@@ -30,7 +30,19 @@ export function SalesListPage() {
   const [retry, setRetry] = useState(0);
 
   useEffect(() => { setHeading({ title: "Ventas", breadcrumbs: null }); return () => setHeading(null); }, [setHeading]);
-  useEffect(() => { setAction(<Link to="/sales/new" className="inline-flex min-h-11 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2">Nueva venta</Link>); return () => setAction(null); }, [setAction]);
+  useEffect(() => {
+    setAction(
+      <div className="flex flex-wrap items-center gap-2">
+        <Link to="/sales/post-sale" className="inline-flex min-h-11 items-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-ink hover:bg-pw-brand-soft focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2">
+          Cambios y devoluciones
+        </Link>
+        <Link to="/sales/new" className="inline-flex min-h-11 items-center rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep focus-visible:outline-3 focus-visible:outline-pw-brand-deep focus-visible:outline-offset-2">
+          Nueva venta
+        </Link>
+      </div>,
+    );
+    return () => setAction(null);
+  }, [setAction]);
   useEffect(() => {
     let active = true;
     setLoading(true); setError(null);

@@ -457,3 +457,12 @@ export type SaleDeliveryAction =
   | "complete"
   | "fail"
   | "cancel";
+
+export type SalePostSaleListItem = {
+  id: number;
+  saleId: number;
+  isExchange: boolean;
+  statusId: number;
+  clientName: string | null;
+  createdAt: string;
+};

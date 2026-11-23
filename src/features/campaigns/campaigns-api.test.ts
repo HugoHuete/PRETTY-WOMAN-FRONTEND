@@ -16,8 +16,8 @@ describe("campaign API contract", () => {
 
     expect(buildCampaignPayload({ name: "Promo", startDate: "2026-10-01", endDate: "2026-10-31" }, lines)).toEqual({
       name: "Promo",
-      startDate: "2026-10-01T00:00:00.000Z",
-      endDate: "2026-10-31T23:59:59.000Z",
+      startDate: "2026-10-01T06:00:00.000Z",
+      endDate: "2026-11-01T05:59:59.999Z",
       targets: [
         { productId: 101, productPresentationId: null, discountTypeId: 2, discountValue: 20 },
         { productId: null, productPresentationId: 45, discountTypeId: 3, discountValue: 450 },

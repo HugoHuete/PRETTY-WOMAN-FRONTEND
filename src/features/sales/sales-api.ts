@@ -10,6 +10,7 @@ import type {
   PaginatedResult,
   ProductSearch,
   SaleRecord,
+  SalePostSaleListItem,
   SalesFilters,
 } from "./sales-types";
 import type {
@@ -320,4 +321,13 @@ export async function getSaleProductsByCodes(request: AuthRequest, codes: number
   productCodes.forEach((code) => query.append("code", String(code)));
   const result = await requestJson<PaginatedProducts>(request, `/api/v1/products?${query}`);
   return normalizePage<ProductDTO>(result).items;
+}
+
+export function getSalePostSale(request: AuthRequest, filters: { page: number; history: boolean; search: string; includeAll?: boolean; isExchange?: boolean; statusId?: number }) {
+  const params = new URLSearchParams({ page: String(filters.page), history: String(filters.history) });
+  if (filters.search) params.set("search", filters.search);
+  if (filters.includeAll) params.set("includeAll", "true");
+  if (filters.isExchange !== undefined) params.set("isExchange", String(filters.isExchange));
+  if (filters.statusId !== undefined) params.set("statusId", String(filters.statusId));
+  return requestJson<PaginatedResult<SalePostSaleListItem>>(request, `/api/v1/sales/post-sale?${params}`);
 }

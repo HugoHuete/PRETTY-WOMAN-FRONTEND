@@ -48,8 +48,12 @@ export type CampaignCsvDelimiter = "," | ";";
 
 const campaignCsvHeaders = ["productCode", "productPresentationId", "discountTypeId", "discountValue"] as const;
 
+export const campaignTimeZone = "America/Managua";
+
 function toUtcDate(value: string, endOfDay = false) {
-  return `${value}T${endOfDay ? "23:59:59.000" : "00:00:00.000"}Z`;
+  const time = endOfDay ? "23:59:59.999" : "00:00:00.000";
+  // Nicaragua uses UTC−06:00 for campaign dates, independent of the browser timezone.
+  return new Date(`${value}T${time}-06:00`).toISOString();
 }
 
 export function buildCampaignPayload(values: CampaignFormInput, lines: CampaignLineInput[]): CampaignRequest {
