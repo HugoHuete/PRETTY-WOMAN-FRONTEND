@@ -14,9 +14,10 @@ import type { ProductImageDTO } from "./product-types";
 type ProductPresentationImagesProps = {
   request: RequestFn;
   productId: number;
-  presentationId: number;
+  presentationId: number | null;
   presentationName: string;
   initialImages?: ProductImageDTO[];
+  onImagesEdited?: () => void;
   onImagesChange?: (presentationId: number, images: ProductImageDTO[]) => void;
   onPrimaryImageChange?: (
     presentationId: number,
@@ -30,6 +31,7 @@ export function ProductPresentationImages({
   presentationId,
   presentationName,
   initialImages,
+  onImagesEdited,
   onImagesChange,
   onPrimaryImageChange,
 }: ProductPresentationImagesProps) {
@@ -42,15 +44,19 @@ export function ProductPresentationImages({
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const isGeneral = presentationId === null;
+  const headingId = `product-${productId}-images-${presentationId ?? "general"}`;
 
   const applyImages = useCallback(
     (nextImages: ProductImageDTO[]) => {
       setImages(nextImages);
-      onImagesChange?.(presentationId, nextImages);
-      onPrimaryImageChange?.(
-        presentationId,
-        nextImages.find((image) => image.isPrimary) ?? null,
-      );
+      if (presentationId !== null) {
+        onImagesChange?.(presentationId, nextImages);
+        onPrimaryImageChange?.(
+          presentationId,
+          nextImages.find((image) => image.isPrimary) ?? null,
+        );
+      }
     },
     [onImagesChange, onPrimaryImageChange, presentationId],
   );
@@ -74,7 +80,7 @@ export function ProductPresentationImages({
           setError(
             caught instanceof Error
               ? caught.message
-              : "No se pudieron cargar las imágenes de la presentación.",
+              : "No se pudieron cargar las imágenes.",
           );
         }
         return null;
@@ -142,6 +148,7 @@ export function ProductPresentationImages({
       if (hasUploaded) await loadImages(false);
     } finally {
       setIsUploading(false);
+      if (hasUploaded) onImagesEdited?.();
     }
   };
 
@@ -157,6 +164,7 @@ export function ProductPresentationImages({
         images.map((currentImage) => currentImage.id),
       );
       applyImages(result);
+      onImagesEdited?.();
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -176,6 +184,7 @@ export function ProductPresentationImages({
       await deleteProductImage(request, productId, imageToDelete.id);
       await loadImages(false);
       setImageToDelete(null);
+      onImagesEdited?.();
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "No se pudo eliminar la imagen.",
@@ -188,16 +197,16 @@ export function ProductPresentationImages({
   return (
     <>
       <section
-        aria-labelledby={"presentation-images-" + presentationId}
+        aria-labelledby={headingId}
         className="mt-4 rounded-lg border border-pw-line bg-white p-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3
               className="text-sm font-extrabold text-pw-ink"
-              id={"presentation-images-" + presentationId}
+              id={headingId}
             >
-              Imágenes de {presentationName}
+              {isGeneral ? "Imágenes generales del producto" : "Imágenes de " + presentationName}
             </h3>
             <p className="mt-1 text-xs text-pw-muted">
               JPEG, PNG o WebP · máximo 4 MB por archivo
@@ -240,7 +249,7 @@ export function ProductPresentationImages({
         ) : null}
         {!isLoading && images.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-pw-line bg-pw-canvas/40 p-4 text-sm text-pw-muted">
-            Esta presentación todavía no tiene imágenes.
+            {isGeneral ? "Este producto todavía no tiene imágenes generales." : "Esta presentación todavía no tiene imágenes."}
           </p>
         ) : null}
         {!isLoading && images.length > 0 ? (

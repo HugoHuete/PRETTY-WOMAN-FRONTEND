@@ -849,6 +849,7 @@ describe("ProductsPage", () => {
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
+      if (path === "/api/v1/products/42/images") return jsonResponse([{ ...presentationPrimaryImage(), id: 44, productPresentationId: null, thumbnailUrl: "/images/general.webp" }]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([presentationPrimaryImage()]);
       throw new Error("Unexpected request: " + path);
     });
@@ -860,6 +861,8 @@ describe("ProductsPage", () => {
     await user.click(screen.getByRole("menuitem", { name: "Gestionar imágenes" }));
 
     expect(await screen.findByRole("img", { name: "Coral — imagen principal" })).toBeVisible();
+    expect(await screen.findByRole("img", { name: "Producto — imagen principal" })).toHaveAttribute("src", "/images/general.webp");
+    expect(auth.request).toHaveBeenCalledWith("/api/v1/products/42/images");
     expect(auth.request).toHaveBeenCalledWith("/api/v1/products/42/images?productPresentationId=7");
   });
 
@@ -868,6 +871,7 @@ describe("ProductsPage", () => {
     auth.request.mockImplementation((path: string) => {
       if (path.startsWith("/api/v1/products?page=1&pageSize=40")) return jsonResponse(paginated());
       if (path === "/api/v1/categories" || path === "/api/v1/sizes" || path === "/api/v1/subcategories") return jsonResponse([]);
+      if (path === "/api/v1/products/42/images") return jsonResponse([]);
       if (path === "/api/v1/products/42/images?productPresentationId=7") return jsonResponse([presentationPrimaryImage()]);
       throw new Error("Unexpected request: " + path);
     });
@@ -902,6 +906,7 @@ describe("ProductsPage", () => {
           { ...presentationPrimaryImage(), isPrimary: false, sortOrder: 1 },
         ]);
       }
+      if (path === "/api/v1/products/42/images") return jsonResponse([]);
       throw new Error("Unexpected request: " + path);
     });
 

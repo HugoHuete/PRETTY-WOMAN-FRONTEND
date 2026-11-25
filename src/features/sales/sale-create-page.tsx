@@ -132,34 +132,25 @@ export function SaleCreatePage() {
     () => saleLines.reduce((amount, line) => amount + line.unitPrice * line.quantity, 0),
     [saleLines],
   );
-  const campaignDiscount = useMemo(
-    () => saleLines.reduce(
-      (total, line) => line.discountSourceId === discountSourceIds.campaign
-        ? total + line.discountAmount * line.quantity
-        : total,
-      0,
-    ),
+  const discount = useMemo(
+    () => saleLines.reduce((amount, line) => amount + line.discountAmount * line.quantity, 0),
     [saleLines],
   );
-  const manualDiscount = useMemo(
-    () => saleLines.reduce(
-      (total, line) => line.discountSourceId === discountSourceIds.manual
-        ? total + line.discountAmount * line.quantity
-        : total,
-      0,
-    ),
-    [saleLines],
-  );
-  const total = useMemo(
-    () => Math.max(0, grossSubtotal - saleLines.reduce((amount, line) => amount + line.discountAmount * line.quantity, 0)),
-    [grossSubtotal, saleLines],
-  );
+  const total = Math.max(0, grossSubtotal - discount);
   const appliedPayment = useMemo(
     () => payments.reduce((amount, payment) => amount + payment.productAmount, 0),
     [payments],
   );
   const appliedShipping = payments.reduce((amount, payment) => amount + payment.shippingAmount, 0);
   const balance = Math.max(0, total - appliedPayment);
+  const shippingCharge = delivery?.shippingChargedToClient ?? 0;
+  const totalWithShipping = total + shippingCharge;
+  const balanceWithShipping = balance + Math.max(0, shippingCharge - appliedShipping);
+  const exchangeRate = storeRate ? Math.round(storeRate * 10000) / 10000 : 0;
+  const formatUsd = (amount: number) => (amount / exchangeRate).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   useEffect(() => {
     setHeading({
@@ -537,24 +528,23 @@ export function SaleCreatePage() {
                 <dd className="font-semibold tabular-nums text-pw-ink">{money.format(grossSubtotal)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-pw-muted">Descuentos de campaña</dt>
-                <dd className="font-semibold tabular-nums text-pw-ink">− {money.format(campaignDiscount)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-pw-muted">Descuentos manuales</dt>
-                <dd className="font-semibold tabular-nums text-pw-ink">− {money.format(manualDiscount)}</dd>
+                <dt className="text-pw-muted">Descuento</dt>
+                <dd className="font-semibold tabular-nums text-pw-ink">− {money.format(discount)}</dd>
               </div>
               {delivery ? <div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-semibold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div> : null}
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
-                <dt className="font-extrabold text-pw-ink">Total estimado</dt>
-                <dd className="text-right font-extrabold tabular-nums text-pw-ink">
-                  <span className="block">{money.format(total + (delivery?.shippingChargedToClient ?? 0))}</span>
-                  {storeRate && storeRate > 0 ? <span className="block text-sm font-semibold text-pw-muted">US${((total + (delivery?.shippingChargedToClient ?? 0)) / (Math.round(storeRate * 10000) / 10000)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> : <span className="block text-xs font-medium text-pw-muted">Tasa de cambio no disponible</span>}
+                <dt className="font-extrabold text-pw-ink">Total</dt>
+                <dd className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 text-right font-extrabold tabular-nums text-pw-ink">
+                  <span className="whitespace-nowrap">{money.format(totalWithShipping)}</span>
+                  {exchangeRate > 0 ? <span className="text-sm font-semibold whitespace-nowrap text-pw-muted">US${formatUsd(totalWithShipping)}</span> : <span className="basis-full text-xs font-medium text-pw-muted">Tasa de cambio no disponible</span>}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
-                <dt className="font-bold text-pw-ink">Saldo estimado</dt>
-                <dd className="font-extrabold tabular-nums text-pw-ink">{money.format(balance + Math.max(0, (delivery?.shippingChargedToClient ?? 0) - appliedShipping))}</dd>
+                <dt className="font-bold text-pw-ink">Saldo</dt>
+                <dd className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 text-right font-extrabold tabular-nums text-pw-ink">
+                  <span className="whitespace-nowrap">{money.format(balanceWithShipping)}</span>
+                  {exchangeRate > 0 ? <span className="text-sm font-semibold whitespace-nowrap text-pw-muted">US${formatUsd(balanceWithShipping)}</span> : null}
+                </dd>
               </div>
             </dl>
           </section>

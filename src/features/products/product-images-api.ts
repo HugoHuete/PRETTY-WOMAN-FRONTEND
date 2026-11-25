@@ -18,22 +18,25 @@ async function ensureOk(response: Response, fallback: string) {
   if (!response.ok) throw new Error(await problemDetail(response, fallback));
 }
 
+function imageScopePath(productId: number, presentationId: number | null) {
+  const path = `/api/v1/products/${productId}/images`;
+  return presentationId === null ? path : `${path}?productPresentationId=${presentationId}`;
+}
+
 export async function fetchProductPresentationImages(
   request: RequestFn,
   productId: number,
-  presentationId: number,
+  presentationId: number | null,
 ): Promise<ProductImageDTO[]> {
-  const response = await request(
-    "/api/v1/products/" + productId + "/images?productPresentationId=" + presentationId,
-  );
-  await ensureOk(response, "No se pudieron cargar las imágenes de la presentación.");
+  const response = await request(imageScopePath(productId, presentationId));
+  await ensureOk(response, "No se pudieron cargar las imágenes.");
   return (await response.json()) as ProductImageDTO[];
 }
 
 export async function uploadProductPresentationImage(
   request: RequestFn,
   productId: number,
-  presentationId: number,
+  presentationId: number | null,
   file: File,
   isPrimary: boolean,
 ): Promise<ProductImageDTO> {
@@ -41,7 +44,7 @@ export async function uploadProductPresentationImage(
   body.append("file", file);
   body.append("isPrimary", String(isPrimary));
   const response = await request(
-    "/api/v1/products/" + productId + "/images?productPresentationId=" + presentationId,
+    imageScopePath(productId, presentationId),
     { method: "POST", body },
   );
   await ensureOk(response, "No se pudo subir la imagen.");
@@ -51,7 +54,7 @@ export async function uploadProductPresentationImage(
 export async function setPrimaryProductPresentationImage(
   request: RequestFn,
   productId: number,
-  presentationId: number,
+  presentationId: number | null,
   primaryImageId: number,
   imageIdsInOrder: number[],
 ): Promise<ProductImageDTO[]> {

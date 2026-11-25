@@ -17,8 +17,10 @@ export function SaleProductPicker({
 }) {
   const { request } = useAuth();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
+  const [selectedPresentation, setSelectedPresentation] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -78,12 +80,18 @@ export function SaleProductPicker({
       if (group) group.push(option);
       else grouped.set(key, [option]);
     });
-    return Array.from(grouped.values());
+    return grouped;
   }, [options]);
+  const hasMultiplePresentations = groups.size > 1;
+  const visibleGroups = hasMultiplePresentations
+    ? Array.from(groups).filter(([key]) => key === selectedPresentation)
+    : Array.from(groups);
+  const hasMultipleProducts = new Set(options.map(({ product }) => product.id)).size > 1;
   const close = () => setOpen(false);
   const openSearch = () => {
     setCode("");
     setPage(1);
+    setSelectedPresentation(null);
     setCatalog(null);
     setError(null);
     setAnnouncement("");
@@ -110,7 +118,7 @@ export function SaleProductPicker({
           }}
           className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/45"
         >
-          <div className="flex max-h-[90dvh] flex-col">
+          <div className="flex max-h-[calc(90dvh-2px)] flex-col [@media(max-height:32rem)]:block [@media(max-height:32rem)]:overflow-y-auto">
             <header className="flex items-center justify-between border-b border-pw-line px-5 py-4">
               <div>
                 <h2 id="sale-product-dialog-title" className="text-lg font-extrabold">Buscar prendas</h2>
@@ -118,7 +126,7 @@ export function SaleProductPicker({
               <button type="button" onClick={close} aria-label="Cerrar búsqueda de prendas" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button>
             </header>
 
-            <div className="space-y-4 overflow-y-auto p-5">
+            <div className="space-y-3 px-5 pt-5 pb-3">
               <label htmlFor="catalog-code" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
                 Código de la prenda
                 <input
@@ -130,6 +138,7 @@ export function SaleProductPicker({
                   onChange={(event) => {
                     setCode(event.target.value);
                     setPage(1);
+                    setSelectedPresentation(null);
                     setAnnouncement("");
                   }}
                   onKeyDown={(event) => {
@@ -140,17 +149,46 @@ export function SaleProductPicker({
                 />
               </label>
 
+              {!loading && !error && hasMultiplePresentations ? (
+                <div role="group" aria-label="Presentaciones disponibles" className="flex gap-2 overflow-x-auto p-1">
+                  {Array.from(groups, ([key, [first]]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={selectedPresentation === key}
+                      onClick={() => {
+                        setSelectedPresentation(key);
+                        if (resultsRef.current) resultsRef.current.scrollTop = 0;
+                      }}
+                      className="flex max-w-52 shrink-0 items-center gap-3 rounded-lg border border-pw-line px-2 py-1.5 text-left text-xs font-extrabold hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-pw-brand-deep aria-pressed:border-pw-brand-deep aria-pressed:bg-pw-brand-soft aria-pressed:text-pw-brand-deep"
+                    >
+                      {first.imageUrl ? (
+                        <img src={first.imageUrl} alt="" className="size-18 shrink-0 rounded-md bg-pw-canvas object-contain sm:size-22" />
+                      ) : (
+                        <span aria-hidden="true" className="grid size-18 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-pw-brand-deep sm:size-22">✦</span>
+                      )}
+                      <span className="wrap-anywhere">{first.presentationName}{hasMultipleProducts ? <small className="block font-normal">Código {first.product.code}</small> : null}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div ref={resultsRef} className="min-h-0 space-y-4 overflow-y-auto px-5 pb-5 [@media(max-height:32rem)]:overflow-visible">
               {!code.trim() ? <p className="rounded-xl border border-dashed border-pw-line p-5 text-center text-sm text-pw-muted">Escribe un código para consultar las prendas disponibles.</p> : null}
               {code.trim() && !/^\d+$/.test(code.trim()) ? <p role="status" className="text-sm text-pw-muted">El código debe contener solo números.</p> : null}
               {loading ? <LoadingState /> : null}
               {!loading && error ? <ErrorState title="No se pudo buscar el catálogo" description={error} onRetry={() => setRetry((value) => value + 1)} /> : null}
               {!loading && !error && catalog && options.length === 0 ? <p className="rounded-xl border border-dashed border-pw-line p-5 text-center text-sm text-pw-muted">No encontramos prendas disponibles con ese código.</p> : null}
-              {!loading && !error && options.length > 0 ? (
+              {!loading && !error && hasMultiplePresentations && visibleGroups.length === 0 ? (
+                <p className="py-4 text-center text-sm text-pw-muted">Elige una presentación para ver las tallas disponibles.</p>
+              ) : null}
+              {!loading && !error && visibleGroups.length > 0 ? (
                 <div className="grid gap-3">
-                  {groups.map((group) => {
+                  {visibleGroups.map(([key, group]) => {
                     const first = group[0];
                     return (
-                      <section key={`${first.product.id}:${first.presentationId}`} className="overflow-hidden rounded-xl border border-pw-line">
+                      <section key={key} className="overflow-hidden rounded-xl border border-pw-line">
                         <header className="flex min-h-11 items-center gap-3 px-3 py-2.5 sm:px-4">
                           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                             <p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p>
@@ -158,8 +196,8 @@ export function SaleProductPicker({
                             <p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p>
                           </div>
                         </header>
-                        <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-stretch gap-2 border-t border-pw-line p-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4">
-                          {first.imageUrl ? (
+                        <div className={"border-t border-pw-line p-2.5 sm:px-4 " + (hasMultiplePresentations ? "" : "grid grid-cols-[4.5rem_minmax(0,1fr)] items-stretch gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-3")}>
+                          {hasMultiplePresentations ? null : first.imageUrl ? (
                             <img
                               src={first.imageUrl}
                               alt={first.presentationName + ", " + first.product.name}
@@ -196,11 +234,14 @@ export function SaleProductPicker({
                   })}
                 </div>
               ) : null}
-              {catalog && catalog.totalPages > 1 ? <Pagination page={catalog.page} totalPages={catalog.totalPages} onPageChange={setPage} /> : null}
+              {catalog && catalog.totalPages > 1 ? <Pagination page={catalog.page} totalPages={catalog.totalPages} onPageChange={(nextPage) => {
+                setSelectedPresentation(null);
+                setPage(nextPage);
+              }} /> : null}
               <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
             </div>
 
-            <footer className="flex justify-end border-t border-pw-line p-4">
+            <footer className="flex shrink-0 justify-end border-t border-pw-line p-4">
               <button type="button" onClick={close} className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-bold">Listo</button>
             </footer>
           </div>

@@ -58,12 +58,12 @@ function ToastHarness({ detail }: { detail: string }) {
   );
 }
 
-function ExpiringToastHarness() {
+function ExpiringToastHarness({ durationMs }: { durationMs?: number }) {
   const { showToast } = useToast();
   return (
     <button
       type="button"
-      onClick={() => showToast({ tone: 'success', title: 'Guardado', durationMs: 2000 })}
+      onClick={() => showToast({ tone: 'success', title: 'Guardado', durationMs })}
     >
       Mostrar éxito
     </button>
@@ -156,11 +156,34 @@ describe('shared UI primitives', () => {
     );
   });
 
-  it('dismisses a toast after its requested duration', () => {
+  it('keeps an error without a duration until dismissed', () => {
     vi.useFakeTimers();
     const { unmount } = render(
       <ToastProvider>
-        <ExpiringToastHarness />
+        <ToastHarness detail="La venta ya fue cancelada." />
+      </ToastProvider>,
+    );
+
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mostrar error' }));
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(screen.getByRole('alert')).toHaveTextContent('La venta ya fue cancelada.');
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { durationMs: undefined, expectedDuration: 4000 },
+    { durationMs: 2000, expectedDuration: 2000 },
+  ])('dismisses a toast after $expectedDuration ms', ({ durationMs, expectedDuration }) => {
+    vi.useFakeTimers();
+    const { unmount } = render(
+      <ToastProvider>
+        <ExpiringToastHarness durationMs={durationMs} />
       </ToastProvider>,
     );
 
@@ -168,7 +191,11 @@ describe('shared UI primitives', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Mostrar éxito' }));
       expect(screen.getByRole('status')).toHaveTextContent('Guardado');
 
-      act(() => vi.advanceTimersByTime(2000));
+      expect(screen.queryByRole('button', { name: 'Cerrar aviso' })).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(expectedDuration - 1));
+      expect(screen.getByRole('status')).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(1));
 
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     } finally {
