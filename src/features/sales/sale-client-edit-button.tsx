@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { SaleCardAction } from "./sale-card-action";
 import { createPortal } from "react-dom";
 import { LoadingButton } from "../../shared/ui/loading-button";
 import { useAuth } from "../auth/auth-provider";
@@ -13,16 +14,21 @@ const fields = [
   ["address", "Dirección", 350],
 ] as const;
 
-export function SaleClientEditButton({ client, onUpdated, disabled }: {
+export function SaleClientEditButton({ client, onUpdated, disabled, iconOnly = false }: {
   client: SaleClient;
   onUpdated: (client: SaleClient) => void;
+  iconOnly?: boolean;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" disabled={disabled} onClick={() => setOpen(true)} className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-bold disabled:opacity-50">
-      Editar clienta
-    </button>
+    {iconOnly ? (
+      <SaleCardAction action="edit" label="Editar clienta" disabled={disabled} onClick={() => setOpen(true)} />
+    ) : (
+      <button type="button" disabled={disabled} onClick={() => setOpen(true)} className="min-h-10 rounded-lg border border-pw-line bg-white px-3 text-sm font-bold disabled:opacity-50">
+        Editar clienta
+      </button>
+    )}
     {open ? <SaleClientEditDialog key={client.id} clientId={client.id} onClose={() => setOpen(false)} onUpdated={onUpdated} /> : null}
   </>;
 }

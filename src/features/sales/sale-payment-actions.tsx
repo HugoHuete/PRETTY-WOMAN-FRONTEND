@@ -4,13 +4,14 @@ import { LoadingButton } from "../../shared/ui/loading-button";
 import { SelectControl } from "../../shared/ui/select-control";
 import { salePaymentMethods, type SaleCatalogOption, type SalePaymentMovement, type UpdateSalePaymentMovementPayload } from "./sales-types";
 import type { RefundSalePaymentMovementPayload } from "./sales-types";
+import { roundMoney } from "./sale-payment-form";
 
 export function SalePaymentEditDialog({ movement, terminals, busy, onClose, onSave }: { movement: SalePaymentMovement; terminals: SaleCatalogOption[]; busy: boolean; onClose: () => void; onSave: (payload: UpdateSalePaymentMovementPayload) => Promise<boolean> }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [method, setMethod] = useState(String(movement.paymentMethodId));
   const [terminal, setTerminal] = useState(String(movement.paymentTerminalId ?? ""));
-  const [productAmount, setProductAmount] = useState(String(movement.productAmount));
-  const [shippingAmount, setShippingAmount] = useState(String(movement.shippingAmount));
+  const [productAmount, setProductAmount] = useState(movement.productAmount.toFixed(2));
+  const [shippingAmount, setShippingAmount] = useState(movement.shippingAmount.toFixed(2));
   const [error, setError] = useState("");
   useEffect(() => { if (dialog.current && !dialog.current.open) dialog.current.showModal(); return () => dialog.current?.close(); }, []);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -22,7 +23,68 @@ export function SalePaymentEditDialog({ movement, terminals, busy, onClose, onSa
     if (saved) onClose();
   };
   const options = [...salePaymentMethods.map((item) => ({ value: String(item.id), label: item.name })), ...terminals.map((item) => ({ value: `terminal:${item.id}`, label: item.name }))];
-  return createPortal(<dialog ref={dialog} aria-labelledby="sale-edit-payment-title" onCancel={(event) => { event.preventDefault(); onClose(); }} className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/50"><form onSubmit={submit} className="space-y-4 p-5"><header className="flex justify-between"><div><h2 id="sale-edit-payment-title" className="text-lg font-extrabold">Corregir pago</h2><p className="mt-1 text-sm text-pw-muted">Cambia el método o la distribución del monto.</p></div><button type="button" onClick={onClose} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-lg border border-pw-line text-xl">×</button></header><label className="grid gap-1 text-xs font-bold text-pw-muted">Método de pago<SelectControl id="edit-sale-payment-method" aria-label="Método de pago" value={method} options={options} onChange={(event) => setMethod(event.target.value)} /></label>{method === "3" ? <label className="grid gap-1 text-xs font-bold text-pw-muted">Terminal<SelectControl id="edit-sale-payment-terminal" aria-label="Terminal de tarjeta" value={terminal} options={[{ value: "", label: "Seleccionar terminal" }, ...terminals.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={(event) => setTerminal(event.target.value)} /></label> : null}<div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-xs font-bold text-pw-muted">Aplicado a productos<input type="number" min="0" step="0.01" value={productAmount} onChange={(event) => setProductAmount(event.target.value)} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" /></label><label className="grid gap-1 text-xs font-bold text-pw-muted">Aplicado al envío<input type="number" min="0" step="0.01" value={shippingAmount} onChange={(event) => setShippingAmount(event.target.value)} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" /></label></div>{error ? <p role="alert" className="text-sm font-bold text-red-700">{error}</p> : null}<footer className="flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Cancelar</button><LoadingButton type="submit" isLoading={busy} className="min-h-10 text-sm">Guardar corrección</LoadingButton></footer></form></dialog>, document.body);
+  return createPortal(
+    <dialog
+      ref={dialog}
+      aria-labelledby="sale-edit-payment-title"
+      onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/50"
+    >
+      <form onSubmit={submit}>
+        <header className="flex items-center justify-between gap-4 border-b border-pw-line px-5 py-4">
+          <h2 id="sale-edit-payment-title" className="text-lg font-extrabold">Corregir pago</h2>
+          <button type="button" disabled={busy} onClick={onClose} aria-label="Cerrar" className="grid size-10 shrink-0 place-items-center rounded-lg border border-pw-line text-lg text-pw-muted hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-pw-brand">×</button>
+        </header>
+        <fieldset disabled={busy} className="grid min-w-0 gap-4 px-5 py-5">
+          <label className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
+            Método de pago
+            <SelectControl id="edit-sale-payment-method" aria-label="Método de pago" value={method} options={options} onChange={(event) => setMethod(event.target.value)} />
+          </label>
+          {method === "3" ? (
+            <label className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
+              Terminal
+              <SelectControl id="edit-sale-payment-terminal" aria-label="Terminal de tarjeta" value={terminal} options={[{ value: "", label: "Seleccionar terminal" }, ...terminals.map((item) => ({ value: String(item.id), label: item.name }))]} onChange={(event) => setTerminal(event.target.value)} />
+            </label>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
+            {[
+              { label: "Aplicado a productos", value: productAmount, setValue: setProductAmount },
+              { label: "Aplicado al envío", value: shippingAmount, setValue: setShippingAmount },
+            ].map(({ label, value, setValue }) => (
+              <label key={label} className="grid min-w-0 gap-1.5 text-xs font-extrabold text-pw-muted">
+                {label}
+                <span className="flex min-h-11 min-w-0 items-center rounded-lg border border-pw-line px-2 focus-within:border-pw-brand focus-within:ring-2 focus-within:ring-pw-brand/20">
+                  <span aria-hidden="true" className="text-sm font-semibold">C$</span>
+                  <input
+                    aria-label={label}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                    onBlur={(event) => {
+                      const input = event.currentTarget;
+                      if (Number.isFinite(input.valueAsNumber) && !input.validity.rangeUnderflow) {
+                        setValue(roundMoney(input.valueAsNumber).toFixed(2));
+                      }
+                    }}
+                    className="h-10 min-w-0 flex-1 border-0 bg-transparent px-2 text-sm text-pw-ink outline-none"
+                  />
+                </span>
+              </label>
+            ))}
+          </div>
+          {error ? <p role="alert" className="text-sm font-bold text-red-700">{error}</p> : null}
+        </fieldset>
+        <footer className="flex justify-end gap-2 border-t border-pw-line px-5 py-4">
+          <button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-4 text-sm font-bold hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-pw-brand">Cancelar</button>
+          <LoadingButton type="submit" isLoading={busy} className="min-h-10 text-sm">Guardar corrección</LoadingButton>
+        </footer>
+      </form>
+    </dialog>,
+    document.body,
+  );
 }
 
 export function SalePaymentRefundButton({ movement, refundedProductAmount, refundedShippingAmount, busy, onRefund }: { movement: SalePaymentMovement; refundedProductAmount: number; refundedShippingAmount: number; busy: boolean; onRefund: (payload: RefundSalePaymentMovementPayload) => Promise<boolean> }) {

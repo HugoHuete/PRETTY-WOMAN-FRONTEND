@@ -19,7 +19,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
       {children}
       {toast ? (
         <div
-          className="fixed right-4 bottom-4 left-4 z-50 ml-auto flex w-fit max-w-sm items-start gap-3 rounded-xl border border-pw-line bg-white p-4 shadow-lg"
+          className="fixed top-4 right-4 left-4 z-50 ml-auto flex w-fit max-w-sm items-start gap-3 rounded-xl border border-pw-line bg-white p-4 shadow-lg"
           role={role}
         >
           <div className="min-w-0 wrap-anywhere">

@@ -1,4 +1,5 @@
 import { SaleClientEditButton } from "./sale-client-edit-button";
+import { SaleCardAction } from "./sale-card-action";
 import { saleDateForApi, todayInManagua } from "./sale-date";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
@@ -400,6 +401,16 @@ export function SaleCreatePage() {
     }
   };
 
+  const openClientDialog = () => {
+    setClientDraft(client);
+    setClientDirty(false);
+    setClientDialogOpen(true);
+  };
+  const openDeliveryDialog = () => {
+    setDeliveryClient(client);
+    setDeliveryOpen(true);
+  };
+
   return (
     <form onSubmit={(event) => void submit(event)} className="w-full pb-8">
       {error ? (
@@ -484,10 +495,61 @@ export function SaleCreatePage() {
             />
           </section>
 
-          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">Envío <span className="font-medium text-pw-muted">(opcional)</span></h2><p className="mt-1 text-sm text-pw-muted">{channel === "1" ? "Selecciona un canal distinto de tienda física para agregar un envío." : "Agrega los datos de entrega para registrar el envío junto con la venta."}</p></div><button type="button" disabled={channel === "1"} onClick={() => { setDeliveryClient(client); setDeliveryOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">{delivery ? "Editar envío" : "Agregar envío"}</button></div>
-            {delivery ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-pw-canvas p-3 text-sm"><p><strong>{delivery.code}</strong> · {agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"} · {money.format(delivery.shippingChargedToClient)}{channel === "1" ? <span className="block text-red-700">Cambia el canal o elimina el envío antes de guardar.</span> : null}</p><button type="button" onClick={() => setDelivery(null)} className="min-h-10 px-2 font-bold text-red-700">Quitar envío</button></div> : null}
-          </section>
+          <div className="@container">
+            <div className="grid gap-5 @min-[36rem]:grid-cols-2">
+              <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-create-client-title">
+                <header className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 id="sale-create-client-title" className="text-base font-extrabold text-pw-ink">
+                    Clienta <span className="font-medium text-pw-muted">(opcional)</span>
+                  </h2>
+                  {client ? (
+                    <div className="flex gap-1.5" role="group" aria-label="Acciones de clienta">
+                      <SaleClientEditButton client={client} onUpdated={setClient} iconOnly />
+                      <SaleCardAction action="change" label="Cambiar clienta" onClick={openClientDialog} />
+                      <SaleCardAction action="remove" label="Quitar clienta" onClick={() => setClient(null)} />
+                    </div>
+                  ) : null}
+                </header>
+                {client ? (
+                  <div className="mt-3 space-y-1 rounded-lg bg-pw-canvas p-3 text-sm wrap-anywhere">
+                    <p className="font-bold text-pw-ink">{client.name}</p>
+                    <p className="text-pw-muted">{client.phone || "Sin teléfono"}</p>
+                    {client.address?.trim() ? <p className="whitespace-pre-wrap text-pw-muted">{client.address}</p> : null}
+                  </div>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm text-pw-muted">No hay clienta asociada.</p>
+                    <button type="button" onClick={openClientDialog} className="mt-3 min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">Buscar o crear clienta</button>
+                  </>
+                )}
+              </section>
+              <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
+                <header className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 id="sale-delivery-heading" className="text-base font-extrabold text-pw-ink">
+                    Envío <span className="font-medium text-pw-muted">(opcional)</span>
+                  </h2>
+                  {delivery ? (
+                    <div className="flex gap-1.5" role="group" aria-label="Acciones de envío">
+                      <SaleCardAction action="edit" label="Editar envío" disabled={channel === "1"} onClick={openDeliveryDialog} />
+                      <SaleCardAction action="remove" label="Quitar envío" onClick={() => setDelivery(null)} />
+                    </div>
+                  ) : null}
+                </header>
+                {delivery ? (
+                  <div className="mt-3 space-y-1 rounded-lg bg-pw-canvas p-3 text-sm wrap-anywhere">
+                    <p className="font-bold text-pw-ink">{agencies.find((agency) => agency.id === delivery.deliveryAgencyId)?.name ?? "Agencia"}</p>
+                    <p className="text-pw-muted">Código {delivery.code} · {money.format(delivery.shippingChargedToClient)}</p>
+                    {channel === "1" ? <p className="text-red-700">Cambia el canal o elimina el envío antes de guardar.</p> : null}
+                  </div>
+                ) : (
+                  <>
+                    {channel === "1" ? <p className="mt-3 text-sm text-pw-muted">Selecciona un canal distinto de tienda física para agregar un envío.</p> : null}
+                    <button type="button" disabled={channel === "1"} onClick={openDeliveryDialog} className="mt-3 min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">Agregar envío</button>
+                  </>
+                )}
+              </section>
+            </div>
+          </div>
 
           <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-comments-heading">
             <h2 id="sale-comments-heading" className="text-base font-extrabold text-pw-ink">Notas <span className="font-medium text-pw-muted">(opcional)</span></h2>
@@ -547,12 +609,6 @@ export function SaleCreatePage() {
                 </dd>
               </div>
             </dl>
-          </section>
-
-          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-create-client-title">
-            <h2 id="sale-create-client-title" className="text-base font-extrabold text-pw-ink">Clienta <span className="font-medium text-pw-muted">(opcional)</span></h2>
-            {client ? <div className="mt-3 text-sm"><p className="break-words font-bold text-pw-ink">{client.name}</p><p className="mt-1 break-words text-pw-muted">{client.phone || "Sin teléfono"}</p>{client.address?.trim() ? <p className="mt-1 whitespace-pre-wrap break-words text-pw-muted">{client.address}</p> : null}</div> : <p className="mt-3 text-sm text-pw-muted">No hay clienta asociada.</p>}
-            <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setClientDraft(client); setClientDirty(false); setClientDialogOpen(true); }} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">{client ? "Cambiar clienta" : "Buscar o crear clienta"}</button>{client ? <SaleClientEditButton client={client} onUpdated={setClient} /> : null}{client ? <button type="button" onClick={() => setClient(null)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold text-pw-ink">Quitar</button> : null}</div>
           </section>
 
           <section id="sale-payment" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-payment-heading">

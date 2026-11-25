@@ -204,10 +204,15 @@ export function SaleDetailPage() {
           <SaleDetailProducts sale={sale} products={products} isAdmin={isAdmin} busy={busy} onSave={saveProducts} />
           <SaleDetailSelectionHolds sale={sale} products={products} isAdmin={isAdmin} busy={busy} onAddHold={addHold} onResolveHold={resolveHold} onReturnHold={returnHold} onUndoResolution={undoHoldResolution} />
           <SaleDetailPayments sale={sale} isAdmin={isAdmin} busy={busy} terminals={terminals} onAdd={addPayment} onUpdate={updatePayment} onRefund={refundPayment} />
-          <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={refreshClientProfile} onCompletePickup={completePickup} pickupError={mutationError} deliverySaveError={mutationError} />
+          <div className="@container">
+            <div className="grid gap-5 @min-[38rem]:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+              <SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onClientUpdated={refreshClientProfile} />
+              <SaleDetailLogistics sale={sale} client={client} isAdmin={isAdmin} busy={busy} municipalities={municipalities} deliveryAgencies={deliveryAgencies} deliveryCatalogLoading={deliveryCatalogLoading} deliveryCatalogError={deliveryCatalogError} onRetryDeliveryCatalogs={() => setDeliveryCatalogRetry((value) => value + 1)} onDeliveryAction={deliveryAction} onEditDelivery={editDelivery} onCreateDelivery={addDelivery} onDeliveryClientSelected={refreshClientProfile} onCompletePickup={completePickup} pickupError={mutationError} deliverySaveError={mutationError} />
+            </div>
+          </div>
           <SaleDetailPostSale key={sale.id} hash={location.hash} sale={sale} products={products} catalogLoading={catalogLoading} agencies={deliveryAgencies} terminals={terminals} isAdmin={isAdmin} busy={busy} onMutation={runMutation} />
         </div>
-        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /><SaleDetailClient sale={sale} client={client} isAdmin={isAdmin} busy={busy} onSave={saveClient} onClientUpdated={refreshClientProfile} /></aside>
+        <aside className="min-w-0 space-y-5 self-start xl:sticky xl:top-5"><SaleDetailSummary sale={sale} /></aside>
       </div>
       {catalogLoading ? <p className="sr-only" role="status">Cargando datos de productos</p> : null}
     </> : null}
