@@ -139,7 +139,7 @@ function ProductAddDialog({ selectedProductIds, busy, onClose, onSelect }: {
 export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
   sale: SaleDetail; products: ProductDTO[]; isAdmin: boolean; busy: boolean; onSave: (payload: ReplaceSaleProductsPayload) => Promise<boolean>;
 }) {
-  const { request } = useAuth();
+  const { request, session } = useAuth();
   const [adding, setAdding] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => draftLinesFromSale(sale));
   const [discountLineIndex, setDiscountLineIndex] = useState<number | null>(null);
@@ -152,7 +152,7 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
     const allChoices = [...choicesFrom(products), ...choicesFrom(siblingProducts), ...additionalChoices];
     return Array.from(new Map(allChoices.map((choice) => [choice.variant.id, choice])).values());
   }, [products, siblingProducts, additionalChoices]);
-  const canEdit = isAdmin && ![4, 5, 6].includes(sale.saleStatusId);
+  const canEdit = (isAdmin || session?.user.roles.includes("Employee")) && [1, 2, 3].includes(sale.saleStatusId);
   const savedLines = useMemo(() => draftLinesFromSale(sale), [sale.productVariants]);
   const dirty = JSON.stringify(draftLines) !== JSON.stringify(savedLines);
 
