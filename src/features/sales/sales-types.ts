@@ -281,6 +281,16 @@ export type PostSaleDelivery = {
   receivedAt: string | null;
 };
 
+export type CorrectExchangeOutboundItemPayload = {
+  expectedProductId: number;
+  replacementProductId: number;
+  originalEffectiveUnitPrice: number;
+  priceReference: string;
+  originalUnitCost: number;
+  costReference: string;
+  reason: string;
+};
+
 export type SaleExchange = {
   id: number;
   originalSaleId: number;
@@ -294,7 +304,7 @@ export type SaleExchange = {
   postSaleDelivery: PostSaleDelivery | null;
   settlement: SaleExchangeSettlement | null;
   returnItems: Array<{ id: number; originalSaleProductId: number; productId: number; quantity: number; recognizedUnitAmount: number; statusId: number; statusName: string }>;
-  outboundItems: Array<{ id: number; productId: number; quantity: number; itemTypeId: number; unitPrice: number; unitCost: number; lineTotal: number; totalCost: number; delivered: boolean }>;
+  outboundItems: Array<{ id: number; productId: number; productCode?: number | null; quantity: number; itemTypeId: number; unitPrice: number; unitCost: number; lineTotal: number; totalCost: number; delivered: boolean }>;
 };
 
 export type SaleReturn = {

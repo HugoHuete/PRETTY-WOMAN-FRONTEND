@@ -9,12 +9,12 @@ import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { exchangeStatuses, returnStatuses } from "./sale-post-sale-statuses";
 import { saleVariants, type SaleVariantOption } from "./sale-product-types";
 import {
-  cancelSaleExchange, cancelSaleReturn, completeSaleExchangeHandover, createSaleExchange,
-  createSaleReturn, getSaleExchanges, getSaleProducts, getSaleReturns, receiveSaleExchangeReturnItem,
+  correctSaleExchangeOutboundItem, cancelSaleExchange, cancelSaleReturn, completeSaleExchangeHandover, createSaleExchange,
+  createSaleReturn, getSaleExchanges, getSaleProductCatalog, getSaleProducts, getSaleReturns, receiveSaleExchangeReturnItem,
   receiveSaleReturn, registerSaleReturnPickup, settleSaleExchange,
 } from "./sales-api";
 import type {
-  CreateSaleExchangePayload, CreateSaleExchangeSettlementPayload, CreateSaleReturnPayload,
+  CorrectExchangeOutboundItemPayload, CreateSaleExchangePayload, CreateSaleExchangeSettlementPayload, CreateSaleReturnPayload,
   ProcessSaleReturnPayload, ReceiveSaleReturnPayload, SaleDetail, SaleExchange, SaleReturn,
   SaleReturn as SaleReturnModel, SaleCatalogOption, SaleDeliveryAgency,
 } from "./sales-types";
@@ -37,11 +37,11 @@ function date(value: string | null) {
   return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(parsed);
 }
 
-function variantLabel(productId: number, products: ProductDTO[]) {
+function variantLabel(productId: number, products: ProductDTO[], productCode?: number | null) {
   for (const product of products) for (const presentation of product.presentations) for (const variant of presentation.sizes) {
     if (variant.id === productId) return `${product.name} · ${presentation.name ?? "Presentación"}${variant.sizeName ? ` · ${variant.sizeName}` : ""} · Código ${product.code}`;
   }
-  return `Prenda #${productId}`;
+  return productCode == null ? `Prenda #${productId}` : `Código ${productCode} · Variante #${productId}`;
 }
 
 function variantReturnDetails(productId: number, products: ProductDTO[]) {
@@ -81,7 +81,7 @@ function itemOptions(sale: SaleDetail, exchanges: SaleExchange[], returns: SaleR
 
 function CreateExchangeDialog({ sale, products, agencies, exchanges, returns, busy, onClose, onSave }: {
   sale: SaleDetail; products: ProductDTO[]; agencies: SaleDeliveryAgency[]; exchanges: SaleExchange[]; returns: SaleReturn[]; busy: boolean;
-  onClose: () => void; onSave: (payload: CreateSaleExchangePayload) => Promise<boolean>;
+  onClose: () => void; onSave: (payload: CreateSaleExchangePayload) => Promise<string | null>;
 }) {
   const { request } = useAuth();
   const returnChoices = itemOptions(sale, exchanges, returns, products);
@@ -121,9 +121,10 @@ function CreateExchangeDialog({ sale, products, agencies, exchanges, returns, bu
     setOutboundLines((current) => [...current, { productId: String(option.variant.id), quantity: "1", itemTypeId: "1", option }]);
   };
   const recognizedReturnTotal = round(returnLines.reduce((total, line) => total + (Number(line.quantity) || 0) * (Number(line.recognizedUnitAmount) || 0), 0));
-  const outboundItemsTotal = round(outboundLines.reduce((total, line) => total + (Number(line.quantity) || 0) * line.option.variant.salePrice, 0));
+  const outboundItemsTotal = round(outboundLines.reduce((total, line) => total + (Number(line.quantity) || 0) * (line.option.variant.discountedSalePrice ?? line.option.variant.salePrice), 0));
   const exchangeBalance = round(outboundItemsTotal - recognizedReturnTotal);
-  const agencyAmountToCollect = round(Math.max(0, exchangeBalance) + (Number(shipping) || 0));
+  const estimatedAgencyRefund = hasAgency && exchangeBalance < 0;
+  const agencyAmountToCollect = round(exchangeBalance + (Number(shipping) || 0));
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError("");
     const returnsPayload = returnLines.map((line) => ({ originalSaleProductId: Number(line.saleProductId), quantity: Number(line.quantity), recognizedUnitAmount: Number(line.recognizedUnitAmount) }));
@@ -133,8 +134,9 @@ function CreateExchangeDialog({ sale, products, agencies, exchanges, returns, bu
       const choice = returnChoices.find((item) => item.line.id === line.originalSaleProductId);
       return !originalLine || !choice || line.quantity < 1 || line.quantity > choice.remaining || line.recognizedUnitAmount < 0 || line.recognizedUnitAmount > originalLine.finalUnitPrice;
     }) || !outboundPayload.length || outboundPayload.some((line, index) => !line.productId || line.quantity < 1 || line.quantity > outboundLines[index].option.variant.availableQuantity)) { setError("Selecciona prendas válidas. La cantidad debe estar disponible y el monto reconocido no puede superar el precio de la prenda."); return; }
-    const saved = await onSave({ ...(hasAgency ? { deliveryAgencyId: Number(agencyId), deliveryCode: deliveryCode.trim(), deliveryAddress: address.trim(), shippingChargedToClient: Number(shipping) || 0 } : { shippingChargedToClient: 0 }), ...(comments.trim() ? { comments: comments.trim() } : {}), returnItems: returnsPayload, outboundItems: outboundPayload });
-    if (saved) onClose();
+    const failure = await onSave({ ...(hasAgency ? { deliveryAgencyId: Number(agencyId), deliveryCode: deliveryCode.trim(), deliveryAddress: address.trim(), shippingChargedToClient: Number(shipping) || 0 } : { shippingChargedToClient: 0 }), ...(comments.trim() ? { comments: comments.trim() } : {}), returnItems: returnsPayload, outboundItems: outboundPayload });
+    if (failure) setError(failure);
+    else onClose();
   };
   return <AsyncDialog title="Crear cambio" onClose={onClose} wide><form onSubmit={submit} className="space-y-4">
     <fieldset className="space-y-3"><legend className="mb-2 text-sm font-extrabold">Prendas que devuelve la clienta</legend>{returnChoices.map(({ line: saleLine, remaining }) => {
@@ -160,13 +162,13 @@ function CreateExchangeDialog({ sale, products, agencies, exchanges, returns, bu
         const selected = outboundLines.some((line) => Number(line.productId) === option.variant.id);
         return <li key={option.variant.id} className="flex items-center gap-3 p-3">
           {option.imageUrl ? <img src={option.imageUrl} alt="" loading="lazy" className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover" /> : <span aria-hidden="true" className="grid h-12 w-10 shrink-0 place-items-center rounded-md bg-pw-canvas text-[10px] text-pw-muted">—</span>}
-          <div className="min-w-0 flex-1"><p className="text-sm font-extrabold">Código {option.product.code} · {option.variant.sizeName || "Unitalla"}</p><p className="text-xs text-pw-muted">{option.presentationName} · {money.format(option.variant.salePrice)} · {option.variant.availableQuantity} disponibles</p></div>
+          <div className="min-w-0 flex-1"><p className="text-sm font-extrabold">Código {option.product.code} · {option.variant.sizeName || "Unitalla"}</p><p className="text-xs text-pw-muted">{option.presentationName} · {money.format(option.variant.discountedSalePrice ?? option.variant.salePrice)} · {option.variant.availableQuantity} disponibles</p></div>
           <button type="button" disabled={selected} onClick={() => addOutbound(option)} className="min-h-9 shrink-0 rounded-lg border border-pw-brand px-3 text-xs font-bold text-pw-brand-deep disabled:border-pw-line disabled:text-pw-muted">{selected ? "Agregada" : "Agregar"}</button>
         </li>;
       })}</ul> : null}
       {catalog?.hasNextPage ? <button type="button" onClick={() => setSearchPage((page) => page + 1)} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Ver más resultados</button> : null}
       {outboundLines.map((line, index) => <div key={line.productId} className="grid gap-2 rounded-xl border border-pw-line p-3 sm:grid-cols-[minmax(0,1fr)_7rem_6rem_auto] sm:items-end">
-      <div className="flex min-w-0 items-center gap-3">{line.option.imageUrl ? <img src={line.option.imageUrl} alt="" className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover" /> : null}<div className="min-w-0"><p className="text-sm font-extrabold">Código {line.option.product.code} · {line.option.variant.sizeName || "Unitalla"}</p><p className="text-xs text-pw-muted">{line.option.presentationName} · {money.format(line.option.variant.salePrice)} · {line.option.variant.availableQuantity} disponibles</p></div></div>
+      <div className="flex min-w-0 items-center gap-3">{line.option.imageUrl ? <img src={line.option.imageUrl} alt="" className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover" /> : null}<div className="min-w-0"><p className="text-sm font-extrabold">Código {line.option.product.code} · {line.option.variant.sizeName || "Unitalla"}</p><p className="text-xs text-pw-muted">{line.option.presentationName} · {money.format(line.option.variant.discountedSalePrice ?? line.option.variant.salePrice)} · {line.option.variant.availableQuantity} disponibles</p></div></div>
       <label className="grid gap-1 text-xs font-bold text-pw-muted">Tipo<SelectControl id={`sale-post-outbound-type-${index}`} aria-label={`Tipo de prenda de salida ${index + 1}`} value={line.itemTypeId} options={[{ value: "1", label: "Reemplazo" }, { value: "2", label: "Compra adicional" }]} onChange={(event) => setOutboundLines((current) => current.map((value, currentIndex) => currentIndex === index ? { ...value, itemTypeId: event.target.value } : value))} /></label>
       <label className="grid gap-1 text-xs font-bold text-pw-muted">Cantidad<input aria-label={`Cantidad de salida ${index + 1}`} type="number" min="1" step="1" max={line.option.variant.availableQuantity} value={line.quantity} onChange={(event) => setOutboundLines((current) => current.map((value, currentIndex) => currentIndex === index ? { ...value, quantity: event.target.value } : value))} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" required /></label>
       <button type="button" aria-label={`Quitar prenda de salida ${index + 1}`} onClick={() => setOutboundLines((current) => current.filter((_, currentIndex) => currentIndex !== index))} className="grid min-h-10 w-10 place-items-center rounded-lg text-red-700 hover:bg-red-50"><TrashIcon /></button>
@@ -175,9 +177,12 @@ function CreateExchangeDialog({ sale, products, agencies, exchanges, returns, bu
     </fieldset>
     <section aria-label="Resumen de diferencia del cambio" className="rounded-xl border border-pw-line bg-pw-canvas p-4">
       <h3 className="text-sm font-extrabold">Diferencia del cambio</h3>
-      <dl className="mt-3 space-y-2 text-sm"><div className="flex justify-between gap-4"><dt className="text-pw-muted">Valor reconocido de prendas devueltas</dt><dd className="font-bold tabular-nums">{money.format(recognizedReturnTotal)}</dd></div><div className="flex justify-between gap-4"><dt className="text-pw-muted">Valor de prendas nuevas</dt><dd className="font-bold tabular-nums">{money.format(outboundItemsTotal)}</dd></div><div className="flex justify-between gap-4 border-t border-pw-line pt-2"><dt className="font-extrabold">{exchangeBalance > 0 ? "La clienta paga" : exchangeBalance < 0 ? "Saldo a favor de la clienta" : "Sin diferencia"}</dt><dd className="font-extrabold tabular-nums">{money.format(Math.abs(exchangeBalance))}</dd></div>{hasAgency ? <><div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-bold tabular-nums">{money.format(Number(shipping) || 0)}</dd></div><div className="flex justify-between gap-4"><dt className="text-pw-muted">Total a cobrar por agencia</dt><dd className="font-bold tabular-nums">{money.format(agencyAmountToCollect)}</dd></div></> : null}</dl>
+      <dl className="mt-3 space-y-2 text-sm"><div className="flex justify-between gap-4"><dt className="text-pw-muted">Valor reconocido de prendas devueltas</dt><dd className="font-bold tabular-nums">{money.format(recognizedReturnTotal)}</dd></div><div className="flex justify-between gap-4"><dt className="text-pw-muted">Valor de prendas nuevas</dt><dd className="font-bold tabular-nums">{money.format(outboundItemsTotal)}</dd></div><div className="flex justify-between gap-4 border-t border-pw-line pt-2"><dt className="font-extrabold">{exchangeBalance > 0 ? "La clienta paga" : exchangeBalance < 0 ? "Saldo a favor de la clienta" : "Sin diferencia"}</dt><dd className="font-extrabold tabular-nums">{money.format(Math.abs(exchangeBalance))}</dd></div>{hasAgency && !estimatedAgencyRefund ? <><div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-bold tabular-nums">{money.format(Number(shipping) || 0)}</dd></div><div className="flex justify-between gap-4"><dt className="text-pw-muted">Total a cobrar por agencia</dt><dd className="font-bold tabular-nums">{money.format(agencyAmountToCollect)}</dd></div></> : null}</dl>
     </section>
     <div className="grid gap-3 sm:grid-cols-3"><label className="grid gap-1 text-xs font-bold text-pw-muted sm:col-span-1">Entrega<select aria-label="Forma de entrega del cambio" value={agencyId} onChange={(event) => setAgencyId(event.target.value)} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm"><option value="">En el local</option>{agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></label>{hasAgency ? <><label className="grid gap-1 text-xs font-bold text-pw-muted">Código del envío<input value={deliveryCode} onChange={(event) => setDeliveryCode(event.target.value)} maxLength={40} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" /></label><label className="grid gap-1 text-xs font-bold text-pw-muted">Envío cobrado<input type="number" min="0" step="0.01" value={shipping} onChange={(event) => setShipping(event.target.value)} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" /></label><label className="grid gap-1 text-xs font-bold text-pw-muted sm:col-span-3">Dirección<input value={address} onChange={(event) => setAddress(event.target.value)} className="min-h-11 rounded-lg border border-pw-line px-3 text-sm" /></label></> : null}<label className="grid gap-1 text-xs font-bold text-pw-muted sm:col-span-3">Comentarios<textarea value={comments} onChange={(event) => setComments(event.target.value)} maxLength={300} rows={2} className="rounded-lg border border-pw-line px-3 py-2 text-sm" /></label></div>
+    {estimatedAgencyRefund && outboundLines.length > 0 ? <p role="status" className="text-sm font-bold text-amber-900">
+      El saldo estimado queda a favor de la clienta. Si el precio vigente todavía deja saldo a favor al guardar, el cambio por agencia se rechazará.
+    </p> : null}
     {error ? <p role="alert" className="text-sm font-bold text-red-700">{error}</p> : null}<footer className="flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-4 text-sm font-bold">Cancelar</button><LoadingButton type="submit" isLoading={busy} disabled={!returnChoices.length || !outboundLines.length} className="min-h-10 text-sm">Crear cambio</LoadingButton></footer>
   </form></AsyncDialog>;
 }
@@ -271,12 +276,131 @@ function ReturnProcessDialog({ saleReturn, busy, onClose, onPickup, onReceive }:
   return <AsyncDialog title={title} onClose={onClose}><form onSubmit={submit} className="space-y-4"><p className="text-sm text-pw-muted">Reembolso calculado: <strong className="text-pw-ink">{money.format(saleReturn.refundTotal)}</strong></p>{refundRequired ? <label className="grid gap-1 text-xs font-bold text-pw-muted">Método de reembolso<SelectControl id="sale-return-refund-method" aria-label="Método de reembolso" value={paymentMethodId} options={[{ value: "1", label: "Efectivo" }, { value: "2", label: "Transferencia" }, { value: "3", label: "Tarjeta" }]} onChange={(event) => setPaymentMethodId(event.target.value)} /></label> : null}{!isAgencyPickup ? <fieldset className="space-y-2"><legend className="text-xs font-extrabold text-pw-muted">Estado de las prendas recibidas</legend>{saleReturn.items.map((item) => <label key={item.id} className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-pw-line px-3 text-sm"><span>Prenda #{item.productId} · cantidad {item.quantity}</span><span className="flex items-center gap-2"><input type="checkbox" checked={damaged[item.id] ?? false} onChange={(event) => setDamaged((current) => ({ ...current, [item.id]: event.target.checked }))} /> Dañada</span></label>)}</fieldset> : null}<label className="grid gap-1 text-xs font-bold text-pw-muted">Comentarios<textarea value={comments} onChange={(event) => setComments(event.target.value)} maxLength={300} rows={2} className="rounded-lg border border-pw-line px-3 py-2 text-sm" /></label><footer className="flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={busy} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-4 text-sm font-bold">Cancelar</button><LoadingButton type="submit" isLoading={busy} className="min-h-10 text-sm">{isAgencyPickup ? "Confirmar recogida" : "Confirmar recepción"}</LoadingButton></footer></form></AsyncDialog>;
 }
 
+type DeliveredItem = SaleExchange["outboundItems"][number];
+
+function CorrectDeliveredItemDialog({ item, label, busy, onClose, onSave }: {
+  item: DeliveredItem;
+  label: string;
+  busy: boolean;
+  onClose: () => void;
+  onSave: (payload: CorrectExchangeOutboundItemPayload) => Promise<string | null>;
+}) {
+  const { request } = useAuth();
+  const [code, setCode] = useState("");
+  const [catalog, setCatalog] = useState<ProductDTO[]>([]);
+  const [variantId, setVariantId] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [priceReference, setPriceReference] = useState("");
+  const [originalCost, setOriginalCost] = useState("");
+  const [costReference, setCostReference] = useState("");
+  const [reason, setReason] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const search = code.trim();
+    if (!/^\d+$/.test(search)) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void getSaleProducts(request, { page: 1, pageSize: 8, code: search })
+        .then((result) => { if (active) setCatalog(result.items.filter((product) => product.code === Number(search))); })
+        .catch(() => { if (active) setSearchError("No se pudo consultar el catálogo. Volvé a ingresar el código."); })
+        .finally(() => { if (active) setSearching(false); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [code, request]);
+
+  const eligible = saleVariants(catalog).filter(({ variant }) =>
+    variant.id !== item.productId && variant.availableQuantity >= item.quantity);
+  const selected = eligible.find(({ variant }) => String(variant.id) === variantId);
+  const disabled = busy || saving;
+  const priceMatches = originalPrice.trim() !== "" && Number(originalPrice) === item.unitPrice;
+  const unitCost = Number(originalCost);
+  const costIsValid = originalCost.trim() !== "" && Number.isFinite(unitCost) && unitCost >= 0;
+  const canSave = selected && priceMatches && priceReference.trim() && costIsValid && costReference.trim() && reason.trim();
+
+  return <AsyncDialog title="Corregir prenda entregada" onClose={() => { if (!disabled) onClose(); }}>
+    <form className="space-y-4" onSubmit={async (event) => {
+      event.preventDefault();
+      if (!canSave || !selected || disabled) return;
+      setSaving(true);
+      setSaveError(null);
+      try {
+        const failure = await onSave({
+          expectedProductId: item.productId,
+          replacementProductId: selected.variant.id,
+          originalEffectiveUnitPrice: Number(originalPrice),
+          priceReference: priceReference.trim(),
+          originalUnitCost: unitCost,
+          costReference: costReference.trim(),
+          reason: reason.trim(),
+        });
+        setSaveError(failure);
+      }
+      finally { setSaving(false); }
+    }}>
+      <p className="text-sm"><strong>Registrada:</strong> {label} × {item.quantity}</p>
+      <p className="text-sm text-pw-muted">Buscá la variante que sí se entregó. El precio efectivo que tenía al hacer el cambio debe coincidir con el registrado ({money.format(item.unitPrice)}). Se conserva el cobro registrado.</p>
+      <label className="grid gap-1 text-sm font-bold">Código de la prenda correcta
+        <input value={code} inputMode="numeric" disabled={disabled} className="min-h-10 rounded-lg border border-pw-line px-3" onChange={(event) => {
+          const value = event.target.value;
+          setCode(value);
+          setCatalog([]);
+          setVariantId("");
+          setSearchError("");
+          setSearching(/^\d+$/.test(value.trim()));
+        }} />
+      </label>
+      {searching ? <p role="status" className="text-sm">Buscando prenda…</p> : null}
+      {searchError ? <p role="alert" className="text-sm text-red-700">{searchError}</p> : null}
+      {!searching && !searchError && /^\d+$/.test(code.trim()) && !eligible.length
+        ? <p className="text-sm text-pw-muted">No hay variantes de ese código con suficiente inventario.</p> : null}
+      {eligible.length ? <label htmlFor="correct-exchange-variant" className="grid gap-1 text-sm font-bold">Presentación y talla
+        <SelectControl id="correct-exchange-variant" aria-label="Presentación y talla" value={variantId} disabled={disabled} onChange={(event) => setVariantId(event.target.value)}
+          options={[{ value: "", label: "Elegí la variante" }, ...eligible.map(({ variant, product, presentationName }) => ({
+            value: String(variant.id),
+            label: `${product.name} · ${presentationName} · ${variant.sizeName ?? "Unitalla"}`,
+          }))]} />
+      </label> : null}
+      <label className="grid gap-1 text-sm font-bold">Precio unitario original de la prenda correcta
+        <input type="number" min="0" step="0.01" required disabled={disabled} value={originalPrice}
+          className="min-h-10 rounded-lg border border-pw-line px-3" onChange={(event) => setOriginalPrice(event.target.value)} />
+      </label>
+      {originalPrice && !priceMatches ? <p role="status" className="text-sm text-red-700">El precio original debe coincidir con {money.format(item.unitPrice)}.</p> : null}
+      <label className="grid gap-1 text-sm font-bold">Referencia del comprobante o registro del precio original
+        <input required maxLength={100} disabled={disabled} value={priceReference}
+          className="min-h-10 rounded-lg border border-pw-line px-3" onChange={(event) => setPriceReference(event.target.value)} />
+      </label>
+      <label className="grid gap-1 text-sm font-bold">Costo unitario original de la prenda correcta (C$)
+        <input type="number" min="0" step="0.000001" required disabled={disabled} value={originalCost}
+          className="min-h-10 rounded-lg border border-pw-line px-3" onChange={(event) => setOriginalCost(event.target.value)} />
+      </label>
+      <label className="grid gap-1 text-sm font-bold">Referencia del registro del costo original
+        <input required maxLength={100} disabled={disabled} value={costReference}
+          className="min-h-10 rounded-lg border border-pw-line px-3" onChange={(event) => setCostReference(event.target.value)} />
+      </label>
+      <label className="grid gap-1 text-sm font-bold">Motivo de la corrección
+        <textarea value={reason} disabled={disabled} required maxLength={200} rows={2} className="rounded-lg border border-pw-line px-3 py-2" onChange={(event) => setReason(event.target.value)} />
+      </label>
+      {saveError ? <p role="alert" className="text-sm font-bold text-red-700">{saveError}</p> : null}
+      <footer className="flex justify-end gap-2 border-t border-pw-line pt-4">
+        <button type="button" disabled={disabled} onClick={onClose} className="min-h-10 rounded-lg border border-pw-line px-4 text-sm font-bold">Cancelar</button>
+        <LoadingButton type="submit" disabled={disabled || !canSave} isLoading={saving}>Guardar corrección</LoadingButton>
+      </footer>
+    </form>
+  </AsyncDialog>;
+}
+
 export function SaleDetailPostSale({ hash = "", sale, products, catalogLoading, agencies, terminals, isAdmin, busy, onMutation }: { hash?: string; sale: SaleDetail; products: ProductDTO[]; catalogLoading: boolean; agencies: SaleDeliveryAgency[]; terminals: SaleCatalogOption[]; isAdmin: boolean; busy: boolean; onMutation: (action: () => Promise<unknown>, title: string) => Promise<boolean> }) {
   const { request } = useAuth();
+  const [outboundProducts, setOutboundProducts] = useState<ProductDTO[]>([]);
   const [exchanges, setExchanges] = useState<SaleExchange[]>([]); const [returns, setReturns] = useState<SaleReturn[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [refresh, setRefresh] = useState(0);
   const [creatingExchange, setCreatingExchange] = useState(false); const [creatingReturn, setCreatingReturn] = useState(false);
   const [settling, setSettling] = useState<SaleExchange | null>(null); const [processingReturn, setProcessingReturn] = useState<SaleReturn | null>(null);
+  const [correcting, setCorrecting] = useState<{ exchangeId: number; item: DeliveredItem } | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; description: string; label: string; action: () => Promise<unknown>; success: string } | null>(null);
   useEffect(() => {
     let active = true;
@@ -286,6 +410,25 @@ export function SaleDetailPostSale({ hash = "", sale, products, catalogLoading, 
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [request, sale.id, refresh]);
+  const outboundVariantKey = [...new Set(exchanges.flatMap((exchange) => exchange.outboundItems.map((item) => item.productId)))].sort((a, b) => a - b).join(",");
+  useEffect(() => {
+    if (!outboundVariantKey) {
+      setOutboundProducts([]);
+      return;
+    }
+
+    let active = true;
+    const ids = outboundVariantKey.split(",").map(Number);
+    const pageSize = 100;
+    const batches = Array.from({ length: Math.ceil(ids.length / pageSize) }, (_, index) =>
+      getSaleProductCatalog(request, ids.slice(index * pageSize, (index + 1) * pageSize)));
+    void Promise.allSettled(batches).then((results) => {
+      if (active) setOutboundProducts(results.flatMap((result) => result.status === "fulfilled" ? result.value : []));
+    });
+    return () => { active = false; };
+  }, [outboundVariantKey, request]);
+
+  const outboundLabel = (item: DeliveredItem) => variantLabel(item.productId, [...outboundProducts, ...products], item.productCode);
   const focusRequest = useCallback((card: HTMLElement | null) => {
     card?.scrollIntoView?.({ block: "start" });
     card?.focus({ preventScroll: true });
@@ -293,7 +436,18 @@ export function SaleDetailPostSale({ hash = "", sale, products, catalogLoading, 
   const canStart = isAdmin && (sale.saleStatusId === 4 || sale.saleStatusId === 5);
   const handle = async (action: () => Promise<unknown>, title: string) => { const saved = await onMutation(action, title); if (saved) setRefresh((value) => value + 1); return saved; };
   const hasAvailableReturn = useMemo(() => itemOptions(sale, exchanges, returns, products).length > 0, [sale, exchanges, returns, products]);
-  const createExchangeAction = (payload: CreateSaleExchangePayload) => handle(() => createSaleExchange(request, sale.id, payload), "Cambio registrado.");
+  const handleDialogMutation = async (action: () => Promise<unknown>, success: string) => {
+    let failure = "No se pudo guardar. Intenta nuevamente.";
+    const saved = await handle(async () => {
+      try { await action(); }
+      catch (caught: unknown) {
+        if (caught instanceof Error) failure = caught.message;
+        throw caught;
+      }
+    }, success);
+    return saved ? null : failure;
+  };
+  const createExchangeAction = (payload: CreateSaleExchangePayload) => handleDialogMutation(() => createSaleExchange(request, sale.id, payload), "Cambio registrado.");
   const createReturnAction = (payload: CreateSaleReturnPayload) => handle(() => createSaleReturn(request, sale.id, payload), "Devolución solicitada.");
   const confirmAction = async () => { if (!confirm) return; if (await handle(confirm.action, confirm.success)) setConfirm(null); };
   const methods = (value: number | null) => ({ 1: "Efectivo", 2: "Transferencia", 3: "Tarjeta" }[value ?? 0] ?? "—");
@@ -302,7 +456,9 @@ export function SaleDetailPostSale({ hash = "", sale, products, catalogLoading, 
     {loading ? <LoadingState /> : error ? <ErrorState title="No pudimos cargar los cambios y devoluciones" description={error} onRetry={() => setRefresh((value) => value + 1)} /> : <div className="space-y-4">
       {!exchanges.length && !returns.length ? <p className="rounded-xl border border-dashed border-pw-line py-6 text-center text-sm text-pw-muted">Esta venta aún no tiene cambios ni devoluciones.</p> : null}
       {exchanges.map((exchange) => <article key={`exchange-${exchange.id}`} id={`post-sale-exchange-${exchange.id}`} ref={hash === `#post-sale-exchange-${exchange.id}` ? focusRequest : null} tabIndex={-1} className="scroll-mt-24 rounded-xl border border-pw-line p-4"><header className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-extrabold">Cambio #{exchange.id}</h3><p className="mt-1 text-xs text-pw-muted">{exchangeStatuses[exchange.statusId] ?? exchange.statusName} · {exchange.postSaleDelivery ? `Agencia ${exchange.postSaleDelivery.deliveryAgencyName ?? ""}` : "En el local"}</p></div><strong className={`text-sm tabular-nums ${exchange.balanceToCollect < 0 ? "text-pw-brand-deep" : ""}`}>{exchange.balanceToCollect < 0 ? "Reembolso " : "Saldo a cobrar "}{money.format(Math.abs(exchange.balanceToCollect))}</strong></header>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2"><div><h4 className="text-xs font-extrabold uppercase tracking-wide text-pw-muted">Devueltas</h4><ul className="mt-1 space-y-1 text-sm">{exchange.returnItems.map((item) => <li key={item.id}>{variantLabel(item.productId, products)} × {item.quantity} <span className="text-xs text-pw-muted">· {exchangeReturnStatuses[item.statusId] ?? item.statusName}</span></li>)}</ul></div><div><h4 className="text-xs font-extrabold uppercase tracking-wide text-pw-muted">Entregadas a la clienta</h4><ul className="mt-1 space-y-1 text-sm">{exchange.outboundItems.map((item) => <li key={item.id}>{variantLabel(item.productId, products)} × {item.quantity} · {item.itemTypeId === 1 ? "Reemplazo" : "Compra adicional"}</li>)}</ul></div></div>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2"><div><h4 className="text-xs font-extrabold uppercase tracking-wide text-pw-muted">Devueltas</h4><ul className="mt-1 space-y-1 text-sm">{exchange.returnItems.map((item) => <li key={item.id}>{variantLabel(item.productId, products)} × {item.quantity} <span className="text-xs text-pw-muted">· {exchangeReturnStatuses[item.statusId] ?? item.statusName}</span></li>)}</ul></div><div><h4 className="text-xs font-extrabold uppercase tracking-wide text-pw-muted">Entregadas a la clienta</h4><ul className="mt-1 space-y-1 text-sm">{exchange.outboundItems.map((item) => <li key={item.id}>{outboundLabel(item)} × {item.quantity} · {item.itemTypeId === 1 ? "Reemplazo" : "Compra adicional"}
+          {isAdmin && exchange.statusId === 4 && item.delivered ? <button type="button" disabled={busy} onClick={() => setCorrecting({ exchangeId: exchange.id, item })} className="ml-2 min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Corregir prenda entregada</button> : null}
+        </li>)}</ul></div></div>
         {exchange.postSaleDelivery ? <p className="mt-3 rounded-lg bg-pw-canvas p-3 text-xs text-pw-muted">Envío {exchange.postSaleDelivery.code || "sin código"} · {postSaleDeliveryStatuses[exchange.postSaleDelivery.statusId] ?? exchange.postSaleDelivery.statusName} · Cobrar a clienta: <strong className="text-pw-ink">{money.format(exchange.postSaleDelivery.amountToCollect)}</strong>{exchange.postSaleDelivery.address ? ` · ${exchange.postSaleDelivery.address}` : ""}</p> : null}
         {exchange.settlement ? <p className="mt-3 rounded-lg bg-pw-canvas p-3 text-sm">{exchange.settlement.movementDirectionId === 1 ? "Cobro" : "Reembolso"} de <strong>{money.format(exchange.settlement.amount)}</strong> · {date(exchange.settlement.movementDate)} · {exchange.settlement.tenders.map((tender) => `${methods(tender.paymentMethodId)}${tender.paymentTerminalName ? ` (${tender.paymentTerminalName})` : ""} ${money.format(tender.amount)}`).join(" + ")}</p> : null}
         {isAdmin ? <div className="mt-3 flex flex-wrap gap-2">{exchange.statusId === 1 ? <button type="button" disabled={busy} onClick={() => setConfirm({ title: `Confirmar entrega del cambio #${exchange.id}`, description: "Confirma que se entregaron las prendas nuevas y se recibieron las prendas devueltas.", label: "Confirmar entrega", action: () => completeSaleExchangeHandover(request, sale.id, exchange.id), success: "Entrega del cambio registrada." })} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Registrar entrega</button> : null}{exchange.returnItems.filter((item) => item.statusId === 2).map((item) => <button key={item.id} type="button" disabled={busy} onClick={() => setConfirm({ title: "Confirmar recepción de prenda", description: `Se marcará recibida: ${variantLabel(item.productId, products)}.`, label: "Confirmar recepción", action: () => receiveSaleExchangeReturnItem(request, sale.id, exchange.id, item.id), success: "Prenda devuelta recibida." })} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">Recibir prenda #{item.id}</button>)}{!exchange.postSaleDelivery && exchange.statusId !== 1 && exchange.statusId !== 5 && !exchange.settlement && Math.abs(exchange.balanceToCollect) > 0 ? <button type="button" disabled={busy} onClick={() => setSettling(exchange)} className="min-h-9 rounded-lg bg-pw-brand px-3 text-xs font-extrabold text-white">{exchange.balanceToCollect > 0 ? "Cobrar diferencia" : "Registrar reembolso"}</button> : null}{exchange.statusId === 1 ? <button type="button" disabled={busy} onClick={() => setConfirm({ title: `Cancelar cambio #${exchange.id}`, description: "Se liberarán las prendas reservadas para este cambio.", label: "Cancelar cambio", action: () => cancelSaleExchange(request, sale.id, exchange.id), success: "Cambio cancelado." })} className="min-h-9 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700">Cancelar cambio</button> : null}</div> : null}
@@ -319,6 +475,16 @@ export function SaleDetailPostSale({ hash = "", sale, products, catalogLoading, 
         {isAdmin ? <div className="mt-3 flex flex-wrap gap-2">{saleReturn.statusId === 1 || saleReturn.statusId === 2 && saleReturn.methodId === 2 ? <button type="button" disabled={busy} onClick={() => setProcessingReturn(saleReturn)} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold">{saleReturn.statusId === 1 && saleReturn.methodId === 2 ? "Registrar recogida" : saleReturn.methodId === 1 ? "Recibir y reembolsar" : "Confirmar llegada"}</button> : null}{saleReturn.statusId === 1 ? <button type="button" disabled={busy} onClick={() => setConfirm({ title: `Cancelar devolución #${saleReturn.id}`, description: "La solicitud se cancelará y las prendas volverán a estar disponibles para otros procesos postventa.", label: "Cancelar devolución", action: () => cancelSaleReturn(request, sale.id, saleReturn.id), success: "Devolución cancelada." })} className="min-h-9 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700">Cancelar devolución</button> : null}</div> : null}
       </article>)}
     </div>}
+    {correcting ? <CorrectDeliveredItemDialog item={correcting.item}
+      label={outboundLabel(correcting.item)}
+      busy={busy} onClose={() => setCorrecting(null)} onSave={async (payload) => {
+        const failure = await handleDialogMutation(
+          () => correctSaleExchangeOutboundItem(request, sale.id, correcting.exchangeId, correcting.item.id, payload),
+          "Prenda entregada corregida.",
+        );
+        if (failure === null) setCorrecting(null);
+        return failure;
+      }} /> : null}
     {creatingExchange ? <CreateExchangeDialog sale={sale} products={products} agencies={agencies} exchanges={exchanges} returns={returns} busy={busy} onClose={() => setCreatingExchange(false)} onSave={createExchangeAction} /> : null}
     {creatingReturn ? <CreateReturnDialog sale={sale} products={products} agencies={agencies} exchanges={exchanges} returns={returns} busy={busy} onClose={() => setCreatingReturn(false)} onSave={createReturnAction} /> : null}
     {settling ? <SettleExchangeDialog exchange={settling} terminals={terminals} busy={busy} onClose={() => setSettling(null)} onSave={(payload) => handle(() => settleSaleExchange(request, sale.id, settling.id, payload), "Saldo del cambio liquidado.")} /> : null}

@@ -2,6 +2,7 @@ import type { ProductDTO, PaginatedProducts } from "../products/product-types";
 import type { ClientRecord } from "../clients/clients-page";
 import type {
   ClientSearch,
+  CorrectExchangeOutboundItemPayload,
   CreateSaleClientPayload,
   CreateSaleExchangePayload,
   CreateSaleExchangeSettlementPayload,
@@ -284,6 +285,13 @@ export function completeSaleExchangeHandover(request: AuthRequest, id: number, e
 export function receiveSaleExchangeReturnItem(request: AuthRequest, id: number, exchangeId: number, returnItemId: number) {
   return sendSaleCommand(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/return-items/${returnItemId}/received`, "POST");
 }
+export function correctSaleExchangeOutboundItem(
+  request: AuthRequest, saleId: number, exchangeId: number, itemId: number,
+  payload: CorrectExchangeOutboundItemPayload,
+) {
+  return sendSaleCommand(request, `/api/v1/sales/${saleId}/exchanges/${exchangeId}/outbound-items/${itemId}/correct`, "POST", payload);
+}
+
 export function cancelSaleExchange(request: AuthRequest, id: number, exchangeId: number) {
   return sendSaleCommand(request, `/api/v1/sales/${id}/exchanges/${exchangeId}/cancel`, "POST");
 }
