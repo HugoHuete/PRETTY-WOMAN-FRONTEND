@@ -99,6 +99,11 @@ export async function getSales(request: AuthRequest, filters: SalesFilters) {
     saleStatusId: filters.saleStatusId,
     salePaymentStatusId: filters.salePaymentStatusId,
     saleChannelId: filters.saleChannelId,
+    productCode: filters.productCode,
+    clientName: filters.clientName,
+    clientPhone: filters.clientPhone,
+    clientInstagramUser: filters.clientInstagramUser,
+    clientMessengerUser: filters.clientMessengerUser,
   });
   const result = await requestJson<PaginatedResult<SaleRecord>>(request, `/api/v1/sales?${query}`);
   return normalizePage(result);

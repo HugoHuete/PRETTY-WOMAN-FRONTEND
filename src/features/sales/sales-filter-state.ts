@@ -1,5 +1,7 @@
 import type { SalesFilters } from "./sales-types";
 
+export const advancedSalesFilterKeys = ["productCode", "clientName", "clientPhone", "clientInstagramUser", "clientMessengerUser"] as const;
+
 export const salesPageSize = 20;
 
 function localDateString(date: Date) {
@@ -23,6 +25,11 @@ export const defaultSalesFilters = (): SalesFilters => {
     saleStatusId: "",
     salePaymentStatusId: "",
     saleChannelId: "",
+    productCode: "",
+    clientName: "",
+    clientPhone: "",
+    clientInstagramUser: "",
+    clientMessengerUser: "",
   };
 };
 
@@ -50,6 +57,9 @@ export function readSalesFilters(params: URLSearchParams): SalesFilters {
   const endDate = readDate("endDate", defaults.endDate);
   const pageSize = positiveInteger(params.get("pageSize"), defaults.pageSize, 100);
 
+  const productCode = params.get("productCode")?.trim() ?? "";
+  const validProductCode = /^\d{1,10}$/.test(productCode) && Number(productCode) <= 2147483647;
+
   return {
     page: positiveInteger(params.get("page"), defaults.page),
     pageSize,
@@ -58,6 +68,11 @@ export function readSalesFilters(params: URLSearchParams): SalesFilters {
     saleStatusId: params.get("saleStatusId") ?? "",
     salePaymentStatusId: params.get("salePaymentStatusId") ?? "",
     saleChannelId: params.get("saleChannelId") ?? "",
+    productCode: validProductCode ? productCode : "",
+    clientName: params.get("clientName")?.trim() ?? "",
+    clientPhone: params.get("clientPhone")?.trim() ?? "",
+    clientInstagramUser: params.get("clientInstagramUser")?.trim() ?? "",
+    clientMessengerUser: params.get("clientMessengerUser")?.trim() ?? "",
   };
 }
 
@@ -70,5 +85,8 @@ export function buildSalesSearchParams(filters: SalesFilters) {
   if (filters.saleStatusId) params.set("saleStatusId", filters.saleStatusId);
   if (filters.salePaymentStatusId) params.set("salePaymentStatusId", filters.salePaymentStatusId);
   if (filters.saleChannelId) params.set("saleChannelId", filters.saleChannelId);
+  for (const key of advancedSalesFilterKeys) {
+    if (filters[key]) params.set(key, filters[key]);
+  }
   return params;
 }

@@ -37,6 +37,11 @@ export type SalesFilters = {
   saleStatusId: string;
   salePaymentStatusId: string;
   saleChannelId: string;
+  productCode: string;
+  clientName: string;
+  clientPhone: string;
+  clientInstagramUser: string;
+  clientMessengerUser: string;
 };
 
 export type ProductSearch = {
