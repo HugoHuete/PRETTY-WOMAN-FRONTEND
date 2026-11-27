@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SaleCreatePage } from './sale-create-page';
 
-const api = vi.hoisted(() => ({ createSale: vi.fn().mockResolvedValue(1), getSalePaymentTerminals: vi.fn().mockResolvedValue([]), getSaleMunicipalities: vi.fn().mockResolvedValue([{ id: 1, name: 'Managua', departmentName: 'Managua' }]), getSaleDeliveryAgencies: vi.fn().mockResolvedValue([{ id: 2, name: 'Agencia prueba', enabled: true }]), createSaleClient: vi.fn().mockResolvedValue(12), getSaleClient: vi.fn().mockResolvedValue({ id: 12, name: 'Ana', phone: '12345678' }), getSaleClients: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 1, totalCount: 0 }), updateSaleClient: vi.fn().mockResolvedValue(undefined) }));
+const api = vi.hoisted(() => ({ getSharedSaleCart: vi.fn(), createSale: vi.fn().mockResolvedValue(1), getSalePaymentTerminals: vi.fn().mockResolvedValue([]), getSaleMunicipalities: vi.fn().mockResolvedValue([{ id: 1, name: 'Managua', departmentName: 'Managua' }]), getSaleDeliveryAgencies: vi.fn().mockResolvedValue([{ id: 2, name: 'Agencia prueba', enabled: true }]), createSaleClient: vi.fn().mockResolvedValue(12), getSaleClient: vi.fn().mockResolvedValue({ id: 12, name: 'Ana', phone: '12345678' }), getSaleClients: vi.fn().mockResolvedValue({ items: [], page: 1, totalPages: 1, totalCount: 0 }), updateSaleClient: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./sales-api', () => api);
 vi.mock('../auth/auth-provider', () => ({ useAuth: () => ({ request: requestMock }) }));
 const requestMock = vi.hoisted(() => vi.fn());
@@ -13,8 +13,8 @@ vi.mock('../../shared/finance/exchange-rate-provider', () => ({ useExchangeRate:
 vi.mock('./sale-client-picker', () => ({ SaleClientPicker: ({ selectedClient }: { selectedClient: { name: string } | null }) => <div>{selectedClient?.name}</div> }));
 vi.mock('./sale-global-discount-dialog', () => ({ SaleGlobalDiscountDialog: () => null }));
 vi.mock('./sale-initial-payment', () => ({ SaleInitialPayment: () => null }));
-vi.mock('./sale-product-lines', () => ({ SaleProductLines: () => null }));
-vi.mock('./sale-product-picker', () => ({ SaleProductPicker: ({ onAdd }: { onAdd: (item: unknown) => void }) => <button type="button" onClick={() => onAdd({ product: { name: 'Prenda', code: 10 }, variant: { id: 4, sizeName: 'M', availableQuantity: 2, salePrice: 100, discountedSalePrice: null, discountCampaignId: null }, presentationName: 'Azul', presentationVariants: [] })}>Prenda de prueba</button> }));
+vi.mock('./sale-product-lines', () => ({ SaleProductLines: ({ lines }: { lines: { productVariantId: number; availableQuantity: number }[] }) => lines.map((line) => <output key={line.productVariantId} aria-label={`Stock de variante ${line.productVariantId}`}>{line.availableQuantity}</output>) }));
+vi.mock('./sale-product-picker', () => ({ SaleProductPicker: ({ onAdd, onImportCart }: { onAdd: (item: unknown) => void; onImportCart: () => void }) => <><button type="button" onClick={() => onAdd({ product: { name: 'Prenda', code: 10 }, variant: { id: 4, sizeName: 'M', availableQuantity: 2, salePrice: 100, discountedSalePrice: null, discountCampaignId: null }, presentationName: 'Azul', presentationVariants: [] })}>Prenda de prueba</button><button type="button" onClick={onImportCart}>Importar carrito</button></> }));
 
 describe('crear venta con envío', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -194,9 +194,106 @@ describe('crear venta con envío', () => {
     expect(api.createSale).not.toHaveBeenCalled();
     expect(screen.getByText('Envío cobrado')).toBeVisible();
     expect(screen.getByText('Total', { selector: 'dt' }).nextElementSibling).toHaveTextContent('US$4.17');
-    expect(screen.getByText('Saldo', { selector: 'dt' }).nextElementSibling).toHaveTextContent('US$4.17');
-    fireEvent.change(screen.getByLabelText('Fecha de venta'), { target: { value: '2026-07-04' } });
+    expect(screen.getByText('Por pagar', { selector: 'dt' }).nextElementSibling).toHaveTextContent('US$4.17');
+    const saleDate = screen.getByLabelText('Fecha de venta');
+    fireEvent.change(saleDate, { target: { value: '31/02/2026' } });
+    fireEvent.blur(saleDate);
+    expect(saleDate).toBeInvalid();
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar venta' }));
+    expect(api.createSale).not.toHaveBeenCalled();
+    fireEvent.change(saleDate, { target: { value: '04/07/2026' } });
+    fireEvent.blur(saleDate);
     fireEvent.click(screen.getByRole('button', { name: 'Registrar venta' }));
     await waitFor(() => expect(api.createSale).toHaveBeenCalledWith(requestMock, expect.objectContaining({ clientId: 12, saleDate: '2026-07-04T18:00:00.000Z', delivery: { code: 'ENV-1', deliveryAgencyId: 2, municipalityId: 1, shippingChargedToClient: 50 } })));
   });
+});
+
+
+it.each(['/compartir/selecciones', '/selecciones'])('importa desde %s, respeta el stock y conserva el borrador', async (route) => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  HTMLDialogElement.prototype.close = function () { this.open = false; };
+  api.createSale.mockClear();
+  const id = '01234567-89ab-cdef-0123-456789abcdef';
+  api.getSharedSaleCart.mockResolvedValueOnce({
+    items: [
+      { variantId: 4, quantity: 2, name: 'Prenda', presentation: 'Azul', size: 'M' },
+      { variantId: 5, quantity: 1, name: 'Falda', presentation: 'Negra', size: 'S' },
+    ],
+    products: [{
+      name: 'Prenda',
+      code: 10,
+      presentations: [{
+        id: 1, name: 'Azul',
+        sizes: [{ id: 4, sizeName: 'M', availableQuantity: 2, salePrice: 100, discountedSalePrice: null, discountCampaignId: null }],
+      }],
+    }],
+  });
+
+  render(<SaleCreatePage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Prenda de prueba' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Importar carrito' }));
+  const dialog = within(screen.getByRole('dialog', { name: 'Importar carrito' }));
+  fireEvent.change(dialog.getByLabelText('Enlace o ID del carrito'), {
+    target: { value: `https://example.com${route}/${id}` },
+  });
+  fireEvent.click(dialog.getByRole('button', { name: 'Importar' }));
+
+  expect(await screen.findByText('Se agregó 1 unidad del carrito.')).toBeVisible();
+  expect(screen.getByText('Prenda · Azul · M: se agregaron 1 de 2 unidades solicitadas.')).toBeVisible();
+  expect(screen.getByText('Falda · Negra · S: agotada o fuera del catálogo.')).toBeVisible();
+  expect(screen.getByText('2 artículos')).toBeVisible();
+  expect(api.getSharedSaleCart).toHaveBeenCalledWith(requestMock, id, expect.any(AbortSignal));
+  expect(api.createSale).not.toHaveBeenCalled();
+});
+
+it.each(['Cancelar', 'Escape'])('cancela la importación con %s e ignora la respuesta tardía', async (action) => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  HTMLDialogElement.prototype.close = function () { this.open = false; };
+  let resolveCart!: (result: { items: []; products: [] }) => void;
+  api.getSharedSaleCart.mockReturnValueOnce(new Promise((resolve) => { resolveCart = resolve; }));
+
+  render(<SaleCreatePage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Prenda de prueba' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Importar carrito' }));
+  const modal = screen.getByRole('dialog', { name: 'Importar carrito' });
+  fireEvent.change(within(modal).getByLabelText('Enlace o ID del carrito'), {
+    target: { value: '01234567-89ab-cdef-0123-456789abcdef' },
+  });
+  fireEvent.click(within(modal).getByRole('button', { name: 'Importar' }));
+
+  if (action === 'Escape') fireEvent(modal, new Event('cancel', { cancelable: true }));
+  else fireEvent.click(within(modal).getByRole('button', { name: 'Cancelar' }));
+
+  expect(modal).not.toBeInTheDocument();
+  expect(api.getSharedSaleCart.mock.lastCall?.[2].aborted).toBe(true);
+  await act(async () => resolveCart({ items: [], products: [] }));
+  expect(screen.getByText('1 artículo')).toBeVisible();
+  expect(screen.queryByText('No se agregaron prendas del carrito.')).not.toBeInTheDocument();
+});
+
+
+it.each([1, 0, null])('actualiza el stock (%s) de una prenda ya agregada aunque no importe unidades', async (stock) => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  HTMLDialogElement.prototype.close = function () { this.open = false; };
+  api.getSharedSaleCart.mockResolvedValueOnce({
+    items: [{ variantId: 4, quantity: 1, name: 'Prenda', presentation: 'Azul', size: 'M' }],
+    products: stock === null ? [] : [{
+      presentations: [{ sizes: [{ id: 4, availableQuantity: stock }] }],
+    }],
+  });
+
+  render(<SaleCreatePage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Prenda de prueba' }));
+  expect(screen.getByLabelText('Stock de variante 4')).toHaveTextContent('2');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Importar carrito' }));
+  const modal = within(screen.getByRole('dialog', { name: 'Importar carrito' }));
+  fireEvent.change(modal.getByLabelText('Enlace o ID del carrito'), {
+    target: { value: '01234567-89ab-cdef-0123-456789abcdef' },
+  });
+  fireEvent.click(modal.getByRole('button', { name: 'Importar' }));
+
+  expect(await screen.findByText('No se agregaron prendas del carrito.')).toBeVisible();
+  expect(screen.getByLabelText('Stock de variante 4')).toHaveTextContent(String(stock ?? 0));
+  expect(screen.getByText('1 artículo')).toBeVisible();
 });

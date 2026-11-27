@@ -8,7 +8,7 @@ function displayDate(value: string) {
 
 function parseDate(value: string) {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-  if (!match) return null;
+  if (!match || match[3] === '0000') return null;
   const iso = `${match[3]}-${match[2]}-${match[1]}`;
   const date = new Date(`${iso}T12:00:00Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === iso ? iso : null;
@@ -21,13 +21,14 @@ function calendarDate(year: number, month: number, day: number) {
   return date;
 }
 
-export function DateFilter({ id, value, onChange, resetKey = 0 }: { id: string; value: string; onChange: (value: string) => void; resetKey?: number }) {
+export function DateFilter({ id, value, onChange, resetKey = 0, required = false }: { id: string; value: string; onChange: (value: string) => void; resetKey?: number; required?: boolean }) {
   const [draft, setDraft] = useState(() => displayDate(value));
   const [invalid, setInvalid] = useState(false);
   const [open, setOpen] = useState(false);
-  const [month, setMonth] = useState(() => value ? new Date(`${value}T12:00:00`) : new Date());
+  const [month, setMonth] = useState(() => parseDate(displayDate(value)) ? new Date(`${value}T12:00:00`) : new Date());
   const [yearDraft, setYearDraft] = useState(() => String(month.getFullYear()));
   const [position, setPosition] = useState({ top: 0, left: 0, maxHeight: 0 });
+  const input = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
   useEffect(() => { setYearDraft(String(month.getFullYear())); }, [month]);
@@ -50,7 +51,7 @@ export function DateFilter({ id, value, onChange, resetKey = 0 }: { id: string; 
     const useAbove = below < 410 && above > below;
     const maxHeight = Math.min(410, useAbove ? above : below);
     setPosition({ left: Math.max(8, Math.min(rect.right - 288, window.innerWidth - 296)), top: useAbove ? rect.top - 8 - maxHeight : rect.bottom + 8, maxHeight });
-    setMonth(value ? new Date(`${value}T12:00:00`) : new Date());
+    setMonth(parseDate(displayDate(value)) ? new Date(`${value}T12:00:00`) : new Date());
     setOpen(true);
   };
   const year = month.getFullYear();
@@ -59,9 +60,10 @@ export function DateFilter({ id, value, onChange, resetKey = 0 }: { id: string; 
   const days = calendarDate(year, monthIndex + 1, 0).getDate();
   const selectDay = (day: number) => {
     const iso = `${String(year).padStart(4, '0')}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    input.current?.setCustomValidity('');
     setDraft(displayDate(iso)); setInvalid(false); onChange(iso); setOpen(false); trigger.current?.focus();
   };
-  useEffect(() => { setDraft(displayDate(value)); setInvalid(false); }, [value, resetKey]);
+  useEffect(() => { setDraft(displayDate(value)); setInvalid(false); input.current?.setCustomValidity(''); }, [value, resetKey]);
   const commit = () => {
     if (!draft.trim()) { setInvalid(false); onChange(''); return; }
     const parsed = parseDate(draft.trim());
@@ -70,16 +72,19 @@ export function DateFilter({ id, value, onChange, resetKey = 0 }: { id: string; 
   };
   return <span className="grid min-w-0 gap-1">
     <span className={`flex min-h-11 min-w-0 items-center rounded-lg border bg-white focus-within:ring-2 ${invalid ? "border-red-700 focus-within:ring-red-200" : "border-pw-line focus-within:ring-pw-brand/30"}`}>
-    <input id={id} type="text" inputMode="numeric" placeholder="dd/mm/aaaa" value={draft} onChange={(event) => { setDraft(event.target.value); setInvalid(false); }} onBlur={commit} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }} aria-invalid={invalid} aria-describedby={invalid ? `${id}-error` : undefined} className="min-w-0 w-full bg-transparent px-3 text-sm font-normal text-pw-ink outline-none" />
+    <input ref={input} id={id} required={required} type="text" inputMode="numeric" placeholder="dd/mm/aaaa" value={draft} onChange={(event) => { const next = event.target.value;
+      setDraft(next);
+      setInvalid(false);
+      if (required) event.currentTarget.setCustomValidity(next.trim() && !parseDate(next.trim()) ? 'Ingresa una fecha válida en formato día/mes/año.' : ''); }} onBlur={commit} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }} aria-invalid={invalid} aria-describedby={invalid ? `${id}-error` : undefined} className="min-w-0 w-full bg-transparent px-3 text-sm font-normal text-pw-ink outline-none" />
     <button ref={trigger} type="button" aria-label="Abrir calendario" aria-expanded={open} aria-haspopup="dialog" onClick={openCalendar} className="mr-1 grid h-9 w-9 shrink-0 place-items-center rounded-md text-pw-muted transition-colors hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-pw-brand-deep">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><rect x="3.5" y="5.5" width="17" height="15" rx="2" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" /></svg>
     </button>
     </span>
     {open ? createPortal(<div ref={popup} role="dialog" aria-label="Calendario" style={{ top: position.top, left: position.left, maxHeight: position.maxHeight }} className="fixed z-50 w-72 overflow-y-auto rounded-xl border border-pw-line bg-white p-4 text-pw-ink shadow-xl">
       <div className="flex items-center justify-between gap-2">
-        <button type="button" aria-label="Mes anterior" onClick={() => setMonth(calendarDate(year, monthIndex - 1, 1))} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-pw-brand-deep"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="m12 5-5 5 5 5" /></svg></button>
+        <button type="button" aria-label="Mes anterior" disabled={year === 1 && monthIndex === 0} onClick={() => setMonth(calendarDate(year, monthIndex - 1, 1))} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-pw-brand-deep"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="m12 5-5 5 5 5" /></svg></button>
         <p className="text-sm font-extrabold capitalize text-pw-ink" aria-live="polite">{new Intl.DateTimeFormat('es-NI', { month: 'long', year: 'numeric' }).format(calendarDate(year, monthIndex, 1))}</p>
-        <button type="button" aria-label="Mes siguiente" onClick={() => setMonth(calendarDate(year, monthIndex + 1, 1))} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-pw-brand-deep"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="m8 5 5 5-5 5" /></svg></button>
+        <button type="button" aria-label="Mes siguiente" disabled={year === 9999 && monthIndex === 11} onClick={() => setMonth(calendarDate(year, monthIndex + 1, 1))} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-pw-line text-pw-muted hover:bg-pw-brand-soft hover:text-pw-brand-deep focus-visible:outline-2 focus-visible:outline-pw-brand-deep"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="m8 5 5 5-5 5" /></svg></button>
       </div>
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
         <label className="relative min-w-0"><span className="sr-only">Mes</span><select aria-label="Mes" value={monthIndex} onChange={(event) => setMonth(calendarDate(year, Number(event.target.value), 1))} className="h-10 w-full appearance-none rounded-lg border border-pw-line bg-white pl-3 pr-8 text-sm font-semibold capitalize text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand-deep">{Array.from({ length: 12 }, (_, index) => <option key={index} value={index}>{new Intl.DateTimeFormat('es-NI', { month: 'long' }).format(new Date(2020, index, 1))}</option>)}</select><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute right-2.5 top-3 h-4 w-4 text-pw-muted"><path d="m5 7 5 5 5-5" /></svg></label>

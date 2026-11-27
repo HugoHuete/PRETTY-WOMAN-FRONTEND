@@ -18,7 +18,9 @@ describe('editar información de venta', () => {
     const onSave = vi.fn().mockResolvedValue(false);
     render(<SaleDetailOverview sale={sale} isAdmin busy={false} onSave={onSave} onCancelSale={vi.fn()} cancelError={null} />);
     fireEvent.click(screen.getByRole('button', { name: 'Editar información' }));
-    fireEvent.change(screen.getByLabelText('Fecha de venta'), { target: { value: '2026-07-05' } });
+    const date = screen.getByLabelText('Fecha de venta');
+    fireEvent.change(date, { target: { value: '05/07/2026' } });
+    fireEvent.blur(date);
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
     const updated = new Date(onSave.mock.calls[0][0].saleDate);
     const original = new Date(sale.saleDate);

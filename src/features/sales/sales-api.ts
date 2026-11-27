@@ -120,6 +120,44 @@ export async function getSaleProducts(request: AuthRequest, search: ProductSearc
   return normalizePage<ProductDTO>(result);
 }
 
+type SharedCartItem = {
+  original: {
+    productId: number;
+    variantId: number;
+    quantity: number;
+    name: string;
+    size: string;
+    presentation: string | null;
+  };
+};
+
+export async function getSharedSaleCart(request: AuthRequest, id: string, signal: AbortSignal) {
+  let cart: { items: SharedCartItem[] };
+  try {
+    cart = await requestJson(request, `/api/v1/catalog/selections/${id}`, { signal });
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 410) throw new Error("Este carrito compartido venció. Pide un enlace nuevo.");
+    if (error instanceof ApiRequestError && error.status === 404) throw new Error("No se encontró el carrito compartido.");
+    throw error;
+  }
+
+  signal.throwIfAborted();
+  const productIds = [...new Set(cart.items.map(({ original }) => original.productId))];
+  const products = await Promise.all(productIds.map(async (productId) => {
+    try {
+      return await requestJson<ProductDTO | null>(request, `/api/v1/products/${productId}`, { signal });
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 404) return null;
+      throw error;
+    }
+  }));
+
+  return {
+    items: cart.items.map(({ original }) => original),
+    products: products.filter((product): product is ProductDTO => product != null),
+  };
+}
+
 export async function getSaleClients(request: AuthRequest, search: ClientSearch) {
   const query = queryString({
     page: search.page,

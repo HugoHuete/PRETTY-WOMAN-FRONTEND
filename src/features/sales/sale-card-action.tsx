@@ -10,10 +10,11 @@ const colors = {
   remove: "border-red-200 text-red-700 hover:bg-red-50 focus-visible:outline-red-700",
 };
 
-export function SaleCardAction({ action, label, disabled, onClick }: {
+export function SaleCardAction({ action, label, disabled, borderless = false, onClick }: {
   action: keyof typeof icons;
   label: string;
   disabled?: boolean;
+  borderless?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -23,7 +24,7 @@ export function SaleCardAction({ action, label, disabled, onClick }: {
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={"grid size-10 place-items-center rounded-lg border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 " + colors[action]}
+      className={`grid size-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${borderless ? "" : "border"} ${colors[action]}`}
     >
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-4">
         <path d={icons[action]} />

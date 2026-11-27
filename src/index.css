@@ -457,6 +457,16 @@
 
 .pw-select-panel-portal {
   position: fixed;
+  display: flex;
+  flex-direction: column;
+}
+
+.pw-select-panel-portal .pw-select-search-wrap {
+  flex-shrink: 0;
+}
+
+.pw-select-panel-portal .pw-select-options {
+  min-height: 0;
 }
 
 .pw-select-panel[hidden] {

@@ -62,9 +62,6 @@ export function SaleGlobalDiscountDialog({
   const valueLabel = type === "percent"
     ? "Porcentaje de descuento"
     : type === "amount" ? "Monto de descuento para la compra" : "Precio final de la compra";
-  const valueDescription = type === "percent"
-    ? "Se aplica el mismo porcentaje al precio regular de cada producto."
-    : "Se distribuye entre los productos proporcionalmente a su subtotal regular.";
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -104,10 +101,7 @@ export function SaleGlobalDiscountDialog({
       className="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/50"
     >
       <header className="flex items-start justify-between gap-4 border-b border-pw-line px-5 py-4 sm:px-6">
-        <div>
-          <h2 id="sale-global-discount-title" className="text-lg font-extrabold">Descuento global</h2>
-          <p className="mt-1 text-sm text-pw-muted">Reemplaza los descuentos actuales y se aplicará a los productos agregados en este momento.</p>
-        </div>
+        <h2 id="sale-global-discount-title" className="text-lg font-extrabold">Descuento global</h2>
         <button
           type="button"
           onClick={() => dialogRef.current?.close()}
@@ -167,7 +161,7 @@ export function SaleGlobalDiscountDialog({
               className={`min-h-11 w-full rounded-lg border border-pw-line text-sm font-medium tabular-nums text-pw-ink hover:border-pw-brand/60 focus:border-pw-brand focus:outline-none focus:ring-2 focus:ring-pw-brand-soft ${type === "percent" ? "pl-3 pr-10" : "pl-10 pr-3"}`}
             />
           </span>
-          <span className="font-medium text-pw-muted">{valueDescription}</span>
+          {type !== "percent" ? <span className="font-medium text-pw-muted">Se distribuye entre los productos proporcionalmente a su subtotal regular.</span> : null}
         </label>
 
         <section aria-label="Vista previa del descuento" className="rounded-xl bg-pw-canvas p-4">
@@ -185,23 +179,6 @@ export function SaleGlobalDiscountDialog({
               <dd className="m-0 font-extrabold tabular-nums">{money.format(subtotal - totalDiscount)}</dd>
             </div>
           </dl>
-          <ul className="mt-3 divide-y divide-pw-line border-t border-pw-line text-sm">
-            {saleLines.map((line) => {
-              const unitDiscount = discounts.get(line.productVariantId) ?? 0;
-              return (
-                <li key={line.productVariantId} className="flex items-center justify-between gap-3 py-2">
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold">{line.presentationName}</span>
-                    <span className="block text-xs text-pw-muted">Código {line.productCode} · {line.quantity} {line.quantity === 1 ? "unidad" : "unidades"}</span>
-                  </span>
-                  <span className="shrink-0 text-right tabular-nums">
-                    <span className="block font-semibold">− {money.format(unitDiscount * line.quantity)}</span>
-                    <span className="block text-xs text-pw-muted">{money.format(unitDiscount)} c/u</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
           {hasRoundingDifference ? (
             <p className="mt-3 text-xs text-pw-muted">
               La API guarda el descuento por unidad; por el redondeo, el resultado distribuido puede diferir unos centavos del valor solicitado.

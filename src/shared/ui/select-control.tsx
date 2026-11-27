@@ -93,7 +93,7 @@ export function SelectControl({
         left: rect.left,
         width: rect.width,
         minWidth: Math.max(rect.width, 210),
-        top: opensUpward ? undefined : rect.bottom + gap,
+        top: opensUpward ? "auto" : rect.bottom + gap,
         bottom: opensUpward ? window.innerHeight - rect.top + gap : undefined,
         maxHeight: availableSpace,
       });
@@ -192,7 +192,6 @@ export function SelectControl({
         className="pw-select-options"
         role="listbox"
         aria-label={ariaLabel}
-        style={portal ? { maxHeight: portalStyle?.maxHeight } : undefined}
       >
         {visibleOptions.length ? visibleOptions.map((option, index) => (
           <button

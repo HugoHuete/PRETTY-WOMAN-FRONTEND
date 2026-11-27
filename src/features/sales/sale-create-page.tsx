@@ -1,3 +1,4 @@
+import { DateFilter } from "../../shared/ui/date-filter";
 import { SaleClientEditButton } from "./sale-client-edit-button";
 import { SaleCardAction } from "./sale-card-action";
 import { saleDateForApi, todayInManagua } from "./sale-date";
@@ -15,8 +16,9 @@ import { SaleDeliveryCreateDialog } from "./sale-delivery-create-dialog";
 import { SaleGlobalDiscountDialog } from "./sale-global-discount-dialog";
 import { SaleInitialPayment } from "./sale-initial-payment";
 import { SaleProductLines } from "./sale-product-lines";
+import { SaleCartImportDialog } from "./sale-cart-import-dialog";
 import { SaleProductPicker } from "./sale-product-picker";
-import { createSale, getSalePaymentTerminals, getSaleMunicipalities, getSaleDeliveryAgencies } from "./sales-api";
+import { createSale, getSharedSaleCart, getSalePaymentTerminals, getSaleMunicipalities, getSaleDeliveryAgencies } from "./sales-api";
 import type { ProductVariantDTO } from "../products/product-types";
 import {
   discountSourceIds,
@@ -30,6 +32,7 @@ import {
 } from "./sales-types";
 import {
   calculateManualDiscountAmount,
+  saleVariants,
   type SaleDraftLine,
   type SaleManualDiscountType,
   type SaleVariantOption,
@@ -92,6 +95,8 @@ export function SaleCreatePage() {
   const [, setClientDirty] = useState(false);
   const clientDialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => { const element = clientDialogRef.current; if (clientDialogOpen) element?.showModal(); return () => element?.close(); }, [clientDialogOpen]);
+  const [cartImportOpen, setCartImportOpen] = useState(false);
+  const [cartImportResult, setCartImportResult] = useState<{ added: number; warnings: string[] } | null>(null);
   const [lines, setLines] = useState<SaleDraftLine[]>([]);
   const [comments, setComments] = useState("");
   const [payments, setPayments] = useState<CreateSalePaymentPayload[]>([]);
@@ -191,6 +196,56 @@ export function SaleCreatePage() {
       ? current
       : [...current, lineFrom(option)]);
     setError(null);
+  };
+
+  const importCart = async (id: string, signal: AbortSignal) => {
+    const { items, products } = await getSharedSaleCart(request, id, signal);
+    if (signal.aborted) return;
+    const options = new Map(saleVariants(products, { includeUnavailable: true }).map((option) => [option.variant.id, option]));
+    const next = new Map(lines.map((line) => [line.productVariantId, line]));
+    const warnings: string[] = [];
+    let added = 0;
+
+    for (const item of items) {
+      const label = [item.name, item.presentation, item.size].filter(Boolean).join(" · ");
+      const option = options.get(item.variantId);
+      const existing = next.get(item.variantId);
+      const stock = option?.variant.availableQuantity ?? 0;
+      if (existing) {
+        next.set(item.variantId, {
+          ...existing,
+          availableQuantity: stock,
+          presentationVariants: option?.presentationVariants ?? existing.presentationVariants.map((variant) =>
+            variant.id === item.variantId ? { ...variant, availableQuantity: 0 } : variant),
+        });
+      }
+      if (!option || stock <= 0) {
+        warnings.push(`${label}: agotada o fuera del catálogo.`);
+        continue;
+      }
+      if (existing?.forSelection) {
+        warnings.push(`${label}: ya está marcada para selección en esta venta.`);
+        continue;
+      }
+
+      const currentQuantity = existing?.quantity ?? 0;
+      const quantity = Math.min(item.quantity, Math.max(0, stock - currentQuantity));
+      if (quantity > 0) {
+        next.set(item.variantId, {
+          ...(next.get(item.variantId) ?? lineFrom(option)),
+          quantity: currentQuantity + quantity,
+        });
+        added += quantity;
+      }
+      if (quantity < item.quantity) {
+        warnings.push(`${label}: se agregaron ${quantity} de ${item.quantity} unidades solicitadas.`);
+      }
+    }
+
+    setLines([...next.values()]);
+    setCartImportResult({ added, warnings });
+    setError(null);
+    setCartImportOpen(false);
   };
 
   const applyGlobalDiscount = (
@@ -426,16 +481,16 @@ export function SaleCreatePage() {
         </div>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0 space-y-5">
-          <section id="sale-channel" className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-channel-heading">
+          <section id="sale-channel" className="rounded-2xl border border-pw-line bg-white p-4 sm:p-5" aria-labelledby="sale-channel-heading">
             <div className="mb-4">
               <h2 id="sale-channel-heading" className="text-base font-extrabold text-pw-ink">Datos de la venta</h2>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 sm:items-start">
+            <div className="grid gap-3 sm:grid-cols-3 sm:items-start">
               <label htmlFor="sale-date" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
                 Fecha de venta
-                <input id="sale-date" type="date" required value={saleDate} onChange={(event) => setSaleDate(event.target.value)} className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand" />
+                <DateFilter id="sale-date" value={saleDate} onChange={setSaleDate} required />
               </label>
               <label htmlFor="sale-status-select" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">
                 Tipo de registro
@@ -468,7 +523,7 @@ export function SaleCreatePage() {
             </div>
           </section>
 
-          <section id="sale-products" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-products-heading">
+          <section id="sale-products" className="@container scroll-mt-6 rounded-2xl border border-pw-line bg-white p-4 sm:p-5" aria-labelledby="sale-products-heading">
             {error && errorSection === "products" ? <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
             <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -483,9 +538,28 @@ export function SaleCreatePage() {
                 >
                   Descuento global
                 </button>
-                <SaleProductPicker lines={lines} onAdd={addProduct} />
+                <SaleProductPicker lines={lines} onAdd={addProduct} onImportCart={() => setCartImportOpen(true)} />
               </div>
             </header>
+            {cartImportResult ? (
+              <div role="status" className="mb-4 rounded-lg border border-pw-line bg-pw-canvas p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-bold text-pw-ink">
+                    {cartImportResult.added === 0
+                      ? "No se agregaron prendas del carrito."
+                      : cartImportResult.added === 1
+                        ? "Se agregó 1 unidad del carrito."
+                        : `Se agregaron ${cartImportResult.added} unidades del carrito.`}
+                  </p>
+                  <button type="button" aria-label="Cerrar resultado de importación" onClick={() => setCartImportResult(null)} className="rounded px-2 text-pw-muted">×</button>
+                </div>
+                {cartImportResult.warnings.length > 0 ? (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-pw-muted">
+                    {cartImportResult.warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
             <SaleProductLines
               lines={lines}
               allowSelection={channel !== "1"}
@@ -517,10 +591,7 @@ export function SaleCreatePage() {
                     {client.address?.trim() ? <p className="whitespace-pre-wrap text-pw-muted">{client.address}</p> : null}
                   </div>
                 ) : (
-                  <>
-                    <p className="mt-3 text-sm text-pw-muted">No hay clienta asociada.</p>
-                    <button type="button" onClick={openClientDialog} className="mt-3 min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">Buscar o crear clienta</button>
-                  </>
+                  <button type="button" onClick={openClientDialog} className="mt-3 min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep">Buscar o crear clienta</button>
                 )}
               </section>
               <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-delivery-heading">
@@ -551,8 +622,8 @@ export function SaleCreatePage() {
             </div>
           </div>
 
-          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-comments-heading">
-            <h2 id="sale-comments-heading" className="text-base font-extrabold text-pw-ink">Notas <span className="font-medium text-pw-muted">(opcional)</span></h2>
+          <details className="rounded-xl border border-pw-line bg-white px-4 py-3">
+            <summary className="cursor-pointer rounded text-sm font-bold text-pw-ink focus-visible:outline-2 focus-visible:outline-pw-brand">{comments.trim() ? "Nota de la venta" : "Agregar nota"}</summary>
             <label htmlFor="sale-comments" className="sr-only">Comentarios de la venta</label>
             <textarea
               id="sale-comments"
@@ -563,11 +634,11 @@ export function SaleCreatePage() {
               placeholder="Agrega observaciones sobre la venta…"
               className="mt-3 w-full rounded-lg border border-pw-line px-3 py-2.5 text-sm text-pw-ink"
             />
-          </section>
+          </details>
         </div>
 
-        <aside className="space-y-5 lg:sticky lg:top-5" aria-label="Resumen y cierre de venta">
-          <section className="rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-summary-heading">
+        <aside className="min-w-0 space-y-4" aria-label="Resumen y cierre de venta">
+          <section className="rounded-2xl border border-pw-line bg-white p-5" aria-labelledby="sale-summary-heading">
             <header className="flex items-start justify-between gap-3 border-b border-pw-line pb-4">
               <div>
                 <h2 id="sale-summary-heading" className="text-base font-extrabold text-pw-ink">Resumen</h2>
@@ -579,12 +650,9 @@ export function SaleCreatePage() {
                   </p>
                 ) : null}
               </div>
-              <span className="rounded-full bg-pw-brand-soft px-3 py-1 text-xs font-bold text-pw-brand-deep">
-                {saleChannels.find((option) => String(option.id) === channel)?.name ?? "Venta"}
-              </span>
             </header>
 
-            <dl className="space-y-3 py-4 text-sm">
+            <dl className="space-y-2 pt-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-pw-muted">Subtotal</dt>
                 <dd className="font-semibold tabular-nums text-pw-ink">{money.format(grossSubtotal)}</dd>
@@ -594,15 +662,15 @@ export function SaleCreatePage() {
                 <dd className="font-semibold tabular-nums text-pw-ink">− {money.format(discount)}</dd>
               </div>
               {delivery ? <div className="flex justify-between gap-4"><dt className="text-pw-muted">Envío cobrado</dt><dd className="font-semibold tabular-nums">{money.format(delivery.shippingChargedToClient)}</dd></div> : null}
-              <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
+              <div className="flex justify-between gap-4 border-t border-pw-line pt-3 text-lg">
                 <dt className="font-extrabold text-pw-ink">Total</dt>
                 <dd className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 text-right font-extrabold tabular-nums text-pw-ink">
                   <span className="whitespace-nowrap">{money.format(totalWithShipping)}</span>
                   {exchangeRate > 0 ? <span className="text-sm font-semibold whitespace-nowrap text-pw-muted">US${formatUsd(totalWithShipping)}</span> : <span className="basis-full text-xs font-medium text-pw-muted">Tasa de cambio no disponible</span>}
                 </dd>
               </div>
-              <div className="flex justify-between gap-4 border-t border-pw-line pt-4 text-base">
-                <dt className="font-bold text-pw-ink">Saldo</dt>
+              <div className="flex justify-between gap-4 border-t border-pw-line pt-3 text-base">
+                <dt className="font-bold text-pw-ink">Por pagar</dt>
                 <dd className="flex min-w-0 flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 text-right font-extrabold tabular-nums text-pw-ink">
                   <span className="whitespace-nowrap">{money.format(balanceWithShipping)}</span>
                   {exchangeRate > 0 ? <span className="text-sm font-semibold whitespace-nowrap text-pw-muted">US${formatUsd(balanceWithShipping)}</span> : null}
@@ -611,11 +679,8 @@ export function SaleCreatePage() {
             </dl>
           </section>
 
-          <section id="sale-payment" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5 sm:p-6" aria-labelledby="sale-payment-heading">
+          <section id="sale-payment" className="scroll-mt-6 rounded-2xl border border-pw-line bg-white p-5" aria-labelledby="sale-payment-heading">
             {error && errorSection === "payment" ? <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
-            <div className="mb-3">
-              <h2 id="sale-payment-heading" className="text-base font-extrabold text-pw-ink">Pago inicial <span className="font-medium text-pw-muted">(opcional)</span></h2>
-            </div>
             <SaleInitialPayment
               estimatedBalance={total}
               shippingBalance={delivery?.shippingChargedToClient ?? 0}
@@ -628,11 +693,9 @@ export function SaleCreatePage() {
             />
           </section>
 
-          <div className="space-y-3">
-            <LoadingButton type="submit" isLoading={submitting} className="w-full justify-center">
-              {submitting ? saleStatusId === 2 ? "Guardando reserva…" : "Guardando venta…" : saleStatusId === 2 ? "Crear reserva" : "Registrar venta"}
-            </LoadingButton>
-          </div>
+          <LoadingButton type="submit" isLoading={submitting} className="w-full justify-center">
+            {submitting ? saleStatusId === 2 ? "Guardando reserva…" : "Guardando venta…" : saleStatusId === 2 ? "Crear reserva" : "Registrar venta"}
+          </LoadingButton>
         </aside>
       </div>
 
@@ -642,6 +705,7 @@ export function SaleCreatePage() {
         <footer className="mt-4 flex justify-end gap-2 border-t border-pw-line pt-4"><button type="button" disabled={clientBusy} onClick={() => setClientDialogOpen(false)} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold">Cancelar</button></footer>
       </dialog>, document.body) : null}
       {deliveryOpen ? <SaleDeliveryCreateDialog municipalities={municipalities} agencies={agencies} loading={deliveryLoading} error={deliveryError} busy={false} clientId={null} clientSelection={{ client: deliveryClient, onSelect: (selected) => { setDeliveryClient(selected); if (selected) setClient((current) => current?.id === selected.id ? selected : current); } }} initialDelivery={delivery ?? undefined} onRetryCatalogs={() => setDeliveryRetry((value) => value + 1)} onClose={() => setDeliveryOpen(false)} onSave={async (payload) => { setDelivery(payload); setClient(deliveryClient); return true; }} /> : null}
+      {cartImportOpen ? <SaleCartImportDialog onImport={importCart} onClose={() => setCartImportOpen(false)} /> : null}
       <SaleGlobalDiscountDialog
         open={globalDiscountOpen}
         lines={saleLines}

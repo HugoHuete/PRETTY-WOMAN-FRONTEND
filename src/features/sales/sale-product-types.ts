@@ -137,9 +137,9 @@ export type SaleVariantOption = {
   presentationVariants: ProductVariantDTO[];
 };
 
-export function saleVariants(products: ProductDTO[]): SaleVariantOption[] {
+export function saleVariants(products: ProductDTO[], { includeUnavailable = false } = {}): SaleVariantOption[] {
   return products.flatMap((product) => product.presentations.flatMap((presentation) => presentation.sizes
-    .filter((variant) => variant.availableQuantity > 0)
+    .filter((variant) => includeUnavailable || variant.availableQuantity > 0)
     .map((variant) => ({
       product,
       variant,

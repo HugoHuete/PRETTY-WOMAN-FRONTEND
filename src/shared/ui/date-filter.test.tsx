@@ -69,3 +69,18 @@ describe('filtro de fecha', () => {
     rect.mockRestore(); vi.restoreAllMocks();
   });
 });
+
+it.each([
+  ['0001-01-01', 'Mes anterior'],
+  ['9999-12-31', 'Mes siguiente'],
+])('rechaza el año cero y limita el calendario al llegar a %s', (date, navigation) => {
+  const onChange = vi.fn();
+  render(<DateFilter id="fecha" value={date} onChange={onChange} required />);
+  const field = screen.getByPlaceholderText('dd/mm/aaaa');
+  fireEvent.change(field, { target: { value: '01/01/0000' } });
+  fireEvent.blur(field);
+  expect(field).toBeInvalid();
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir calendario' }));
+  expect(screen.getByRole('button', { name: navigation })).toBeDisabled();
+});

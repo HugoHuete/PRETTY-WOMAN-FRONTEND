@@ -1,12 +1,11 @@
+import { SaleProductImage } from "./sale-product-image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { ProductDTO, ProductVariantDTO } from "../products/product-types";
-import { Pagination } from "../../shared/ui/pagination";
 import { SelectControl } from "../../shared/ui/select-control";
-import { ErrorState, LoadingState } from "../../shared/ui/screen-state";
 import { useAuth } from "../auth/auth-provider";
-import { getSaleProducts, getSaleProductsByCodes } from "./sales-api";
-import { saleVariants, type SaleDraftLine, type SaleManualDiscountType, type SaleVariantOption } from "./sale-product-types";
+import { getSaleProductsByCodes } from "./sales-api";
+import type { SaleDraftLine, SaleManualDiscountType, SaleVariantOption } from "./sale-product-types";
+import { SaleProductPicker } from "./sale-product-picker";
 import { SaleDiscountButton } from "./sale-discount-button";
 import { SaleDiscountDialog } from "./sale-discount-dialog";
 import { type SaleDetail, type SaleProductLine, type ReplaceSaleProductsPayload, discountSourceIds } from "./sales-types";
@@ -47,100 +46,12 @@ function discountDraftLine(line: DraftLine, choice: ProductChoice, choices: Prod
     manualDiscountValue: line.manualDiscountValue ?? (Number(line.discountAmount) || 0),
   };
 }
-function ProductThumb({ choice }: { choice?: ProductChoice }) { return choice?.image ? <img src={choice.image} alt="" className="h-14 w-12 shrink-0 rounded-lg bg-pw-brand-soft object-cover" /> : <span aria-hidden="true" className="grid h-14 w-12 shrink-0 place-items-center rounded-lg bg-pw-brand-soft text-sm font-bold text-pw-brand-deep">{choice ? choice.product.code : "—"}</span>; }
+function ProductThumb({ choice }: { choice?: ProductChoice }) { return choice?.image ? <SaleProductImage src={choice.image} name={`Código ${choice.product.code} · ${choice.presentationName}`} className="h-14 w-12 shrink-0 rounded-lg bg-pw-brand-soft" /> : <span aria-hidden="true" className="grid h-14 w-12 shrink-0 place-items-center rounded-lg bg-pw-brand-soft text-sm font-bold text-pw-brand-deep">{choice ? choice.product.code : "—"}</span>; }
 
-function ProductAddDialog({ selectedProductIds, busy, onClose, onSelect }: {
-  selectedProductIds: number[];
-  busy: boolean;
-  onClose: () => void;
-  onSelect: (option: SaleVariantOption) => void;
-}) {
-  const { request } = useAuth();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [code, setCode] = useState("");
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [retry, setRetry] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof getSaleProducts>> | null>(null);
-  const [announcement, setAnnouncement] = useState("");
-
-  useEffect(() => {
-    if (dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
-    return () => dialogRef.current?.close();
-  }, []);
-
-  useEffect(() => {
-    const query = code.trim();
-    if (!query || !/^\d+$/.test(query)) {
-      setCatalog(null);
-      setLoading(false);
-      setError(null);
-      return undefined;
-    }
-    let active = true;
-    setLoading(true);
-    setError(null);
-    setCatalog(null);
-    const timeout = window.setTimeout(() => {
-      void getSaleProducts(request, { page, pageSize: 8, code: query })
-        .then((result) => { if (active) setCatalog(result); })
-        .catch((caught: unknown) => { if (active) setError(caught instanceof Error ? caught.message : "No se pudo buscar el catálogo."); })
-        .finally(() => { if (active) setLoading(false); });
-    }, 250);
-    return () => { active = false; window.clearTimeout(timeout); };
-  }, [code, page, request, retry]);
-
-  const options = useMemo(() => saleVariants(catalog?.items ?? []), [catalog]);
-  const groups = useMemo(() => {
-    const grouped = new Map<string, SaleVariantOption[]>();
-    options.forEach((option) => {
-      const key = option.product.id + ":" + option.presentationId;
-      const group = grouped.get(key);
-      if (group) group.push(option);
-      else grouped.set(key, [option]);
-    });
-    return Array.from(grouped.values());
-  }, [options]);
-
-  const addVariant = (option: SaleVariantOption) => {
-    onSelect(option);
-    setAnnouncement(option.product.name + ", " + option.presentationName + (option.variant.sizeName ? ", talla " + option.variant.sizeName : "") + ", agregada a la venta. Guarda los cambios para aplicarla.");
-  };
-
-  return createPortal(<dialog ref={dialogRef} aria-labelledby="sale-product-add-title" onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/45">
-    <div className="flex max-h-[90dvh] flex-col">
-      <header className="flex items-center justify-between border-b border-pw-line px-5 py-4"><h2 id="sale-product-add-title" className="text-lg font-extrabold">Buscar prendas</h2><button type="button" onClick={onClose} aria-label="Cerrar búsqueda de prendas" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button></header>
-      <div className="space-y-4 overflow-y-auto p-5">
-        <label htmlFor="sale-detail-product-code" className="grid gap-1.5 text-xs font-extrabold text-pw-muted">Código de la prenda<input id="sale-detail-product-code" type="search" inputMode="numeric" autoComplete="off" value={code} onChange={(event) => { setCode(event.target.value); setPage(1); setAnnouncement(""); }} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder="Escribe el código" className="min-h-11 rounded-lg border border-pw-line bg-white px-3 text-sm text-pw-ink" /></label>
-        {!code.trim() ? <p className="rounded-xl border border-dashed border-pw-line p-5 text-center text-sm text-pw-muted">Escribe un código para consultar las prendas disponibles.</p> : null}
-        {code.trim() && !/^\d+$/.test(code.trim()) ? <p role="status" className="text-sm text-pw-muted">El código debe contener solo números.</p> : null}
-        {loading ? <LoadingState /> : null}
-        {!loading && error ? <ErrorState title="No se pudo buscar el catálogo" description={error} onRetry={() => setRetry((value) => value + 1)} /> : null}
-        {!loading && !error && catalog && options.length === 0 ? <p className="rounded-xl border border-dashed border-pw-line p-5 text-center text-sm text-pw-muted">No encontramos prendas disponibles con ese código.</p> : null}
-        {!loading && !error && options.length > 0 ? <div className="grid gap-3">{groups.map((group) => {
-          const first = group[0];
-          return <section key={first.product.id + ":" + first.presentationId} className="overflow-hidden rounded-xl border border-pw-line">
-            <header className="flex items-center gap-3 px-3 py-2.5 sm:px-4">{first.imageUrl ? <img src={first.imageUrl} alt="" className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover" /> : <span aria-hidden="true" className="grid h-12 w-10 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-[10px] font-bold text-pw-brand-deep">{first.product.code}</span>}<div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5"><p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p><h3 className="text-sm font-extrabold text-pw-ink">{first.presentationName}</h3><p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p></div></header>
-            <div>{group.map((option) => {
-              const alreadyInSale = selectedProductIds.includes(option.variant.id);
-              const price = option.variant.discountedSalePrice ?? option.variant.salePrice;
-              return <div key={option.variant.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-pw-line px-3 py-2 sm:px-4"><div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5"><p className="text-sm font-bold text-pw-ink">{option.variant.sizeName || "Talla única"}</p><p className="text-xs text-pw-muted">{money.format(price)}</p><p className="text-xs text-pw-muted">{option.variant.availableQuantity} disponibles</p></div><button type="button" disabled={busy || alreadyInSale} onClick={() => addVariant(option)} className="min-h-9 shrink-0 rounded-lg border border-pw-brand px-3 text-xs font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft disabled:cursor-default disabled:border-pw-line disabled:text-pw-muted">{alreadyInSale ? "Agregada" : "Agregar"}</button></div>;
-            })}</div>
-          </section>;
-        })}</div> : null}
-        {catalog && catalog.totalPages > 1 ? <Pagination page={catalog.page} totalPages={catalog.totalPages} onPageChange={setPage} /> : null}
-        <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
-      </div>
-      <footer className="flex justify-end border-t border-pw-line p-4"><button type="button" onClick={onClose} className="min-h-11 rounded-lg border border-pw-line bg-white px-4 text-sm font-bold">Listo</button></footer>
-    </div>
-  </dialog>, document.body);
-}
 export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
   sale: SaleDetail; products: ProductDTO[]; isAdmin: boolean; busy: boolean; onSave: (payload: ReplaceSaleProductsPayload) => Promise<boolean>;
 }) {
   const { request, session } = useAuth();
-  const [adding, setAdding] = useState(false);
   const [draftLines, setDraftLines] = useState<DraftLine[]>(() => draftLinesFromSale(sale));
   const [discountLineIndex, setDiscountLineIndex] = useState<number | null>(null);
   const [additionalChoices, setAdditionalChoices] = useState<ProductChoice[]>([]);
@@ -301,9 +212,9 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
   } : null;
 
   return <section className="@container rounded-2xl border border-pw-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sale-products-title">
-    <header className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h2 id="sale-products-title" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2></div>{canEdit ? <div className="flex flex-wrap gap-2">{dirty ? <button type="button" disabled={busy} onClick={() => { setDraftLines(draftLinesFromSale(sale)); setError(""); }} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold hover:bg-pw-canvas">Descartar cambios</button> : null}<button type="button" disabled={busy || !dirty} onClick={() => void saveChanges()} className="min-h-10 rounded-lg bg-pw-brand px-3 text-sm font-extrabold text-white hover:bg-pw-brand-deep disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Guardando…" : "Guardar cambios"}</button><button type="button" disabled={busy} onClick={() => setAdding(true)} className="min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep hover:bg-pw-brand-soft">Agregar prenda</button></div> : null}</header>
+    <header className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h2 id="sale-products-title" className="text-base font-extrabold text-pw-ink">Prendas de la venta</h2></div>{canEdit ? <div className="flex flex-wrap gap-2">{dirty ? <button type="button" disabled={busy} onClick={() => { setDraftLines(draftLinesFromSale(sale)); setError(""); }} className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold hover:bg-pw-canvas">Descartar cambios</button> : null}<button type="button" disabled={busy || !dirty} onClick={() => void saveChanges()} className="min-h-10 rounded-lg bg-pw-brand px-3 text-sm font-extrabold text-white hover:bg-pw-brand-deep disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Guardando…" : "Guardar cambios"}</button><SaleProductPicker lines={draftLines.map((line) => ({ productVariantId: Number(line.productId) }))} onAdd={addVariantToDraft} disabled={busy} /></div> : null}</header>
     {error ? <p role="alert" className="mb-3 text-sm font-semibold text-red-700">{error}</p> : null}
-    {canEdit && draftLines.length ? <div className="hidden @min-[61rem]:grid @min-[61rem]:grid-cols-[1.5rem_minmax(10rem,1.1fr)_minmax(7rem,0.8fr)_4.75rem_4.25rem_3.5rem_6rem_7rem_6.25rem] gap-x-5 border-b border-pw-line px-1 py-2 text-xs font-extrabold text-pw-muted"><span aria-hidden="true"></span><span>Prenda</span><span>Categoría</span><span className="text-center">Talla</span><span className="text-center">Cantidad</span><span className="text-center">Disponible</span><span className="text-center">Precio c/u</span><span className="text-center">Descuento c/u</span><span className="text-center">Total</span></div> : null}
+    {canEdit && draftLines.length ? <div className="hidden @min-[47rem]:grid @min-[47rem]:grid-cols-[minmax(8rem,1fr)_4.75rem_2.5rem_4rem_5.5rem_7rem_5.5rem_2rem] gap-x-3 border-b border-pw-line py-2 text-xs font-extrabold text-pw-muted"><span>Presentación</span><span className="text-center">Talla</span><span className="text-center">Stock</span><span className="text-center">Cantidad</span><span className="text-center">Precio c/u</span><span>Descuento c/u</span><span className="text-right">Total</span><span className="sr-only">Acciones</span></div> : null}
     {!canEdit && sale.productVariants.length ? <div className="hidden @min-[44rem]:grid @min-[44rem]:grid-cols-[minmax(8rem,1.2fr)_minmax(7rem,1fr)_4rem_3.5rem_5rem_5.5rem_5.75rem] gap-x-3 border-b border-pw-line py-2 text-xs font-extrabold text-pw-muted"><span>Presentación</span><span>Subcategoría</span><span className="text-center">Talla</span><span className="text-center">Cantidad</span><span className="text-right">Precio c/u</span><span className="text-right">Descuento</span><span className="text-right">Total</span></div> : null}
     {canEdit ? <ul className="w-full divide-y divide-pw-line">{draftLines.map((line, index) => {
       const choice = choices.find((item) => String(item.variant.id) === line.productId);
@@ -312,24 +223,23 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
       const sizeOptions = choice ? choices.filter((item) => item.presentationId === choice.presentationId && (maxQuantityForLine(index, String(item.variant.id)) > 0 || item.variant.id === choice.variant.id)) : [];
       const total = Math.max(0, price - (Number(line.discountAmount) || 0)) * (Number(line.quantity) || 0);
       const discountButtonLine = choice ? discountDraftLine(line, choice, choices, price, maxQuantityForLine(index, line.productId)) : null;
-      return <li key={line.saleProductId ?? "new-" + index} className="grid w-full grid-cols-2 items-end gap-x-3 gap-y-3 @min-[36rem]:grid-cols-5 py-3 @min-[61rem]:grid-cols-[1.5rem_minmax(10rem,1.1fr)_minmax(7rem,0.8fr)_4.75rem_4.25rem_3.5rem_6rem_7rem_6.25rem] @min-[61rem]:items-center @min-[61rem]:gap-x-5">
-        <div className="flex min-w-0 items-center gap-2 @min-[36rem]:col-span-4 @min-[61rem]:col-span-1 @min-[61rem]:col-start-2 @min-[61rem]:row-start-1 @min-[61rem]:gap-3"><ProductThumb choice={choice} /><div className="min-w-0"><strong className="block truncate text-sm font-extrabold text-pw-ink">{choice?.presentationName ?? "Presentación"}</strong><span className="block truncate text-xs text-pw-muted">{choice ? "Código " + choice.product.code + " · " + (choice.product.subcategoryName || choice.product.name || "Sin subcategoría") : "Producto #" + line.productId}</span></div></div>
-        <button type="button" disabled={busy} onClick={() => { setDraftLines((current) => current.filter((_item, row) => row !== index)); setError(""); }} aria-label={"Eliminar prenda " + (index + 1)} title="Eliminar prenda" className="grid h-9 w-8 place-items-center justify-self-end self-center @min-[61rem]:col-start-1 @min-[61rem]:row-start-1 @min-[61rem]:justify-self-center rounded-lg text-red-600 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M10 11v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3" /></svg></button>
-        <span className="hidden min-w-0 text-sm text-pw-muted @min-[61rem]:block">{choice?.product.categoryName || "—"}</span>
-        <label onFocusCapture={loadSiblingVariants} className="min-w-0 text-xs font-bold text-pw-muted @min-[61rem]:text-center"><span className="mb-1 block text-[0.65rem] text-pw-muted @min-[61rem]:hidden">Talla</span><SelectControl id={"sale-detail-size-" + index} aria-label={"Talla de prenda " + (index + 1)} value={line.productId} options={sizeOptions.map((item) => ({ value: String(item.variant.id), label: item.variant.sizeName || "Única" }))} onChange={(event) => changeVariant(index, event.target.value)} /></label>
-        <label className="text-xs font-bold text-pw-muted @min-[61rem]:text-center"><span className="mb-1 block text-[0.65rem] @min-[61rem]:hidden">Cantidad</span><input aria-label={"Cantidad de prenda " + (index + 1)} type="number" min="1" max={maxQuantityForLine(index, line.productId)} step="1" value={line.quantity} onChange={(event) => { const value = event.target.value; const maximum = maxQuantityForLine(index, line.productId); updateLine(index, { quantity: value && Number(value) > maximum ? String(maximum) : value }); }} className="pw-number-input min-h-9 w-full rounded-lg border border-pw-line px-2 text-center text-sm text-pw-ink" /></label>
-        <span className="hidden text-center text-sm tabular-nums text-pw-muted @min-[61rem]:block">{maxQuantityForLine(index, line.productId)}</span>
-        <div className="min-w-0 text-sm tabular-nums text-pw-muted @min-[61rem]:text-center">
-          <span className="mb-1 block text-[0.65rem] font-bold @min-[61rem]:hidden">Precio c/u</span>
+      return <li key={line.saleProductId ?? "new-" + index} className="grid w-full grid-cols-2 items-end gap-x-3 gap-y-3 @min-[36rem]:grid-cols-5 py-3 @min-[47rem]:grid-cols-[minmax(8rem,1fr)_4.75rem_2.5rem_4rem_5.5rem_7rem_5.5rem_2rem] @min-[47rem]:items-center @min-[47rem]:gap-x-3">
+        <div className="flex min-w-0 items-center gap-2 @min-[36rem]:col-span-4 @min-[47rem]:col-span-1 @min-[47rem]:col-start-1 @min-[47rem]:row-start-1 @min-[47rem]:gap-3"><ProductThumb choice={choice} /><div className="min-w-0"><strong className="block truncate text-sm font-extrabold text-pw-ink">{choice?.presentationName ?? "Presentación"}</strong><span className="block truncate text-xs text-pw-muted">{choice ? "Código " + choice.product.code + " · " + (choice.product.subcategoryName || choice.product.categoryName || choice.product.name || "Sin subcategoría") : "Producto #" + line.productId}</span></div></div>
+        <button type="button" disabled={busy} onClick={() => { setDraftLines((current) => current.filter((_item, row) => row !== index)); setError(""); }} aria-label={"Eliminar prenda " + (index + 1)} title="Eliminar prenda" className="grid h-9 w-8 place-items-center justify-self-end self-center @min-[47rem]:col-start-8 @min-[47rem]:row-start-1 @min-[47rem]:justify-self-center rounded-lg text-red-600 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M10 11v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3" /></svg></button>
+        <label onFocusCapture={loadSiblingVariants} className="min-w-0 text-xs font-bold text-pw-muted @min-[47rem]:text-center"><span className="mb-1 block text-[0.65rem] text-pw-muted @min-[47rem]:hidden">Talla</span><SelectControl id={"sale-detail-size-" + index} aria-label={"Talla de prenda " + (index + 1)} value={line.productId} options={sizeOptions.map((item) => ({ value: String(item.variant.id), label: item.variant.sizeName || "Única" }))} onChange={(event) => changeVariant(index, event.target.value)} /></label>
+        <span className="hidden text-center text-sm tabular-nums text-pw-muted @min-[47rem]:block">{maxQuantityForLine(index, line.productId)}</span>
+        <label className="text-xs font-bold text-pw-muted @min-[47rem]:text-center"><span className="mb-1 block text-[0.65rem] @min-[47rem]:hidden">Cantidad</span><input aria-label={"Cantidad de prenda " + (index + 1)} type="number" min="1" max={maxQuantityForLine(index, line.productId)} step="1" value={line.quantity} onChange={(event) => { const value = event.target.value; const maximum = maxQuantityForLine(index, line.productId); updateLine(index, { quantity: value && Number(value) > maximum ? String(maximum) : value }); }} className="pw-number-input min-h-9 w-full rounded-lg border border-pw-line px-2 text-center text-sm text-pw-ink" /></label>
+        <div className="min-w-0 text-sm tabular-nums text-pw-muted @min-[47rem]:text-center">
+          <span className="mb-1 block text-[0.65rem] font-bold @min-[47rem]:hidden">Precio c/u</span>
           <span className="wrap-anywhere">{money.format(price)}</span>
-          <span className="block text-xs @min-[61rem]:hidden">{maxQuantityForLine(index, line.productId)} disponibles</span>
+          <span className="block text-xs @min-[47rem]:hidden">{maxQuantityForLine(index, line.productId)} disponibles</span>
         </div>
         <div className="min-w-0">
-          <span className="mb-1 block text-[0.65rem] font-bold text-pw-muted @min-[61rem]:hidden">Descuento c/u</span>
+          <span className="mb-1 block text-[0.65rem] font-bold text-pw-muted @min-[47rem]:hidden">Descuento c/u</span>
           {discountButtonLine ? <SaleDiscountButton line={discountButtonLine} compact onClick={() => setDiscountLineIndex(index)} /> : <span className="text-xs text-pw-muted">—</span>}
         </div>
-        <div className="col-span-2 min-w-0 text-right @min-[36rem]:col-span-1 @min-[61rem]:text-center">
-          <span className="mb-1 block text-[0.65rem] font-bold text-pw-muted @min-[61rem]:hidden">Total</span>
+        <div className="col-span-2 min-w-0 text-right @min-[36rem]:col-span-1">
+          <span className="mb-1 block text-[0.65rem] font-bold text-pw-muted @min-[47rem]:hidden">Total</span>
           <strong className="wrap-anywhere text-sm font-extrabold tabular-nums">{money.format(total)}</strong>
         </div>
       </li>;
@@ -347,10 +257,10 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
     })}</ul>}
     {canEdit && draftLines.length === 0 ? <p className="rounded-xl border border-dashed border-pw-line py-8 text-center text-sm text-pw-muted">Esta venta aún no tiene prendas. Usa “Agregar prenda” para añadir una.</p> : null}
     {!canEdit && sale.productVariants.length === 0 ? <p className="rounded-xl border border-dashed border-pw-line py-8 text-center text-sm text-pw-muted">Esta venta aún no tiene prendas.</p> : null}
-    <dl className={"ml-auto mt-4 grid max-w-xs grid-cols-[minmax(0,1fr)_auto] gap-y-2 border-t border-pw-line pt-4 text-sm " + (canEdit ? "@min-[61rem]:w-full @min-[61rem]:max-w-none @min-[61rem]:grid-cols-[1.5rem_minmax(10rem,1.1fr)_minmax(7rem,0.8fr)_4.75rem_4.25rem_3.5rem_6rem_7rem_6.25rem] @min-[61rem]:gap-x-5" : "")}>
-      <dt className={"text-pw-muted " + (canEdit ? "@min-[61rem]:col-span-8 @min-[61rem]:col-start-1 @min-[61rem]:text-right" : "")}>Subtotal</dt><dd className={"font-bold tabular-nums " + (canEdit ? "text-right @min-[61rem]:col-start-9 @min-[61rem]:text-center" : "text-right")}>{money.format(canEdit ? totals.subtotal : sale.subtotal)}</dd>
-      <dt className={"text-pw-muted " + (canEdit ? "@min-[61rem]:col-span-8 @min-[61rem]:col-start-1 @min-[61rem]:text-right" : "")}>Descuento</dt><dd className={"font-bold tabular-nums " + (canEdit ? "text-right @min-[61rem]:col-start-9 @min-[61rem]:text-center" : "text-right")}>− {money.format(canEdit ? totals.discount : sale.totalDiscount)}</dd>
-      <dt className={"border-t border-pw-line pt-2 font-extrabold " + (canEdit ? "@min-[61rem]:col-span-8 @min-[61rem]:col-start-1 @min-[61rem]:text-right" : "")}>Total prendas</dt><dd className={"border-t border-pw-line pt-2 font-extrabold tabular-nums " + (canEdit ? "text-right @min-[61rem]:col-start-9 @min-[61rem]:text-center" : "text-right")}>{money.format(canEdit ? totals.total : sale.total)}</dd>
+    <dl className={"ml-auto mt-4 grid max-w-xs grid-cols-[minmax(0,1fr)_auto] gap-y-2 border-t border-pw-line pt-4 text-sm " + (canEdit ? "@min-[47rem]:w-full @min-[47rem]:max-w-none @min-[47rem]:grid-cols-[minmax(8rem,1fr)_4.75rem_2.5rem_4rem_5.5rem_7rem_5.5rem_2rem] @min-[47rem]:gap-x-3" : "")}>
+      <dt className={"text-pw-muted " + (canEdit ? "@min-[47rem]:col-span-6 @min-[47rem]:col-start-1 @min-[47rem]:text-right" : "")}>Subtotal</dt><dd className={"font-bold tabular-nums " + (canEdit ? "text-right @min-[47rem]:col-start-7" : "text-right")}>{money.format(canEdit ? totals.subtotal : sale.subtotal)}</dd>
+      <dt className={"text-pw-muted " + (canEdit ? "@min-[47rem]:col-span-6 @min-[47rem]:col-start-1 @min-[47rem]:text-right" : "")}>Descuento</dt><dd className={"font-bold tabular-nums " + (canEdit ? "text-right @min-[47rem]:col-start-7" : "text-right")}>− {money.format(canEdit ? totals.discount : sale.totalDiscount)}</dd>
+      <dt className={"border-t border-pw-line pt-2 font-extrabold " + (canEdit ? "@min-[47rem]:col-span-6 @min-[47rem]:col-start-1 @min-[47rem]:text-right" : "")}>Total prendas</dt><dd className={"border-t border-pw-line pt-2 font-extrabold tabular-nums " + (canEdit ? "text-right @min-[47rem]:col-start-7" : "text-right")}>{money.format(canEdit ? totals.total : sale.total)}</dd>
     </dl>
     <SaleDiscountDialog line={discountDialogLine} onClose={() => setDiscountLineIndex(null)} onApply={(_productVariantId, discountAmount, type, value) => {
       if (discountLineIndex === null) return;
@@ -379,7 +289,6 @@ export function SaleDetailProducts({ sale, products, isAdmin, busy, onSave }: {
       });
       setDiscountLineIndex(null);
     }} />
-    {adding ? <ProductAddDialog selectedProductIds={draftLines.map((line) => Number(line.productId)).filter(Boolean)} busy={busy} onClose={() => setAdding(false)} onSelect={addVariantToDraft} /> : null}
   </section>;
 }
 

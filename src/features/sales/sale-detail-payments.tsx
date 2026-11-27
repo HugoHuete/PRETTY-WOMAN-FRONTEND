@@ -1,3 +1,4 @@
+import { SaleCardAction } from "./sale-card-action";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
@@ -8,6 +9,8 @@ import { SalePaymentEditDialog, SalePaymentRefundButton } from "./sale-payment-a
 import { PaymentDialogContent, calculatePayment, emptyPayment, roundMoney as round, type PaymentDraft } from "./sale-payment-form";
 
 const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO" });
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const paymentDate = new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" });
 const applied = (movement: SalePaymentMovement, value: number) => movement.movementDirectionId === 2 ? -value : value;
 
 function AddPaymentDialog({ productBalance, shippingBalance, deliveryId, terminals, busy, onClose, onSave }: { productBalance: number; shippingBalance: number; deliveryId?: number; terminals: SaleCatalogOption[]; busy: boolean; onClose: () => void; onSave: (payload: CreateSalePaymentMovementPayload) => Promise<boolean> }) {
@@ -100,21 +103,48 @@ export function SaleDetailPayments({ sale, isAdmin, busy, terminals, onAdd, onUp
   const shippingBalance = Math.max(0, round((delivery?.shippingChargedToClient ?? 0) - deliveryShippingPaid));
   const due = round(productBalance + shippingBalance);
   const canAdd = sale.saleStatusId !== 6 && due > 0;
-  return <section className="rounded-2xl border border-pw-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sale-payments-title"><header className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="sale-payments-title" className="text-base font-extrabold">Pagos</h2></div>{canAdd ? <button type="button" disabled={busy} onClick={() => setAdding(true)} className="min-h-10 rounded-lg bg-pw-brand px-3 text-sm font-extrabold text-white">Registrar pago</button> : null}</header>
-    <div className="grid gap-2 rounded-xl bg-pw-canvas p-3 sm:grid-cols-3"><div><span className="block text-xs text-pw-muted">Aplicado a productos</span><strong className="text-sm tabular-nums">{money.format(Math.max(0, productsPaid))}</strong></div><div><span className="block text-xs text-pw-muted">Aplicado al envío</span><strong className="text-sm tabular-nums">{money.format(Math.max(0, shippingPaid))}</strong></div><div><span className="block text-xs text-pw-muted">Saldo pendiente</span><strong className="text-sm tabular-nums">{money.format(due)}</strong></div></div>
-    {movements.length ? <ul className="mt-4 divide-y divide-pw-line rounded-xl border border-pw-line">
-      <li aria-hidden="true" className="hidden grid-cols-[minmax(0,1.1fr)_minmax(9rem,1fr)_minmax(0,1.3fr)_6.5rem_9rem] gap-4 bg-pw-canvas px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-pw-muted sm:grid"><span>Movimiento</span><span>Fecha y hora</span><span>Aplicado</span><span className="text-right">Monto</span><span className="text-right">Acciones</span></li>
+  return <section className="rounded-2xl border border-pw-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sale-payments-title"><header className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 id="sale-payments-title" className="text-base font-extrabold">Pagos</h2></div>{canAdd ? <button type="button" disabled={busy} onClick={() => setAdding(true)} aria-label="Registrar pago" title="Registrar pago" className="grid size-10 place-items-center rounded-lg text-pw-brand-deep hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="size-5"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg></button> : null}</header>
+    <div className="grid gap-2 rounded-xl bg-pw-canvas p-3 sm:grid-cols-3"><div><span className="block text-xs text-pw-muted">Aplicado a productos</span><strong className="text-sm tabular-nums">{money.format(Math.max(0, productsPaid))}</strong></div><div><span className="block text-xs text-pw-muted">Aplicado al envío</span><strong className="text-sm tabular-nums">{money.format(Math.max(0, shippingPaid))}</strong></div><div><span className="block text-xs text-pw-muted">Por pagar</span><strong className="text-sm tabular-nums">{money.format(due)}</strong></div></div>
+    {movements.length ? <ul aria-label="Movimientos de pago" className="mt-3 divide-y divide-pw-line">
       {movements.map((movement) => {
         const isRefund = movement.movementDirectionId === 2;
         const amount = movement.productAmount + movement.shippingAmount;
         const refundedAmount = refundedAmounts.get(movement.id) ?? { product: 0, shipping: 0 };
         const fullyRefunded = !isRefund && refundedAmount.product + refundedAmount.shipping >= amount - 0.01;
-        return <li key={movement.id} className="grid grid-cols-2 items-center gap-x-4 gap-y-3 px-3 py-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(9rem,1fr)_minmax(0,1.3fr)_6.5rem_9rem] sm:gap-4">
-          <div className="min-w-0"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-pw-muted sm:hidden">Movimiento</span><strong className="block truncate text-sm">{isRefund ? `Reembolso${movement.paymentTerminalName ? ` · ${movement.paymentTerminalName}` : ""}` : `${movement.paymentMethodName ?? "Pago"}${movement.paymentTerminalName ? ` · ${movement.paymentTerminalName}` : ""}`}</strong>{fullyRefunded ? <span className="mt-1 inline-flex rounded-full bg-pw-canvas px-2 py-0.5 text-[10px] font-bold text-pw-muted">Reembolsado</span> : null}</div>
-          <div><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-pw-muted sm:hidden">Fecha y hora</span><span className="text-xs text-pw-muted">{new Intl.DateTimeFormat("es-NI", { day: "2-digit", month: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(movement.movementDate))}</span></div>
-          <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-pw-muted sm:hidden">Aplicado</span><span className="block text-xs text-pw-muted">Productos {money.format(movement.productAmount)}</span><span className="block text-xs text-pw-muted">Envío {money.format(movement.shippingAmount)}</span>{movement.changeGivenNio ? <span className="block text-xs text-pw-muted">Cambio {money.format(movement.changeGivenNio)}</span> : null}</div>
-          <strong className={"text-right text-sm tabular-nums " + (isRefund ? "text-red-700" : "text-pw-ink")}><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-pw-muted sm:hidden">Monto</span>{isRefund ? "− " : ""}{money.format(amount)}</strong>
-          <div className="col-span-2 flex justify-end sm:col-span-1">{isAdmin && !isRefund && !fullyRefunded ? <div className="flex gap-2"><button type="button" disabled={busy} onClick={() => setEditing(movement)} className="min-h-9 rounded-lg border border-pw-line bg-white px-2 text-xs font-bold hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-50">Corregir</button><SalePaymentRefundButton movement={movement} refundedProductAmount={refundedAmount.product} refundedShippingAmount={refundedAmount.shipping} busy={busy} onRefund={(payload) => onRefund(movement.id, payload)} /></div> : null}</div>
+        const currency = movement.amountReceivedUsd > 0
+          ? movement.amountReceivedNio > 0 ? "C$ / US$" : "US$"
+          : "C$";
+        const received = [
+          movement.amountReceivedNio > 0 ? money.format(movement.amountReceivedNio) : null,
+          movement.amountReceivedUsd > 0 ? `US${usd.format(movement.amountReceivedUsd)}` : null,
+        ].filter(Boolean).join(" · ");
+        const method = movement.paymentMethodName ?? "Pago";
+
+        return <li key={movement.id} className="py-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="min-w-0 flex-1 basis-36">
+              <strong className="block wrap-anywhere text-sm">{isRefund ? "Reembolso" : `${method} (${currency})`}{movement.paymentTerminalName ? ` · ${movement.paymentTerminalName}` : ""}</strong>
+              <span className="block text-xs text-pw-muted">{paymentDate.format(new Date(movement.movementDate))}{fullyRefunded ? " · Reembolsado" : ""}</span>
+            </div>
+            <div className="ml-auto text-right">
+              <span className="block text-xs text-pw-muted">{!isRefund && received ? "Recibido" : "Monto"}</span>
+              <strong className={`text-sm tabular-nums ${isRefund ? "text-red-700" : "text-pw-ink"}`}>{isRefund ? `− ${money.format(amount)}` : received || money.format(amount)}</strong>
+            </div>
+            {isAdmin && !isRefund && !fullyRefunded ? (
+              <div className="flex shrink-0 items-center gap-1">
+                <SaleCardAction action="edit" borderless label="Corregir pago" disabled={busy} onClick={() => setEditing(movement)} />
+                <SalePaymentRefundButton movement={movement} refundedProductAmount={refundedAmount.product} refundedShippingAmount={refundedAmount.shipping} busy={busy} onRefund={(payload) => onRefund(movement.id, payload)} />
+              </div>
+            ) : null}
+          </div>
+          {!isRefund && movement.changeGivenNio > 0 ? <p className="mt-2 flex flex-wrap justify-between gap-x-2 text-xs font-bold"><span>Cambio a entregar</span><span className="tabular-nums">{money.format(movement.changeGivenNio)}</span></p> : null}
+          <details className="mt-2 text-xs text-pw-muted">
+            <summary className="w-fit cursor-pointer rounded font-semibold focus-visible:outline-2 focus-visible:outline-pw-brand">Desglose del movimiento</summary>
+            <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+              <div className="flex gap-2"><dt>Productos</dt><dd className="font-semibold tabular-nums">{money.format(movement.productAmount)}</dd></div>
+              <div className="flex gap-2"><dt>Envío</dt><dd className="font-semibold tabular-nums">{money.format(movement.shippingAmount)}</dd></div>
+            </dl>
+          </details>
         </li>;
       })}
     </ul> : <p className="mt-4 rounded-xl border border-dashed border-pw-line py-7 text-center text-sm text-pw-muted">Aún no hay pagos registrados.</p>}

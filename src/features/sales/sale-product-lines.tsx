@@ -1,3 +1,4 @@
+import { SaleProductImage } from "./sale-product-image";
 import { useState } from "react";
 import type { SaleDraftLine, SaleManualDiscountType } from "./sale-product-types";
 import { discountSourceIds } from "./sales-types";
@@ -46,10 +47,9 @@ export function SaleProductLines({
     </button>
   );
 
-  const quantityControl = (line: SaleDraftLine, inputId?: string, mobile = false) => (
+  const quantityControl = (line: SaleDraftLine, mobile = false) => (
     <input
-      id={inputId}
-      aria-label={inputId ? undefined : `Cantidad de ${line.presentationName}`}
+      aria-label={`Cantidad de ${line.presentationName}`}
       type="number"
       min="1"
       max={line.availableQuantity}
@@ -57,7 +57,7 @@ export function SaleProductLines({
       onChange={(event) => update(line.productVariantId, {
         quantity: Math.max(1, Math.min(line.availableQuantity, Number(event.target.value) || 1)),
       })}
-      className={`min-h-10 rounded-lg border border-pw-line px-2 text-center text-sm tabular-nums text-pw-ink focus:border-pw-brand focus:outline-none focus:ring-2 focus:ring-pw-brand-soft ${mobile ? "w-full" : "w-20"}`}
+      className={`min-h-10 rounded-lg border border-pw-line px-2 text-center text-sm tabular-nums text-pw-ink focus:border-pw-brand focus:outline-none focus:ring-2 focus:ring-pw-brand-soft ${mobile ? "w-full" : "w-16"}`}
     />
   );
 
@@ -116,27 +116,28 @@ export function SaleProductLines({
     if (variant && variant.id !== line.productVariantId) onChangeVariant(line.productVariantId, variant);
   };
 
+  const showSelection = allowSelection || lines.some((line) => line.forSelection);
+
   if (!lines.length) {
     return (
-      <div className="rounded-xl border border-dashed border-pw-line px-5 py-8 text-center">
+      <div className="rounded-xl border border-dashed border-pw-line px-5 py-6 text-center">
         <p className="font-bold text-pw-ink">Aún no hay prendas en la venta.</p>
-        <p className="mt-1 text-sm text-pw-muted">Busca una prenda por código para agregarla.</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="hidden overflow-x-auto rounded-xl border border-pw-line lg:block">
-        <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+      <div className="hidden rounded-xl border border-pw-line @min-[49rem]:block">
+        <table className="w-full border-collapse text-left text-sm">
           <caption className="sr-only">Prendas agregadas a la venta</caption>
           <thead className="bg-pw-canvas text-xs font-bold text-pw-muted">
             <tr>
               <th scope="col" className="px-4 py-3">Presentación</th>
               <th scope="col" className="w-24 px-2 py-3">Talla</th>
-              <th scope="col" className="w-24 px-2 py-3 text-center">Selección</th>
+              {showSelection ? <th scope="col" className="px-2 py-3 text-center">Selección</th> : null}
               <th scope="col" className="px-3 py-3">Precio c/u</th>
-              <th scope="col" className="px-3 py-3 text-center">Stock</th>
+              <th scope="col" className="px-2 py-3 text-center">Stock</th>
               <th scope="col" className="px-3 py-3 text-center">Cantidad</th>
               <th scope="col" className="px-3 py-3">Descuento c/u</th>
               <th scope="col" className="px-3 py-3 text-center">Total</th>
@@ -149,12 +150,12 @@ export function SaleProductLines({
                 <th scope="row" className="max-w-64 px-4 py-4 font-semibold text-pw-ink">
                   <div className="flex items-start gap-3">
                     {line.imageUrl ? (
-                      <img src={line.imageUrl} alt={line.presentationName} loading="lazy" className="h-16 w-12 shrink-0 rounded-lg object-cover" />
+                      <SaleProductImage src={line.imageUrl} name={`Código ${line.productCode} · ${line.presentationName}`} className="h-16 w-12 shrink-0 rounded-lg" />
                     ) : (
                       <div role="img" aria-label="Sin imagen" className="grid h-16 w-12 shrink-0 place-items-center rounded-lg bg-pw-canvas px-1 text-center text-[10px] font-medium text-pw-muted">Sin imagen</div>
                     )}
                     <span className="min-w-0">
-                      <span className="block font-extrabold text-pw-ink">{line.presentationName}</span>
+                      <span className="block wrap-anywhere font-extrabold text-pw-ink">{line.presentationName}</span>
                       <span className="mt-1 block text-xs font-medium text-pw-muted">Código {line.productCode}</span>
                     </span>
                   </div>
@@ -174,12 +175,10 @@ export function SaleProductLines({
                     </label>
                   ) : <span className="text-sm font-bold text-pw-ink">{line.sizeName || "Talla única"}</span>}
                 </td>
-                <td className="px-2 py-4">{selectionControl(line)}</td>
+                {showSelection ? <td className="px-2 py-3">{selectionControl(line)}</td> : null}
                 <td className="whitespace-nowrap px-3 py-4 tabular-nums text-pw-muted">{money.format(line.unitPrice)}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-center tabular-nums text-pw-muted">{line.availableQuantity}</td>
-                <td className="px-3 py-4 text-center">
-                  {quantityControl(line, `sale-quantity-${line.productVariantId}`)}
-                </td>
+                <td className="px-2 py-4 text-center tabular-nums text-pw-muted">{line.availableQuantity}</td>
+                <td className="px-2 py-4 text-center">{quantityControl(line)}</td>
                 <td className="px-3 py-4">
                   {line.forSelection
                     ? <span className="text-xs text-pw-muted">Se define al elegir</span>
@@ -188,7 +187,7 @@ export function SaleProductLines({
                 <td className="whitespace-nowrap px-3 py-4 text-center font-extrabold tabular-nums text-pw-ink">
                   {line.forSelection ? <span className="text-xs font-medium text-pw-muted">Sin cobrar</span> : money.format(lineTotal(line))}
                 </td>
-                <td className="px-3 py-4 text-right">
+                <td className="px-1 py-3 text-right">
                   {removeButton(line)}
                 </td>
               </tr>
@@ -197,50 +196,50 @@ export function SaleProductLines({
         </table>
       </div>
 
-      <ul className="divide-y divide-pw-line rounded-xl border border-pw-line lg:hidden">
+      <ul className="divide-y divide-pw-line rounded-xl border border-pw-line @min-[49rem]:hidden">
         {lines.map((line) => (
-          <li key={line.productVariantId} className="space-y-4 p-4">
+          <li key={line.productVariantId} className="space-y-3 p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 {line.imageUrl ? (
-                  <img src={line.imageUrl} alt={line.presentationName} loading="lazy" className="h-20 w-16 shrink-0 rounded-lg object-cover" />
+                  <SaleProductImage src={line.imageUrl} name={`Código ${line.productCode} · ${line.presentationName}`} className="h-14 w-11 shrink-0 rounded-lg" />
                 ) : (
-                  <div role="img" aria-label="Sin imagen" className="grid h-20 w-16 shrink-0 place-items-center rounded-lg bg-pw-canvas px-1 text-center text-[10px] font-medium text-pw-muted">Sin imagen</div>
+                  <div role="img" aria-label="Sin imagen" className="grid h-14 w-11 shrink-0 place-items-center rounded-lg bg-pw-canvas px-1 text-center text-[10px] font-medium text-pw-muted">Sin imagen</div>
                 )}
                 <div className="min-w-0">
                   <h3 className="font-extrabold text-pw-ink">{line.presentationName}</h3>
                   <p className="mt-1 text-xs text-pw-muted">Código {line.productCode}</p>
-                  <p className="mt-1 text-sm text-pw-muted">{money.format(line.unitPrice)} por unidad · {line.availableQuantity} disponibles</p>
+                  <p className="mt-1 text-sm text-pw-muted">{money.format(line.unitPrice)} c/u · {line.availableQuantity} {line.availableQuantity === 1 ? "disponible" : "disponibles"}</p>
                 </div>
               </div>
               {removeButton(line)}
             </div>
-            {selectionControl(line, true)}
-            {line.presentationVariants?.length ? (
-              <label className="grid gap-1 text-xs font-extrabold text-pw-brand-deep">
-                Cambiar talla
-                <SelectControl
-                  id={`sale-size-mobile-${line.productVariantId}`}
-                  value={String(line.productVariantId)}
-                  options={sizeOptions(line)}
-                  onChange={(event) => changeVariant(line, event.target.value)}
-                  aria-label={`Cambiar talla de ${line.presentationName}`}
-                />
-              </label>
-            ) : <p className="text-sm text-pw-muted">Talla: {line.sizeName || "Talla única"}</p>}
-            <div className="grid grid-cols-2 gap-3">
+            {showSelection && (allowSelection || line.forSelection) ? selectionControl(line, true) : null}
+            <div className="grid grid-cols-2 items-start gap-2 @min-[29rem]:grid-cols-3">
+              {line.presentationVariants?.length ? (
+                <label className="grid gap-1 text-xs font-extrabold text-pw-brand-deep">
+                  Cambiar talla
+                  <SelectControl
+                    id={`sale-size-mobile-${line.productVariantId}`}
+                    value={String(line.productVariantId)}
+                    options={sizeOptions(line)}
+                    onChange={(event) => changeVariant(line, event.target.value)}
+                    aria-label={`Cambiar talla de ${line.presentationName}`}
+                  />
+                </label>
+              ) : <p className="text-sm text-pw-muted">Talla: {line.sizeName || "Talla única"}</p>}
               <label className="grid gap-1 text-xs font-extrabold text-pw-muted">
                 Cantidad
-                {quantityControl(line, undefined, true)}
+                {quantityControl(line, true)}
               </label>
-              <div className="grid content-start gap-1 text-xs font-extrabold text-pw-muted">
+              <div className="col-span-2 grid content-start gap-1 text-xs font-extrabold text-pw-muted @min-[29rem]:col-span-1">
                 <span>Descuento c/u</span>
                 {line.forSelection
                   ? <span className="flex min-h-10 items-center text-xs font-medium text-pw-muted">Se define al elegir</span>
                   : discountButton(line)}
               </div>
             </div>
-            <div className="flex justify-between border-t border-pw-line pt-3 text-sm">
+            <div className="flex flex-wrap justify-between gap-x-3 border-t border-pw-line pt-2 text-sm">
               <span className="font-bold text-pw-muted">Total de la prenda</span>
               <strong className="tabular-nums text-pw-ink">{line.forSelection ? "Sin cobrar" : money.format(lineTotal(line))}</strong>
             </div>

@@ -1,3 +1,4 @@
+import { SaleProductImage } from "./sale-product-image";
 import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { SaleCardAction } from "./sale-card-action";
 import { createPortal } from "react-dom";
@@ -23,7 +24,7 @@ function variantName(hold: SaleSelectionHold, products: ProductDTO[]) {
 function SelectionProductThumb({ choice }: { choice: ReturnType<typeof variantName> }) {
   const image = choice?.presentation.primaryImageUrl || choice?.product.primaryImageUrl;
   return image
-    ? <img src={image} alt="" className="h-12 w-10 shrink-0 rounded-lg bg-pw-brand-soft object-cover" />
+    ? <SaleProductImage src={image} name={`Código ${choice?.product.code} · ${choice?.presentation.name || "Presentación"}`} className="h-12 w-10 shrink-0 rounded-lg bg-pw-brand-soft" />
     : <span aria-hidden="true" className="grid h-12 w-10 shrink-0 place-items-center rounded-lg bg-pw-brand-soft text-[10px] font-bold text-pw-brand-deep">{choice?.product.code ?? "—"}</span>;
 }
 function AddHoldDialog({ existingProductIds, busy, onClose, onSave }: {
@@ -102,7 +103,7 @@ function AddHoldDialog({ existingProductIds, busy, onClose, onSave }: {
         {!loading && !error && options.length > 0 ? <div className="grid gap-3">{groups.map((group) => {
           const first = group[0];
           return <section key={first.product.id + ":" + first.presentationId} className="overflow-hidden rounded-xl border border-pw-line">
-            <header className="flex items-center gap-3 px-3 py-2.5 sm:px-4">{first.imageUrl ? <img src={first.imageUrl} alt="" className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas object-cover" /> : <span aria-hidden="true" className="grid h-12 w-10 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-[10px] font-bold text-pw-brand-deep">{first.product.code}</span>}<div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5"><p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p><h3 className="text-sm font-extrabold text-pw-ink">{first.presentationName}</h3><p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p></div></header>
+            <header className="flex items-center gap-3 px-3 py-2.5 sm:px-4">{first.imageUrl ? <SaleProductImage src={first.imageUrl} name={`Código ${first.product.code} · ${first.presentationName}`} className="h-12 w-10 shrink-0 rounded-md bg-pw-canvas" /> : <span aria-hidden="true" className="grid h-12 w-10 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-[10px] font-bold text-pw-brand-deep">{first.product.code}</span>}<div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5"><p className="text-xs font-extrabold text-pw-brand-deep">Código {first.product.code}</p><h3 className="text-sm font-extrabold text-pw-ink">{first.presentationName}</h3><p className="min-w-0 text-xs text-pw-muted">{first.product.subcategoryName?.trim() || "Sin subcategoría"}</p></div></header>
             <div>{group.map((option) => {
               const added = existingProductIds.includes(option.variant.id) || addedIds.includes(option.variant.id);
               const price = option.variant.discountedSalePrice ?? option.variant.salePrice;

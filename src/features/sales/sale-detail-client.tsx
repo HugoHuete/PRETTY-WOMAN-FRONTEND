@@ -77,7 +77,6 @@ export function SaleDetailClient({ sale, client, isAdmin, busy, onSave, onClient
       </div>
     ) : (
       <>
-        <p className="mt-3 text-sm text-pw-muted">Esta venta no tiene clienta asociada.</p>
         {isAdmin ? <button type="button" disabled={busy} onClick={openClientDialog} className="mt-3 min-h-10 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand-deep disabled:opacity-50">Buscar o crear clienta</button> : null}
       </>
     )}

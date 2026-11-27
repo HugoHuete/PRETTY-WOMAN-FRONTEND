@@ -1,3 +1,4 @@
+import { SaleCardAction } from "./sale-card-action";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useExchangeRate } from "../../shared/finance/exchange-rate-provider";
 import { salePaymentMethods, type CreateSalePaymentPayload, type SaleCatalogOption } from "./sales-types";
@@ -118,6 +119,23 @@ export function SaleInitialPayment({ estimatedBalance: productBalance, shippingB
 
   return (
     <div className="space-y-3">
+      <header className="-mr-2 flex items-center justify-between gap-2">
+        <h2 id="sale-payment-heading" className="text-base font-extrabold text-pw-ink">
+          Pago inicial <span className="font-medium text-pw-muted">(opcional)</span>
+        </h2>
+        <button
+          type="button"
+          onClick={openAddDialog}
+          disabled={remainingBalance <= 0}
+          aria-label="Agregar pago"
+          title="Agregar pago"
+          className="grid size-10 shrink-0 place-items-center rounded-lg text-pw-brand-deep hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="size-5">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+        </button>
+      </header>
       {terminalLoading ? <p className="text-xs text-pw-muted">Cargando métodos de pago…</p> : null}
       {terminalError ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -128,35 +146,31 @@ export function SaleInitialPayment({ estimatedBalance: productBalance, shippingB
       {!terminalLoading && !terminalError && terminals.length === 0 ? <p className="text-xs text-pw-muted">No hay terminales activas; puedes registrar efectivo o transferencia.</p> : null}
 
       {drafts.length ? (
-        <ul aria-label="Pagos iniciales agregados" className="divide-y divide-pw-line overflow-hidden rounded-xl border border-pw-line">
+        <ul aria-label="Pagos iniciales agregados" className="divide-y divide-pw-line">
           {drafts.map((draft, index) => {
             const payment = payments[index];
             const received = draft.received.trim() ? Number(draft.received) || 0 : 0;
             return (
-              <li key={`${index}-${draft.methodId}-${draft.terminalId}`} className="grid gap-2.5 bg-white px-3 py-3 sm:px-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 wrap-anywhere">
-                    <p className="text-sm font-bold text-pw-ink">{getMethodLabel(draft)}</p>
-                    <p className="text-xs text-pw-muted">{draft.currency === "USD" ? "Dólares" : "Córdobas"}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button type="button" onClick={() => openEditDialog(index)} aria-label={`Editar pago ${index + 1}`} className="min-h-9 rounded-lg border border-pw-line px-3 text-xs font-bold text-pw-ink hover:border-pw-brand hover:text-pw-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand">Editar</button>
+              <li key={`${index}-${draft.methodId}-${draft.terminalId}`} className="grid gap-2 py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-sm font-bold text-pw-ink">
+                    <span className="wrap-anywhere">{getMethodLabel(draft)}</span>
+                    <span>({draft.currency === "USD" ? "US$" : "C$"})</span>
+                  </p>
+                  <div className="-mr-2 flex shrink-0">
+                    <SaleCardAction action="edit" borderless label={`Editar pago ${index + 1}`} onClick={() => openEditDialog(index)} />
                     <button type="button" onClick={() => removePayment(index)} aria-label={`Quitar pago ${index + 1}`} className="grid min-h-9 w-9 place-items-center rounded-lg text-pw-muted hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
                       <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4"><path d="M4 6h12M8 6V4h4v2m-6 0 1 10h6l1-10M8.5 9v4m3-4v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </button>
                   </div>
                 </div>
-                <dl className="grid gap-1 text-xs">
-                  <div className="flex flex-wrap justify-between gap-x-2">
+                <dl className="grid gap-1.5 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                     <dt className="text-pw-muted">Recibido</dt>
-                    <dd className="ml-auto font-semibold tabular-nums">{formatReceived(received, draft.currency)}</dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-x-2">
-                    <dt className="text-pw-muted">Aplicado</dt>
-                    <dd className="ml-auto font-semibold tabular-nums">{money.format(payment.productAmount + payment.shippingAmount)}</dd>
+                    <dd className="ml-auto font-extrabold tabular-nums text-pw-ink">{formatReceived(received, draft.currency)}</dd>
                   </div>
                   {payment.changeGivenNio > 0 ? (
-                    <div className="mt-1 flex flex-wrap justify-between gap-x-2 border-t border-pw-line pt-2 font-bold text-pw-ink">
+                    <div className="flex flex-wrap justify-between gap-x-2 border-t border-pw-line pt-1.5 text-xs font-bold text-pw-ink">
                       <dt>Cambio a entregar</dt>
                       <dd className="ml-auto tabular-nums">{money.format(payment.changeGivenNio)}</dd>
                     </div>
@@ -169,16 +183,6 @@ export function SaleInitialPayment({ estimatedBalance: productBalance, shippingB
       ) : (
         <p className="text-sm text-pw-muted">Aún no se ha agregado ningún pago inicial.</p>
       )}
-
-      <button
-        type="button"
-        onClick={openAddDialog}
-        disabled={remainingBalance <= 0}
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-pw-brand px-3 text-sm font-bold text-pw-brand transition-colors hover:bg-pw-brand-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
-        Agregar pago
-      </button>
 
       {dialogOpen ? <dialog
         ref={dialogRef}

@@ -1,3 +1,4 @@
+import { SaleProductImage } from "./sale-product-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../auth/auth-provider";
@@ -11,9 +12,13 @@ const money = new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO
 export function SaleProductPicker({
   lines,
   onAdd,
+  onImportCart,
+  disabled = false,
 }: {
-  lines: SaleDraftLine[];
+  lines: Pick<SaleDraftLine, "productVariantId">[];
+  disabled?: boolean;
   onAdd: (option: SaleVariantOption) => void;
+  onImportCart?: () => void;
 }) {
   const { request } = useAuth();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -104,7 +109,7 @@ export function SaleProductPicker({
 
   return (
     <>
-      <button type="button" onClick={openSearch} className="min-h-11 rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep">Agregar prenda</button>
+      <button type="button" onClick={openSearch} disabled={disabled} className="min-h-11 rounded-lg bg-pw-brand px-4 text-sm font-extrabold text-white hover:bg-pw-brand-deep disabled:opacity-50">Agregar prenda</button>
       {createPortal(
         <dialog
           ref={dialogRef}
@@ -119,11 +124,22 @@ export function SaleProductPicker({
           className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-hidden rounded-2xl border border-pw-line bg-white p-0 text-pw-ink shadow-2xl backdrop:bg-black/45"
         >
           <div className="flex max-h-[calc(90dvh-2px)] flex-col [@media(max-height:32rem)]:block [@media(max-height:32rem)]:overflow-y-auto">
-            <header className="flex items-center justify-between border-b border-pw-line px-5 py-4">
+            <header className="flex items-center justify-between gap-3 border-b border-pw-line px-5 py-4">
               <div>
                 <h2 id="sale-product-dialog-title" className="text-lg font-extrabold">Buscar prendas</h2>
               </div>
-              <button type="button" onClick={close} aria-label="Cerrar búsqueda de prendas" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {onImportCart ? (
+                  <button
+                    type="button"
+                    onClick={() => { close(); onImportCart(); }}
+                    className="min-h-10 rounded-lg border border-pw-line px-3 text-sm font-bold hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand"
+                  >
+                    Importar carrito
+                  </button>
+                ) : null}
+                <button type="button" onClick={close} aria-label="Cerrar búsqueda de prendas" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-pw-line text-xl">×</button>
+              </div>
             </header>
 
             <div className="space-y-3 px-5 pt-5 pb-3">
@@ -152,23 +168,29 @@ export function SaleProductPicker({
               {!loading && !error && hasMultiplePresentations ? (
                 <div role="group" aria-label="Presentaciones disponibles" className="flex gap-2 overflow-x-auto p-1">
                   {Array.from(groups, ([key, [first]]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-pressed={selectedPresentation === key}
-                      onClick={() => {
-                        setSelectedPresentation(key);
-                        if (resultsRef.current) resultsRef.current.scrollTop = 0;
-                      }}
-                      className="flex max-w-52 shrink-0 items-center gap-3 rounded-lg border border-pw-line px-2 py-1.5 text-left text-xs font-extrabold hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-pw-brand-deep aria-pressed:border-pw-brand-deep aria-pressed:bg-pw-brand-soft aria-pressed:text-pw-brand-deep"
-                    >
+                    <div key={key} className={`flex max-w-52 shrink-0 items-stretch gap-1 rounded-lg border p-1.5 ${selectedPresentation === key ? "border-pw-brand-deep bg-pw-brand-soft" : "border-pw-line"}`}>
                       {first.imageUrl ? (
-                        <img src={first.imageUrl} alt="" className="size-18 shrink-0 rounded-md bg-pw-canvas object-contain sm:size-22" />
+                        <SaleProductImage
+                          src={first.imageUrl}
+                          name={`Código ${first.product.code} · ${first.presentationName}`}
+                          className="size-18 shrink-0 rounded-md bg-pw-canvas sm:size-22"
+                          fit="contain"
+                        />
                       ) : (
-                        <span aria-hidden="true" className="grid size-18 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-pw-brand-deep sm:size-22">✦</span>
+                        <span aria-hidden="true" className="grid size-18 shrink-0 place-items-center rounded-md bg-pw-brand-soft text-xs text-pw-brand-deep sm:size-22">{first.product.code}</span>
                       )}
-                      <span className="wrap-anywhere">{first.presentationName}{hasMultipleProducts ? <small className="block font-normal">Código {first.product.code}</small> : null}</span>
-                    </button>
+                      <button
+                        type="button"
+                        aria-pressed={selectedPresentation === key}
+                        onClick={() => {
+                          setSelectedPresentation(key);
+                          if (resultsRef.current) resultsRef.current.scrollTop = 0;
+                        }}
+                        className="min-w-0 rounded-md px-2 text-left text-xs font-extrabold wrap-anywhere hover:bg-pw-canvas focus-visible:outline-2 focus-visible:outline-pw-brand-deep aria-pressed:text-pw-brand-deep"
+                      >
+                        {first.presentationName}{hasMultipleProducts ? <small className="block font-normal">Código {first.product.code}</small> : null}
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : null}
@@ -198,10 +220,10 @@ export function SaleProductPicker({
                         </header>
                         <div className={"border-t border-pw-line p-2.5 sm:px-4 " + (hasMultiplePresentations ? "" : "grid grid-cols-[4.5rem_minmax(0,1fr)] items-stretch gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-3")}>
                           {hasMultiplePresentations ? null : first.imageUrl ? (
-                            <img
+                            <SaleProductImage
                               src={first.imageUrl}
-                              alt={first.presentationName + ", " + first.product.name}
-                              className="h-24 w-[4.5rem] self-center rounded-lg bg-pw-canvas object-cover sm:h-28 sm:w-[5.5rem]"
+                              name={`Código ${first.product.code} · ${first.presentationName}`}
+                              className="h-24 w-[4.5rem] self-center rounded-lg bg-pw-canvas sm:h-28 sm:w-[5.5rem]"
                             />
                           ) : <span aria-hidden="true" className="grid h-24 w-[4.5rem] self-center place-items-center rounded-lg bg-pw-brand-soft text-xs font-bold text-pw-brand-deep sm:h-28 sm:w-[5.5rem]">{first.product.code}</span>}
                           <div className="min-w-0 divide-y divide-pw-line">
@@ -218,7 +240,7 @@ export function SaleProductPicker({
                                 </div>
                                 <button
                                   type="button"
-                                  disabled={added}
+                                  disabled={added || disabled}
                                   onClick={() => addVariant(option)}
                                   className="min-h-9 shrink-0 rounded-lg border border-pw-brand px-3 text-xs font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft disabled:cursor-default disabled:border-pw-line disabled:text-pw-muted"
                                 >

@@ -39,7 +39,7 @@ it('prefills the sale balance and retains allocation to the associated delivery'
     amountReceivedNio: 0, amountReceivedUsd: 3, changeGivenNio: 0, exchangeRate: 36,
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Corregir' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Corregir pago' }));
   const correction = within(screen.getByRole('dialog', { name: 'Corregir pago' }));
   const products = correction.getByLabelText('Aplicado a productos');
   const shipping = correction.getByLabelText('Aplicado al envío');
@@ -65,11 +65,13 @@ it('does not offer to collect a canceled and refunded delivery on a paid sale', 
     ],
     paymentMovements: [
       { id: 1, movementDirectionId: 1, movementDate: '2026-11-25T10:00:00Z', productAmount: 150, shippingAmount: 25, saleDeliveryId: 7 },
-      { id: 2, movementDirectionId: 1, movementDate: '2026-11-25T11:00:00Z', productAmount: 0, shippingAmount: 50, saleDeliveryId: 8 },
-      { id: 3, movementDirectionId: 2, movementDate: '2026-11-25T12:00:00Z', productAmount: 0, shippingAmount: 50, saleDeliveryId: 8, reversedSalePaymentMovementId: 2 },
+      { id: 2, movementDirectionId: 1, movementDate: '2026-11-25T11:00:00Z', productAmount: 0, shippingAmount: 50, amountReceivedUsd: 2, changeGivenNio: 22, saleDeliveryId: 8 },
+      { id: 3, movementDirectionId: 2, movementDate: '2026-11-25T12:00:00Z', productAmount: 0, shippingAmount: 50, amountReceivedUsd: 2, changeGivenNio: 22, saleDeliveryId: 8, reversedSalePaymentMovementId: 2 },
     ],
   } as SaleDetail;
   render(<SaleDetailPayments sale={sale} isAdmin={false} busy={false} terminals={[]} onAdd={vi.fn()} onUpdate={vi.fn()} onRefund={vi.fn()} />);
-  expect(screen.getByText('Saldo pendiente').nextElementSibling).toHaveTextContent('C$0.00');
+  expect(screen.getAllByText('Cambio a entregar')).toHaveLength(1);
+  expect(screen.getByText('Reembolso').closest('li')).not.toHaveTextContent('Cambio a entregar');
+  expect(screen.getByText('Por pagar').nextElementSibling).toHaveTextContent('C$0.00');
   expect(screen.queryByRole('button', { name: 'Registrar pago' })).not.toBeInTheDocument();
 });
