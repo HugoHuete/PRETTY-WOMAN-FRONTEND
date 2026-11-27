@@ -968,7 +968,7 @@ describe("PurchaseOrderDetailPage", () => {
     expect(document.querySelector("#tracking-section")).toBeInTheDocument();
   });
 
-  it("cierra definitivamente todos los pendientes sin enviar variantes", async () => {
+  it("cierra todos los pendientes sin enviar variantes", async () => {
     const user = userEvent.setup();
     const closableOrder = {
       ...orderFixture,
@@ -1020,9 +1020,9 @@ describe("PurchaseOrderDetailPage", () => {
 
     await user.click(closeButton);
     const dialog = await screen.findByRole("dialog");
-    expect(dialog).toHaveTextContent("Esta es una decisión definitiva");
+    expect(dialog).toHaveTextContent("Podrás reabrirlos mientras no se haya registrado un reembolso ni confirmado la pérdida");
     expect(dialog).toHaveTextContent(
-      "Todas las cantidades pendientes se registrarán como faltantes",
+      "Se registrarán 2 unidades como faltantes",
     );
 
     await user.click(
@@ -1088,6 +1088,29 @@ describe("PurchaseOrderDetailPage", () => {
     ));
     expect((await screen.findAllByText("C$125.00")).length).toBeGreaterThan(0);
     expect(within(screen.getByRole("region", { name: "Faltantes" })).queryByRole("button", { name: "Registrar reembolso" })).not.toBeInTheDocument();
+  });
+
+  it("reabre un faltante pendiente y muestra la orden actualizada", async () => {
+    const user = userEvent.setup();
+    const pending = {
+      ...orderFixture, orderStatusId: 5, supplierRefund: null, supplierRefundDeclinedAt: null,
+      totalSupplierRefundNio: 0, totalShortageLossNio: 250, netShortageLossNio: 250,
+    };
+    const reopened = { ...pending, orderStatusId: 2, purchaseShortages: [], totalShortageLossNio: 0, netShortageLossNio: 0 };
+    auth.request.mockImplementation((path: string, options?: RequestInit) => {
+      if (path.endsWith("/tracking-numbers") || path.endsWith("/receipts")) return jsonResponse([]);
+      if (path.endsWith("/shortages/reopen") && options?.method === "POST") return jsonResponse(reopened);
+      return jsonResponse(pending);
+    });
+
+    renderDetail();
+    const summary = await screen.findByRole("complementary", { name: "Resumen financiero de la orden" });
+    await user.click(within(summary).getByRole("button", { name: "Reabrir faltantes" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reabrir faltantes" });
+    await user.click(within(dialog).getByRole("button", { name: "Reabrir faltantes" }));
+    expect(await screen.findByText("Faltantes reabiertos. Ya podés registrar la recepción del paquete.")).toBeVisible();
+    expect(auth.request).toHaveBeenCalledWith("/api/v1/orders/48/shortages/reopen", { method: "POST" });
+    expect(within(summary).queryByRole("button", { name: "Reabrir faltantes" })).not.toBeInTheDocument();
   });
 
   it("permite marcar definitivamente los faltantes sin reembolso", async () => {

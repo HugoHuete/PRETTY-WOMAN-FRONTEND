@@ -236,6 +236,8 @@ export function PurchaseOrderDetailPage() {
   const [isDeclineRefundConfirmationOpen, setIsDeclineRefundConfirmationOpen] =
     useState(false);
   const [isDecliningRefund, setIsDecliningRefund] = useState(false);
+  const [isReopenShortagesOpen, setIsReopenShortagesOpen] = useState(false);
+  const [isReopeningShortages, setIsReopeningShortages] = useState(false);
   const [shortageResolutionMessage, setShortageResolutionMessage] = useState<
     string | null
   >(null);
@@ -317,6 +319,8 @@ export function PurchaseOrderDetailPage() {
     setShortageResolutionMessage(null);
     setIsSavingRefund(false);
     setIsDecliningRefund(false);
+    setIsReopenShortagesOpen(false);
+    setIsReopeningShortages(false);
   }, [id]);
 
   useEffect(() => {
@@ -737,7 +741,9 @@ export function PurchaseOrderDetailPage() {
     order.supplierRefund === null &&
     order.supplierRefundDeclinedAt === null &&
     !isSavingRefund &&
-    !isDecliningRefund;
+    !isDecliningRefund &&
+    !isReopeningShortages;
+  const canReopenShortages = canResolveShortages && order?.orderStatusId === 5;
 
   const openRefundDialog = () => {
     if (!canResolveShortages || !order) return;
@@ -832,6 +838,27 @@ export function PurchaseOrderDetailPage() {
       }
     } finally {
       if (shortageActionOrderId.current === actionOrderId) setIsDecliningRefund(false);
+    }
+  };
+
+  const reopenShortages = async () => {
+    if (!id || !canReopenShortages) return;
+    const actionOrderId = id;
+    setIsReopeningShortages(true);
+    setRefundMutationError(null);
+    try {
+      const response = await request(`/api/v1/orders/${actionOrderId}/shortages/reopen`, { method: "POST" });
+      if (!response.ok) throw new Error(await problemDetail(response));
+      const updatedOrder = (await response.json()) as OrderDTO;
+      if (shortageActionOrderId.current !== actionOrderId) return;
+      setOrder(updatedOrder);
+      setIsReopenShortagesOpen(false);
+      setShortageResolutionMessage("Faltantes reabiertos. Ya podés registrar la recepción del paquete.");
+    } catch (caught) {
+      if (shortageActionOrderId.current === actionOrderId)
+        setRefundMutationError(caught instanceof Error ? caught.message : "No se pudieron reabrir los faltantes.");
+    } finally {
+      if (shortageActionOrderId.current === actionOrderId) setIsReopeningShortages(false);
     }
   };
 
@@ -1024,6 +1051,19 @@ export function PurchaseOrderDetailPage() {
             >
               Cerrar con faltantes
             </button>
+            {canReopenShortages || isReopeningShortages ? (
+              <button
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-pw-line bg-white px-4 text-sm font-extrabold text-pw-brand-deep hover:bg-pw-brand-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pw-brand disabled:opacity-60"
+                type="button"
+                disabled={isReopeningShortages}
+                onClick={() => {
+                  setRefundMutationError(null);
+                  setIsReopenShortagesOpen(true);
+                }}
+              >
+                Reabrir faltantes
+              </button>
+            ) : null}
             {shortageMutationError ? (
               <p
                 className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
@@ -1380,6 +1420,14 @@ export function PurchaseOrderDetailPage() {
           <h2 id="shortages-title" className="text-lg font-extrabold">
             Faltantes
           </h2>
+          {shortageResolutionMessage ? (
+            <p
+              className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800"
+              role="status"
+            >
+              {shortageResolutionMessage}
+            </p>
+          ) : null}
           {order.purchaseShortages.length === 0 ? (
             <p className="mt-3 text-sm text-pw-muted">
               No hay faltantes registrados para esta orden.
@@ -1406,14 +1454,6 @@ export function PurchaseOrderDetailPage() {
                   ? `Reembolso registrado: ${formatCordobas(order.supplierRefund.amountNio)}.`
                   : "Sin reembolso registrado."}
               </p>
-              {shortageResolutionMessage ? (
-                <p
-                  className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800"
-                  role="status"
-                >
-                  {shortageResolutionMessage}
-                </p>
-              ) : null}
               {order.supplierRefundDeclinedAt ? (
                 <p className="mt-4 text-sm text-pw-muted">
                   El proveedor no emitirá reembolso; el faltante quedó registrado como pérdida.
@@ -1759,9 +1799,22 @@ export function PurchaseOrderDetailPage() {
         />
 
         <ConfirmDialog
+          open={isReopenShortagesOpen}
+          title="Reabrir faltantes"
+          description="Las prendas volverán a quedar pendientes de recepción en esta orden. Registrá el paquete cuando lo recibás."
+          confirmLabel="Reabrir faltantes"
+          error={refundMutationError}
+          isPending={isReopeningShortages}
+          onConfirm={() => void reopenShortages()}
+          onClose={() => {
+            if (!isReopeningShortages) setIsReopenShortagesOpen(false);
+          }}
+        />
+
+        <ConfirmDialog
           open={isShortageConfirmationOpen}
           title="Cerrar con faltantes"
-          description={`Esta es una decisión definitiva. Todas las cantidades pendientes se registrarán como faltantes: ${pendingShortageUnits} unidades y no podrán recibirse después.`}
+          description={`Se registrarán ${pendingShortageUnits} unidades como faltantes. Podrás reabrirlos mientras no se haya registrado un reembolso ni confirmado la pérdida.`}
           confirmLabel="Cerrar con faltantes"
           error={shortageMutationError}
           isPending={isClosingShortages}
